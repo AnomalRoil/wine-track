@@ -5,6 +5,7 @@ export type Model = (typeof MODELS)[number]
 
 export interface Settings {
   apiKey: string
+  workspaceId: string
   model: Model
   locale: Locale
   lastBackupAt: number | null
@@ -19,6 +20,7 @@ function detectLocale(): Locale {
 function load(): Settings {
   const defaults: Settings = {
     apiKey: '',
+    workspaceId: '',
     model: 'claude-opus-5',
     locale: detectLocale(),
     lastBackupAt: null,

@@ -41,7 +41,7 @@
   async function doLookup() {
     lookingUp = true
     lookupNote = null
-    const result = await lookupGrapes(settings.apiKey, settings.model, $state.snapshot(draft))
+    const result = await lookupGrapes(settings, settings.model, $state.snapshot(draft))
     lookingUp = false
     if (!result.ok) {
       lookupNote = failureText(result.kind, result.detail)

@@ -47,7 +47,7 @@
     extractError = null
     step = 'extracting'
     const gen = ++generation
-    const result = await extractFromLabel(settings.apiKey, settings.model, await blobToBase64(photoBlob))
+    const result = await extractFromLabel(settings, settings.model, await blobToBase64(photoBlob))
     if (gen !== generation) return
     if (result.ok) {
       draft = toWineDraft(result.data)
