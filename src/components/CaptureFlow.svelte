@@ -1,0 +1,163 @@
+<script lang="ts">
+  import { putPhoto } from '../lib/db'
+  import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
+  import { t } from '../lib/i18n.svelte'
+  import { blobToBase64, processPhoto } from '../lib/photo'
+  import { settings } from '../lib/settings.svelte'
+  import { saveWine } from '../lib/store.svelte'
+  import type { Wine } from '../lib/types'
+  import WineForm from './WineForm.svelte'
+
+  let { onsaved }: { onsaved: (wine: Wine) => void } = $props()
+
+  let step = $state<'idle' | 'extracting' | 'form'>('idle')
+  let draft = $state<WineDraft>(emptyDraft())
+  let photoBlob = $state<Blob | null>(null)
+  let photoUrl = $state<string | null>(null)
+  let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
+  let generation = 0
+
+  function reset() {
+    if (photoUrl) URL.revokeObjectURL(photoUrl)
+    photoUrl = null
+    photoBlob = null
+    draft = emptyDraft()
+    extractError = null
+    generation++
+    step = 'idle'
+  }
+
+  async function onPhotoPicked(e: Event) {
+    const input = e.currentTarget as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    photoBlob = await processPhoto(file)
+    photoUrl = URL.createObjectURL(photoBlob)
+    await extract()
+  }
+
+  async function extract() {
+    if (!photoBlob) return
+    if (!settings.apiKey) {
+      extractError = { kind: 'no-key' }
+      step = 'form'
+      return
+    }
+    extractError = null
+    step = 'extracting'
+    const gen = ++generation
+    const result = await extractFromLabel(settings.apiKey, settings.model, await blobToBase64(photoBlob))
+    if (gen !== generation) return
+    if (result.ok) {
+      draft = toWineDraft(result.data)
+    } else {
+      extractError = result
+    }
+    step = 'form'
+  }
+
+  function skipExtraction() {
+    generation++
+    step = 'form'
+  }
+
+  async function save() {
+    const photoId = photoBlob ? crypto.randomUUID() : null
+    if (photoBlob && photoId) await putPhoto({ id: photoId, blob: photoBlob })
+    const wine: Wine = {
+      id: crypto.randomUUID(),
+      ...$state.snapshot(draft),
+      photoId,
+      bottlesOwned: 0,
+      drinkBy: null,
+      tasteAgainOn: null,
+      createdAt: Date.now(),
+    }
+    await saveWine(wine)
+    reset()
+    onsaved(wine)
+  }
+</script>
+
+{#if step === 'idle'}
+  <div class="start">
+    <label class="capture primary">
+      📷 {t('capture.take')}
+      <input type="file" accept="image/*" capture="environment" onchange={onPhotoPicked} />
+    </label>
+    <label class="capture">
+      🖼️ {t('capture.gallery')}
+      <input type="file" accept="image/*" onchange={onPhotoPicked} />
+    </label>
+    <button class="link" onclick={() => (step = 'form')}>{t('capture.manual')}</button>
+  </div>
+{:else if step === 'extracting'}
+  <div class="start">
+    {#if photoUrl}<img class="preview" src={photoUrl} alt="" />{/if}
+    <p class="pulse">{t('capture.extracting')}</p>
+    <button class="link" onclick={skipExtraction}>{t('capture.skip')}</button>
+  </div>
+{:else}
+  {#if extractError}
+    <p class="error card">
+      {t(`extract.${extractError.kind}`, { detail: extractError.detail ?? '' })}
+      {#if extractError.kind !== 'no-key' && photoBlob}
+        <button class="link" onclick={extract}>{t('extract.retry')}</button>
+      {/if}
+    </p>
+  {/if}
+  <WineForm bind:draft title={t('form.newWine')} {photoUrl} onsave={save} oncancel={reset} />
+{/if}
+
+<style>
+  .start {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    align-items: stretch;
+    margin-top: 15vh;
+    text-align: center;
+  }
+
+  .capture {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.1rem;
+    font-size: 1.05rem;
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .capture.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+
+  .capture input {
+    display: none;
+  }
+
+  .preview {
+    max-height: 40vh;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  .pulse {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  .error {
+    border-color: var(--danger);
+  }
+
+  @keyframes pulse {
+    50% {
+      opacity: 0.4;
+    }
+  }
+</style>
