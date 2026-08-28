@@ -1,0 +1,125 @@
+<script lang="ts">
+  import { getPhoto } from '../lib/db'
+  import { t } from '../lib/i18n.svelte'
+  import type { Wine } from '../lib/types'
+  import Stars from './Stars.svelte'
+
+  let { wine, rating, onopen }: { wine: Wine; rating: number | null; onopen: (wine: Wine) => void } =
+    $props()
+
+  let photoUrl = $state<string | null>(null)
+
+  $effect(() => {
+    const id = wine.photoId
+    photoUrl = null
+    if (!id) return
+    let revoked: string | null = null
+    getPhoto(id).then((photo) => {
+      if (photo) {
+        revoked = URL.createObjectURL(photo.blob)
+        photoUrl = revoked
+      }
+    })
+    return () => {
+      if (revoked) URL.revokeObjectURL(revoked)
+    }
+  })
+</script>
+
+<button class="card wine" onclick={() => onopen(wine)}>
+  <span class="thumb" class:placeholder={!photoUrl}>
+    {#if photoUrl}
+      <img src={photoUrl} alt="" />
+    {:else}
+      🍾
+    {/if}
+  </span>
+  <span class="info">
+    <span class="name">{wine.name || wine.producer}</span>
+    <span class="muted">
+      {wine.producer}{wine.producer && wine.vintage ? ' · ' : ''}{wine.vintage ?? ''}
+    </span>
+    <span class="meta">
+      <span class="dot {wine.color}"></span>
+      {#if rating !== null}<Stars value={rating} />{/if}
+      {#if wine.bottlesOwned > 0}
+        <span class="badge">{t('list.bottles', { n: wine.bottlesOwned })}</span>
+      {/if}
+    </span>
+  </span>
+</button>
+
+<style>
+  .wine {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+    text-align: left;
+    align-items: center;
+  }
+
+  .thumb {
+    width: 56px;
+    height: 72px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    background: var(--bg);
+  }
+
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .badge {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 0.5rem;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .dot.red { background: #7c2231; }
+  .dot.white { background: #f2e8b8; }
+  .dot.rose { background: #f4b8c0; }
+  .dot.orange { background: #e08a3c; }
+  .dot.sparkling { background: #f7e7a8; }
+  .dot.sweet { background: #d9a441; }
+  .dot.fortified { background: #5e2b1e; }
+  .dot.other { background: var(--muted); }
+</style>
