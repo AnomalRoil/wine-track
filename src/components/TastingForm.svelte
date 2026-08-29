@@ -3,6 +3,7 @@
   import { t } from '../lib/i18n.svelte'
   import { saveTasting } from '../lib/store.svelte'
   import type { Tasting } from '../lib/types'
+  import RatingDial from './RatingDial.svelte'
 
   let { wineId, ondone }: { wineId: string; ondone: () => void } = $props()
 
@@ -22,8 +23,8 @@
   <label for="tasting-date">{t('tasting.date')}</label>
   <input id="tasting-date" type="date" bind:value={date} required />
 
-  <label for="tasting-rating">{t('tasting.rating')}: <span class="stars">{rating}★</span></label>
-  <input id="tasting-rating" type="range" min="1" max="5" step="0.5" bind:value={rating} />
+  <span class="dial-label">{t('tasting.rating')}</span>
+  <RatingDial bind:value={rating} />
 
   <label for="tasting-notes">{t('tasting.notes')}</label>
   <textarea id="tasting-notes" rows="3" bind:value={notes}></textarea>
@@ -35,8 +36,11 @@
 </form>
 
 <style>
-  input[type='range'] {
-    width: 100%;
+  .dial-label {
+    display: block;
+    margin: 0.7rem 0 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted);
   }
 
   .row {

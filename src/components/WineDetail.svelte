@@ -166,6 +166,7 @@
       <div class="row">
         <span class="muted">{tasting.date}</span>
         <Stars value={tasting.rating} />
+        <span class="muted">{tasting.rating.toFixed(1)}</span>
         <div class="spacer"></div>
         <button class="link danger" onclick={() => delTasting(tasting.id)}>✕</button>
       </div>

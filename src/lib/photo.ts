@@ -27,6 +27,32 @@ export async function processPhoto(file: File): Promise<Blob> {
   }
 }
 
+const THUMB_SIZE = 192
+const THUMB_QUALITY = 0.7
+
+/** Square center-crop thumbnail for list icons, small enough to store per wine. */
+export async function makeThumb(photo: Blob): Promise<Blob> {
+  const bitmap = await createImageBitmap(photo)
+  try {
+    const side = Math.min(bitmap.width, bitmap.height)
+    const sx = (bitmap.width - side) / 2
+    const sy = (bitmap.height - side) / 2
+    const canvas = document.createElement('canvas')
+    canvas.width = THUMB_SIZE
+    canvas.height = THUMB_SIZE
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('canvas 2d context unavailable')
+    ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, THUMB_SIZE, THUMB_SIZE)
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', THUMB_QUALITY),
+    )
+    if (!blob) throw new Error('JPEG encoding failed')
+    return blob
+  } finally {
+    bitmap.close()
+  }
+}
+
 /** Returns the raw base64 payload, without the data-URL prefix. */
 export function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

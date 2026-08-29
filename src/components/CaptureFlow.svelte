@@ -2,7 +2,7 @@
   import { putPhoto } from '../lib/db'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
-  import { blobToBase64, processPhoto } from '../lib/photo'
+  import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { settings } from '../lib/settings.svelte'
   import { saveWine } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
@@ -64,7 +64,9 @@
 
   async function save() {
     const photoId = photoBlob ? crypto.randomUUID() : null
-    if (photoBlob && photoId) await putPhoto({ id: photoId, blob: photoBlob })
+    if (photoBlob && photoId) {
+      await putPhoto({ id: photoId, blob: photoBlob, thumb: await makeThumb(photoBlob) })
+    }
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...$state.snapshot(draft),
