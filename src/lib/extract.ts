@@ -25,6 +25,7 @@ export type FailureKind =
   | 'no-key'
   | 'auth'
   | 'offline'
+  | 'timeout'
   | 'rate-limit'
   | 'refusal'
   | 'unparseable'
@@ -74,6 +75,7 @@ Extract the wine's details. Use null for any field that is not legible or not pr
 function failure<T>(err: unknown): Result<T> {
   if (err instanceof Anthropic.AuthenticationError) return { ok: false, kind: 'auth' }
   if (err instanceof Anthropic.RateLimitError) return { ok: false, kind: 'rate-limit' }
+  if (err instanceof Anthropic.APIConnectionTimeoutError) return { ok: false, kind: 'timeout' }
   if (err instanceof Anthropic.APIConnectionError) return { ok: false, kind: 'offline' }
   if (err instanceof Anthropic.APIError) {
     return { ok: false, kind: 'error', detail: `${err.status} ${err.message}` }
@@ -87,10 +89,11 @@ export interface Auth {
   workspaceId: string
 }
 
-function client(auth: Auth): Anthropic {
+function client(auth: Auth, timeoutMs: number): Anthropic {
   return new Anthropic({
     apiKey: auth.apiKey,
     dangerouslyAllowBrowser: true,
+    timeout: timeoutMs,
     defaultHeaders: auth.workspaceId ? { 'anthropic-workspace-id': auth.workspaceId } : undefined,
   })
 }
@@ -103,7 +106,7 @@ export async function extractFromLabel(
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
   try {
-    const response = await client(auth).messages.parse({
+    const response = await client(auth, 90_000).messages.parse({
       model,
       max_tokens: 2000,
       messages: [
@@ -130,9 +133,14 @@ export async function extractFromLabel(
 // Haiku 4.5 predates the dynamic-filtering web search variant.
 function webSearchTool(model: Model): Anthropic.Messages.ToolUnion {
   if (model === 'claude-haiku-4-5') {
-    return { type: 'web_search_20250305', name: 'web_search', max_uses: 3 }
+    return { type: 'web_search_20250305', name: 'web_search', max_uses: 2 }
   }
-  return { type: 'web_search_20260209', name: 'web_search', max_uses: 3 }
+  return { type: 'web_search_20260209', name: 'web_search', max_uses: 2 }
+}
+
+/** True when the draft identifies the wine well enough for an online lookup. */
+export function canLookupGrapes(draft: WineDraft): boolean {
+  return Boolean(draft.name.trim() || draft.producer.trim() || draft.region.trim())
 }
 
 export async function lookupGrapes(
@@ -153,7 +161,7 @@ export async function lookupGrapes(
     .filter(Boolean)
     .join(' ')
   try {
-    const response = await client(auth).messages.parse({
+    const response = await client(auth, 120_000).messages.parse({
       model,
       max_tokens: 4000,
       messages: [
@@ -166,7 +174,8 @@ for the appellation, "unknown" when you found nothing reliable (with an empty li
         },
       ],
       tools: [webSearchTool(model)],
-      output_config: { format: zodOutputFormat(GrapeLookup) },
+      // Low effort keeps the lookup fast; the answer needs a search, not deep reasoning.
+      output_config: { effort: 'low', format: zodOutputFormat(GrapeLookup) },
     })
     if (response.stop_reason === 'refusal') {
       return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }

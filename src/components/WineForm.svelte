@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { lookupGrapes, type FailureKind, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, lookupGrapes, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
   import { WINE_COLORS } from '../lib/types'
@@ -109,7 +109,7 @@
     }}
     onblur={addGrape}
   />
-  <button type="button" class="link" disabled={lookingUp} onclick={doLookup}>
+  <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(draft)} onclick={doLookup}>
     {lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
   </button>
   {#if lookupNote}
