@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { getPhoto } from '../lib/db'
+  import { getPhoto, putPhoto } from '../lib/db'
   import { t } from '../lib/i18n.svelte'
-  import type { Wine } from '../lib/types'
+  import { makeThumb } from '../lib/photo'
+  import type { Photo, Wine } from '../lib/types'
   import Stars from './Stars.svelte'
 
   let { wine, rating, onopen }: { wine: Wine; rating: number | null; onopen: (wine: Wine) => void } =
@@ -9,16 +10,23 @@
 
   let photoUrl = $state<string | null>(null)
 
+  // Photos saved before thumbnails existed get one generated and stored here.
+  async function thumbOf(photo: Photo): Promise<Blob> {
+    if (photo.thumb) return photo.thumb
+    const thumb = await makeThumb(photo.blob)
+    await putPhoto({ ...photo, thumb })
+    return thumb
+  }
+
   $effect(() => {
     const id = wine.photoId
     photoUrl = null
     if (!id) return
     let revoked: string | null = null
-    getPhoto(id).then((photo) => {
-      if (photo) {
-        revoked = URL.createObjectURL(photo.blob)
-        photoUrl = revoked
-      }
+    getPhoto(id).then(async (photo) => {
+      if (!photo) return
+      revoked = URL.createObjectURL(await thumbOf(photo))
+      photoUrl = revoked
     })
     return () => {
       if (revoked) URL.revokeObjectURL(revoked)
@@ -60,7 +68,7 @@
 
   .thumb {
     width: 56px;
-    height: 72px;
+    height: 56px;
     border-radius: 8px;
     overflow: hidden;
     flex-shrink: 0;

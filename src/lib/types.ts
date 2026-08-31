@@ -45,7 +45,7 @@ export interface Tasting {
   wineId: string
   /** "YYYY-MM-DD" */
   date: string
-  /** 1–5 in 0.5 steps. */
+  /** 1.0–5.0, one decimal. */
   rating: number
   notes: string
 }
@@ -53,4 +53,6 @@ export interface Tasting {
 export interface Photo {
   id: string
   blob: Blob
+  /** Square list icon; generated lazily for photos saved before it existed. */
+  thumb?: Blob
 }
