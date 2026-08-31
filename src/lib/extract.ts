@@ -81,19 +81,29 @@ function failure<T>(err: unknown): Result<T> {
   return { ok: false, kind: 'error', detail: err instanceof Error ? err.message : String(err) }
 }
 
-function client(apiKey: string): Anthropic {
-  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+/** Anthropic credentials; workspaceId is required only for identity-linked API keys. */
+export interface Auth {
+  apiKey: string
+  workspaceId: string
+}
+
+function client(auth: Auth): Anthropic {
+  return new Anthropic({
+    apiKey: auth.apiKey,
+    dangerouslyAllowBrowser: true,
+    defaultHeaders: auth.workspaceId ? { 'anthropic-workspace-id': auth.workspaceId } : undefined,
+  })
 }
 
 export async function extractFromLabel(
-  apiKey: string,
+  auth: Auth,
   model: Model,
   jpegBase64: string,
 ): Promise<Result<WineExtraction>> {
-  if (!apiKey) return { ok: false, kind: 'no-key' }
+  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
   try {
-    const response = await client(apiKey).messages.parse({
+    const response = await client(auth).messages.parse({
       model,
       max_tokens: 2000,
       messages: [
@@ -126,11 +136,11 @@ function webSearchTool(model: Model): Anthropic.Messages.ToolUnion {
 }
 
 export async function lookupGrapes(
-  apiKey: string,
+  auth: Auth,
   model: Model,
   draft: WineDraft,
 ): Promise<Result<GrapeLookup>> {
-  if (!apiKey) return { ok: false, kind: 'no-key' }
+  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
   const wine = [
     draft.producer,
@@ -143,7 +153,7 @@ export async function lookupGrapes(
     .filter(Boolean)
     .join(' ')
   try {
-    const response = await client(apiKey).messages.parse({
+    const response = await client(auth).messages.parse({
       model,
       max_tokens: 4000,
       messages: [

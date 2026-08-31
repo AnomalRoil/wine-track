@@ -61,6 +61,10 @@
 <input id="apikey" type="password" autocomplete="off" bind:value={settings.apiKey} />
 <p class="muted">{t('settings.apiKeyNote')}</p>
 
+<label for="workspace">{t('settings.workspaceId')}</label>
+<input id="workspace" type="text" autocomplete="off" placeholder="wrkspc_…" bind:value={settings.workspaceId} />
+<p class="muted">{t('settings.workspaceIdNote')}</p>
+
 <label for="model">{t('settings.model')}</label>
 <select id="model" bind:value={settings.model}>
   {#each MODELS as model (model)}

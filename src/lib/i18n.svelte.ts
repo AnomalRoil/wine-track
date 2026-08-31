@@ -97,6 +97,9 @@ const en = {
   'settings.apiKey': 'Anthropic API key',
   'settings.apiKeyNote':
     'Stored only on this device. It is sent only to api.anthropic.com when reading a label.',
+  'settings.workspaceId': 'Workspace ID (optional)',
+  'settings.workspaceIdNote':
+    'Only needed for identity-linked API keys: the id of the Console workspace the key acts in.',
   'settings.model': 'Model',
   'settings.language': 'Language',
   'settings.backup': 'Backup',
@@ -211,6 +214,9 @@ const fr: Record<MessageKey, string> = {
   'settings.apiKey': 'Clé API Anthropic',
   'settings.apiKeyNote':
     'Stockée uniquement sur cet appareil. Envoyée seulement à api.anthropic.com pour lire une étiquette.',
+  'settings.workspaceId': 'ID d’espace de travail (optionnel)',
+  'settings.workspaceIdNote':
+    'Requis seulement pour les clés API liées à une identité : l’id de l’espace de travail Console utilisé par la clé.',
   'settings.model': 'Modèle',
   'settings.language': 'Langue',
   'settings.backup': 'Sauvegarde',
