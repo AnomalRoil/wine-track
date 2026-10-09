@@ -37,7 +37,9 @@
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
   let unitPrice = $state<number | null>(null)
+  // generation drops a pending extraction; session also drops a photo still being processed.
   let generation = 0
+  let session = 0
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -49,6 +51,7 @@
     quantity = 0
     unitPrice = null
     generation++
+    session++
     step = 'idle'
   }
 
@@ -61,9 +64,12 @@
 
   async function usePhoto(file: File) {
     step = 'extracting'
-    photoBlob = await processPhoto(file)
-    photoUrl = URL.createObjectURL(photoBlob)
-    await extract()
+    const current = session
+    const blob = await processPhoto(file)
+    if (current !== session) return
+    photoBlob = blob
+    photoUrl = URL.createObjectURL(blob)
+    if (step === 'extracting') await extract()
   }
 
   untrack(() => photo && usePhoto(photo))
@@ -71,6 +77,7 @@
   // Leaving mid-extraction drops its result and frees the preview.
   $effect(() => () => {
     generation++
+    session++
     if (photoUrl) URL.revokeObjectURL(photoUrl)
   })
 
@@ -84,7 +91,9 @@
     extractError = null
     step = 'extracting'
     const gen = ++generation
-    const result = await extractFromLabel(settings, settings.model, await blobToBase64(photoBlob))
+    const image = await blobToBase64(photoBlob)
+    if (gen !== generation) return
+    const result = await extractFromLabel(settings, settings.model, image)
     if (gen !== generation) return
     if (result.ok) {
       draft = toWineDraft(result.data)
