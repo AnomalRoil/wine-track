@@ -13,6 +13,8 @@ export interface Settings {
   model: Model
   locale: Locale
   currency: Currency
+  /** Masks every amount shown in the app. */
+  hidePrices: boolean
   lastBackupAt: number | null
 }
 
@@ -30,6 +32,7 @@ function load(): Settings {
     model: 'claude-opus-5',
     locale: detectLocale(),
     currency: 'EUR',
+    hidePrices: false,
     lastBackupAt: null,
   }
   try {

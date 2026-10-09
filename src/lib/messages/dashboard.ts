@@ -1,0 +1,156 @@
+import type { Messages } from './types'
+
+export const en = {
+  'dashboard.title': 'Overview',
+  'dashboard.empty': 'Add bottles to a cellar to see statistics here.',
+  'dashboard.bottles': 'Bottles',
+  'dashboard.wines': 'Wines',
+  'dashboard.cellars': 'Cellars',
+  'dashboard.invested': 'Invested',
+  'dashboard.value': 'Estimated value',
+  'dashboard.added': 'Added value',
+  'dashboard.unpriced': '{n} bottle(s) without a purchase price.',
+
+  'dashboard.ready': 'Ready to drink',
+  'dashboard.peak': 'At peak',
+  'dashboard.decline': 'In decline',
+  'dashboard.drinkNote': 'Based on drink-before dates: at peak means due within six months.',
+  'dashboard.noWine': 'No wine in this group.',
+
+  'dashboard.composition': 'Composition',
+  'dashboard.by.color': 'Type',
+  'dashboard.by.country': 'Country',
+  'dashboard.by.region': 'Region',
+  'dashboard.by.grape': 'Grape',
+  'dashboard.by.vintage': 'Vintage',
+  'dashboard.by.size': 'Size',
+  'dashboard.by.cellar': 'Cellar',
+  'dashboard.unset': 'Not set',
+  'dashboard.nonVintage': 'Non-vintage',
+  'dashboard.others': '{n} more',
+  'dashboard.grapeNote': 'A blend counts toward each of its grapes.',
+
+  'dashboard.flows': 'Bottles in and out',
+  'dashboard.months': '12 months',
+  'dashboard.years': 'Per year',
+  'dashboard.flowAdded': 'Added',
+  'dashboard.flowDrunk': 'Drunk',
+  'dashboard.flowGifted': 'Gifted',
+
+  'dashboard.valueOverTime': 'Cellar value over time',
+  'dashboard.valueLine': 'Estimated value',
+  'dashboard.investedLine': 'Purchase cost',
+  'dashboard.valueNote': 'Rebuilt from stock movements and value history. Bottles without a value count at their purchase price.',
+
+  'dashboard.topAdded': 'Top added value',
+  'dashboard.drunkRegions': 'Most drunk regions',
+  'dashboard.ratings': 'Ratings',
+  'dashboard.tastings': '{n} tasting(s)',
+
+  'dashboard.hidePrices': 'Hide prices',
+  'dashboard.hidePricesNote': 'Masks every amount in the app, for example when showing it to guests.',
+} as const
+
+export const fr: Messages<typeof en> = {
+  'dashboard.title': 'Vue d’ensemble',
+  'dashboard.empty': 'Ajoutez des bouteilles à une cave pour voir les statistiques ici.',
+  'dashboard.bottles': 'Bouteilles',
+  'dashboard.wines': 'Vins',
+  'dashboard.cellars': 'Caves',
+  'dashboard.invested': 'Investi',
+  'dashboard.value': 'Valeur estimée',
+  'dashboard.added': 'Plus-value',
+  'dashboard.unpriced': '{n} bouteille(s) sans prix d’achat.',
+
+  'dashboard.ready': 'Prêts à boire',
+  'dashboard.peak': 'À leur apogée',
+  'dashboard.decline': 'En déclin',
+  'dashboard.drinkNote': 'D’après les dates « à boire avant » : apogée signifie à boire dans les six mois.',
+  'dashboard.noWine': 'Aucun vin dans ce groupe.',
+
+  'dashboard.composition': 'Composition',
+  'dashboard.by.color': 'Type',
+  'dashboard.by.country': 'Pays',
+  'dashboard.by.region': 'Région',
+  'dashboard.by.grape': 'Cépage',
+  'dashboard.by.vintage': 'Millésime',
+  'dashboard.by.size': 'Format',
+  'dashboard.by.cellar': 'Cave',
+  'dashboard.unset': 'Non renseigné',
+  'dashboard.nonVintage': 'Sans millésime',
+  'dashboard.others': '{n} de plus',
+  'dashboard.grapeNote': 'Un assemblage compte pour chacun de ses cépages.',
+
+  'dashboard.flows': 'Entrées et sorties',
+  'dashboard.months': '12 mois',
+  'dashboard.years': 'Par année',
+  'dashboard.flowAdded': 'Ajoutées',
+  'dashboard.flowDrunk': 'Bues',
+  'dashboard.flowGifted': 'Offertes',
+
+  'dashboard.valueOverTime': 'Valeur de la cave dans le temps',
+  'dashboard.valueLine': 'Valeur estimée',
+  'dashboard.investedLine': 'Prix d’achat',
+  'dashboard.valueNote':
+    'Reconstituée à partir des mouvements de stock et de l’historique des valeurs. Les bouteilles sans valeur comptent à leur prix d’achat.',
+
+  'dashboard.topAdded': 'Meilleures plus-values',
+  'dashboard.drunkRegions': 'Régions les plus bues',
+  'dashboard.ratings': 'Notes',
+  'dashboard.tastings': '{n} dégustation(s)',
+
+  'dashboard.hidePrices': 'Masquer les prix',
+  'dashboard.hidePricesNote': 'Cache tous les montants de l’application, par exemple pour la montrer à des invités.',
+}
+
+export const de: Messages<typeof en> = {
+  'dashboard.title': 'Übersicht',
+  'dashboard.empty': 'Flaschen in einen Keller legen, um hier Statistiken zu sehen.',
+  'dashboard.bottles': 'Flaschen',
+  'dashboard.wines': 'Weine',
+  'dashboard.cellars': 'Keller',
+  'dashboard.invested': 'Investiert',
+  'dashboard.value': 'Geschätzter Wert',
+  'dashboard.added': 'Wertzuwachs',
+  'dashboard.unpriced': '{n} Flasche(n) ohne Kaufpreis.',
+
+  'dashboard.ready': 'Trinkreif',
+  'dashboard.peak': 'Auf dem Höhepunkt',
+  'dashboard.decline': 'Im Abbau',
+  'dashboard.drinkNote': 'Nach den Trinken-bis-Daten: Höhepunkt heißt fällig innerhalb von sechs Monaten.',
+  'dashboard.noWine': 'Kein Wein in dieser Gruppe.',
+
+  'dashboard.composition': 'Zusammensetzung',
+  'dashboard.by.color': 'Typ',
+  'dashboard.by.country': 'Land',
+  'dashboard.by.region': 'Region',
+  'dashboard.by.grape': 'Rebsorte',
+  'dashboard.by.vintage': 'Jahrgang',
+  'dashboard.by.size': 'Format',
+  'dashboard.by.cellar': 'Keller',
+  'dashboard.unset': 'Nicht angegeben',
+  'dashboard.nonVintage': 'Ohne Jahrgang',
+  'dashboard.others': '{n} weitere',
+  'dashboard.grapeNote': 'Eine Cuvée zählt für jede ihrer Rebsorten.',
+
+  'dashboard.flows': 'Zu- und Abgänge',
+  'dashboard.months': '12 Monate',
+  'dashboard.years': 'Pro Jahr',
+  'dashboard.flowAdded': 'Zugang',
+  'dashboard.flowDrunk': 'Getrunken',
+  'dashboard.flowGifted': 'Verschenkt',
+
+  'dashboard.valueOverTime': 'Kellerwert im Zeitverlauf',
+  'dashboard.valueLine': 'Geschätzter Wert',
+  'dashboard.investedLine': 'Kaufpreis',
+  'dashboard.valueNote':
+    'Aus Lagerbewegungen und Wertverlauf rekonstruiert. Flaschen ohne Wert zählen mit ihrem Kaufpreis.',
+
+  'dashboard.topAdded': 'Größter Wertzuwachs',
+  'dashboard.drunkRegions': 'Meistgetrunkene Regionen',
+  'dashboard.ratings': 'Bewertungen',
+  'dashboard.tastings': '{n} Verkostung(en)',
+
+  'dashboard.hidePrices': 'Preise ausblenden',
+  'dashboard.hidePricesNote': 'Verbirgt alle Beträge in der App, etwa beim Vorzeigen vor Gästen.',
+}
