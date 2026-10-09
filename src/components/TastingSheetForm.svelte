@@ -23,6 +23,7 @@
   } = $props()
 
   let peopleInput: ChipInput | undefined = $state()
+  let photoFailed = $state(false)
 
   /** Commits text still typed in the people field; the form calls it before saving. */
   export function commit() {
@@ -43,11 +44,14 @@
     input.value = ''
     if (!file) return
     processing++
+    photoFailed = false
     try {
       const blob = await processPhoto(file)
       const id = crypto.randomUUID()
       pending[id] = { id, blob, thumb: await makeThumb(blob) }
       sheet.photoIds = [...sheet.photoIds, id]
+    } catch {
+      photoFailed = true
     } finally {
       processing--
     }
@@ -73,6 +77,7 @@
     📷 {t('tasting.takePhoto')}
     <input type="file" accept="image/*" capture="environment" onchange={addPhoto} />
   </label>
+  {#if photoFailed}<p class="error">{t('tasting.photoFailed')}</p>{/if}
 </section>
 
 <section>
@@ -105,6 +110,10 @@
 </section>
 
 <style>
+  .error {
+    color: var(--danger);
+  }
+
   section {
     border-top: 1px solid var(--border);
     margin-top: 0.9rem;
