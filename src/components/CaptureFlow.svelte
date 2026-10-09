@@ -41,6 +41,8 @@
   // and the navigation after a save.
   let generation = 0
   let session = 0
+  /** The photo being resized, which a save waits for. */
+  let photoTask: Promise<Blob> | null = null
   let saving = false
 
   function reset() {
@@ -52,6 +54,7 @@
     extractError = null
     quantity = 0
     unitPrice = null
+    photoTask = null
     generation++
     session++
     step = 'idle'
@@ -67,8 +70,10 @@
   async function usePhoto(file: File) {
     step = 'extracting'
     const current = session
-    const blob = await processPhoto(file)
+    const task = (photoTask = processPhoto(file))
+    const blob = await task
     if (current !== session) return
+    photoTask = null
     photoBlob = blob
     photoUrl = URL.createObjectURL(blob)
     if (step === 'extracting') await extract()
@@ -122,7 +127,8 @@
 
   async function write() {
     const current = session
-    const blob = photoBlob
+    const blob = photoTask ? await photoTask : photoBlob
+    if (current !== session) return
     const photoId = blob ? crypto.randomUUID() : null
     if (blob && photoId) {
       await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
