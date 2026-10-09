@@ -24,11 +24,13 @@
   let detailed = $state(initial?.sheet !== undefined)
   let pending = $state<Record<string, Photo>>({})
   let processing = $state(0)
+  let saving = $state(false)
   let sheetForm: TastingSheetForm | undefined = $state()
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
-    if (processing > 0) return
+    if (processing > 0 || saving) return
+    saving = true
     sheetForm?.commit()
     const filled = $state.snapshot(sheet)
     const saved: Tasting = { id: initial?.id ?? crypto.randomUUID(), wineId, date, rating, notes }
@@ -36,7 +38,11 @@
     const kept = new Set(saved.sheet?.photoIds)
     const added = Object.values($state.snapshot(pending)).filter((p) => kept.has(p.id))
     const removed = (initial?.sheet?.photoIds ?? []).filter((id) => !kept.has(id))
-    await saveTasting(saved, added, removed)
+    try {
+      await saveTasting(saved, added, removed)
+    } finally {
+      saving = false
+    }
     ondone()
   }
 </script>
@@ -60,7 +66,7 @@
 
   <div class="row">
     <button type="button" onclick={ondone}>{t('form.cancel')}</button>
-    <button type="submit" class="primary grow" disabled={processing > 0}>{t('tasting.save')}</button>
+    <button type="submit" class="primary grow" disabled={processing > 0 || saving}>{t('tasting.save')}</button>
   </div>
 </form>
 

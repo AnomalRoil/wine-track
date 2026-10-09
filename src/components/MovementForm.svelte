@@ -25,6 +25,7 @@
   let unitPrice = $state<number | null>(null)
   let date = $state(today())
   let note = $state('')
+  let saving = $state(false)
 
   $effect(() => {
     if (toCellarId === cellarId) toCellarId = cellars.find((c) => c.id !== cellarId)?.id ?? cellarId
@@ -58,21 +59,25 @@
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
-    if (!valid) return
+    if (!valid || saving) return
+    saving = true
     const freed = asking ? chosen : placed.slice(0, toFree).map((p) => p.id)
-    await addMovements([
-      {
-        id: crypto.randomUUID(),
-        wineId,
-        date,
-        kind: mode === 'remove' ? reason : mode,
-        quantity,
-        cellarId,
-        toCellarId: mode === 'transfer' ? toCellarId : null,
-        unitPrice: mode === 'add' ? (unitPrice ?? null) : null,
-        note: note.trim(),
-      },
-    ], freed)
+    const movement = {
+      id: crypto.randomUUID(),
+      wineId,
+      date,
+      kind: mode === 'remove' ? reason : mode,
+      quantity,
+      cellarId,
+      toCellarId: mode === 'transfer' ? toCellarId : null,
+      unitPrice: mode === 'add' ? (unitPrice ?? null) : null,
+      note: note.trim(),
+    }
+    try {
+      await addMovements([movement], freed)
+    } finally {
+      saving = false
+    }
     ondone()
   }
 </script>
@@ -138,7 +143,7 @@
 
   <div class="row actions">
     <button type="button" onclick={ondone}>{t('form.cancel')}</button>
-    <button type="submit" class="primary grow" disabled={!valid}>{t('stock.save')}</button>
+    <button type="submit" class="primary grow" disabled={!valid || saving}>{t('stock.save')}</button>
   </div>
 </form>
 
