@@ -43,7 +43,7 @@
   let session = 0
   /** The photo being resized, which a save waits for. */
   let photoTask: Promise<Blob> | null = null
-  let saving = false
+  let saving = $state(false)
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -125,18 +125,19 @@
     }
   }
 
+  // Reads every input before the first await, so edits made while it writes stay out of the saved wine.
   async function write() {
     const current = session
+    const fields = { ...$state.snapshot(draft), ...cleanAging($state.snapshot(aging)) }
+    const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
     const blob = photoTask ? await photoTask : photoBlob
-    if (current !== session) return
     const photoId = blob ? crypto.randomUUID() : null
     if (blob && photoId) {
       await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
     }
     const wine: Wine = {
       id: crypto.randomUUID(),
-      ...$state.snapshot(draft),
-      ...cleanAging($state.snapshot(aging)),
+      ...fields,
       wished: false,
       value: null,
       valueHistory: [],
@@ -146,22 +147,12 @@
       createdAt: Date.now(),
     }
     await saveWine(wine)
-    if (quantity > 0) {
+    if (stock.quantity > 0) {
       await addMovements([
-        {
-          id: crypto.randomUUID(),
-          wineId: wine.id,
-          date: today(),
-          kind: 'add',
-          quantity,
-          cellarId,
-          toCellarId: null,
-          unitPrice: unitPrice ?? null,
-          note: '',
-        },
+        { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', ...stock, toCellarId: null, note: '' },
       ])
     }
-    // Cancelled or left while writing: the wine is kept, the caller no longer expects it.
+    // Left while writing: the wine is kept, the caller no longer expects it.
     if (current !== session) return
     reset()
     onsaved(wine)
@@ -196,7 +187,7 @@
       {/if}
     </p>
   {/if}
-  <WineForm bind:draft title={t('form.newWine')} {photoUrl} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet extra()}
       {#if intoCellar}
         <label for="price">{t('stock.unitPrice')}</label>
