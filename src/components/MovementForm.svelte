@@ -2,9 +2,10 @@
   import { untrack } from 'svelte'
   import { today } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
-  import { cellarName } from '../lib/labels'
+  import { cellarName, placementLabel } from '../lib/labels'
+  import { placementsOf, slotsFreed } from '../lib/racks'
   import { bottlesOf } from '../lib/stock'
-  import { addMovements, currentStock, sortedCellars } from '../lib/store.svelte'
+  import { addMovements, currentStock, sortedCellars, store } from '../lib/store.svelte'
   import { REMOVAL_KINDS, type MovementKind } from '../lib/types'
 
   let {
@@ -31,13 +32,34 @@
 
   const available = $derived(bottlesOf(currentStock(), wineId, cellarId))
   const tooMany = $derived(mode !== 'add' && quantity > available)
+
+  // Bottles leaving the cellar empty their slots; the user says which when there is a choice.
+  const placed = $derived(placementsOf(store.racks, store.placements, wineId, cellarId))
+  const toFree = $derived(mode === 'add' ? 0 : slotsFreed(available, quantity, placed.length))
+  const asking = $derived(toFree > 0 && toFree < placed.length)
+  let chosen = $state<string[]>([])
+
+  $effect(() => {
+    const ids = new Set(placed.map((p) => p.id))
+    if (chosen.some((id) => !ids.has(id))) chosen = chosen.filter((id) => ids.has(id))
+  })
+
   const valid = $derived(
-    Number.isInteger(quantity) && quantity > 0 && !tooMany && !(mode === 'transfer' && toCellarId === cellarId),
+    Number.isInteger(quantity) &&
+      quantity > 0 &&
+      !tooMany &&
+      !(mode === 'transfer' && toCellarId === cellarId) &&
+      (!asking || chosen.length === toFree),
   )
+
+  function toggle(id: string) {
+    chosen = chosen.includes(id) ? chosen.filter((c) => c !== id) : [...chosen, id]
+  }
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
     if (!valid) return
+    const freed = asking ? chosen : placed.slice(0, toFree).map((p) => p.id)
     await addMovements([
       {
         id: crypto.randomUUID(),
@@ -50,7 +72,7 @@
         unitPrice: mode === 'add' ? (unitPrice ?? null) : null,
         note: note.trim(),
       },
-    ])
+    ], freed)
     ondone()
   }
 </script>
@@ -94,6 +116,16 @@
       {/each}
     </select>
   {/if}
+  {#if asking && !tooMany}
+    <span class="label slots">{t('rack.whichSlots', { n: toFree })}</span>
+    <div class="chips wrap">
+      {#each placed as p (p.id)}
+        <button type="button" class="chip" class:active={chosen.includes(p.id)} onclick={() => toggle(p.id)}>
+          {placementLabel(p)}
+        </button>
+      {/each}
+    </div>
+  {/if}
   {#if tooMany}
     <p class="error">{t('stock.tooMany', { n: available })}</p>
   {/if}
@@ -120,6 +152,14 @@
 
   .grow {
     flex: 1;
+  }
+
+  .slots {
+    margin-top: 0.7rem;
+  }
+
+  .wrap {
+    flex-wrap: wrap;
   }
 
   .actions {
