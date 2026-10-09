@@ -251,6 +251,14 @@ describe('planImport', () => {
   })
 })
 
+it('keeps names apart when one ends where the other starts', () => {
+  const p = parseImport('name,producer\nA|B,C\nA,B|C', 2026)
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const plan = planImport(p.rows, [], { cellars: [], defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.matches.map((m) => m.kind)).toEqual(['new', 'new'])
+})
+
 it('keeps distinct non-Latin wine and cellar names apart', () => {
   const p = parseImport('cellar,name\n赤,赤\n白,白\n赤, 赤 ', 2026)
   if (!p.ok) throw new Error(p.error)

@@ -290,7 +290,7 @@ export function identity(s: string): string {
 
 /** Identity used to detect duplicates: same name, producer, vintage and bottle size. */
 export function wineKey(w: Pick<WineDraft, 'name' | 'producer' | 'vintage' | 'sizeCl'>): string {
-  return [identity(w.name), identity(w.producer), w.vintage ?? 'nv', w.sizeCl].join('|')
+  return JSON.stringify([identity(w.name), identity(w.producer), w.vintage ?? 'nv', w.sizeCl])
 }
 
 export type RowMatch =
