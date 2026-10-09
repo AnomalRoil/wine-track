@@ -17,6 +17,7 @@
     totals,
     valueOverTime,
     yearlyFlows,
+    yearlyValues,
     type Dimension,
     type DrinkStatus,
     type Flow,
@@ -37,7 +38,10 @@
   const shares = $derived(composition(store.wines, currentStock(), dimension))
   const shortcuts = $derived(drinkShortcuts(store.wines, currentStock(), now))
   const flows = $derived(byYear ? yearlyFlows(store.movements, now) : monthlyFlows(store.movements, now))
-  const values = $derived(valueOverTime(store.wines, store.movements, now))
+  const monthlyValues = $derived(valueOverTime(store.wines, store.movements, now))
+  // Past three years, monthly points crowd a phone-wide chart.
+  const valueByYear = $derived(byYear || monthlyValues.length > 36)
+  const values = $derived(valueByYear ? yearlyValues(monthlyValues) : monthlyValues)
   const gains = $derived(topAddedValue(store.wines, store.movements, currentStock()))
   const regions = $derived(consumedRegions(store.wines, store.movements))
   const ratings = $derived(ratingHistogram(store.tastings))
@@ -150,8 +154,8 @@
     <h2>{t('dashboard.valueOverTime')}</h2>
     <div class="card">
       <LineChart
-        labels={values.map((p) => shortMonth(p.month))}
-        titles={values.map((p) => longMonth(p.month))}
+        labels={values.map((p) => (valueByYear ? p.month : shortMonth(p.month)))}
+        titles={values.map((p) => (valueByYear ? p.month : longMonth(p.month)))}
         series={[
           { label: t('dashboard.valueLine'), color: 'var(--series-1)', values: values.map((p) => p.value) },
           { label: t('dashboard.investedLine'), color: 'var(--series-2)', values: values.map((p) => p.invested) },

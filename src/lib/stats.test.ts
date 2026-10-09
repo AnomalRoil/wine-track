@@ -11,6 +11,7 @@ import {
   totals,
   valueOverTime,
   yearlyFlows,
+  yearlyValues,
   type Dimension,
 } from './stats'
 import { computeStock } from './stock'
@@ -145,6 +146,27 @@ describe('valueOverTime', () => {
 
   it('is empty without movements', () => {
     expect(valueOverTime(wines, [], '2026-04-10')).toEqual([])
+  })
+})
+
+describe('yearlyValues', () => {
+  it.each([
+    { name: 'empty', points: [], want: [] },
+    {
+      name: 'keeps the last month of each year',
+      points: [
+        { month: '2024-11', value: 1, invested: 1 },
+        { month: '2024-12', value: 2, invested: 1 },
+        { month: '2025-01', value: 3, invested: 2 },
+        { month: '2025-04', value: 4, invested: 2 },
+      ],
+      want: [
+        { month: '2024', value: 2, invested: 1 },
+        { month: '2025', value: 4, invested: 2 },
+      ],
+    },
+  ])('$name', ({ points, want }) => {
+    expect(yearlyValues(points)).toEqual(want)
   })
 })
 

@@ -181,6 +181,13 @@ export function valueOverTime(wines: Wine[], movements: Movement[], today: strin
   return points
 }
 
+/** Year-end points ("YYYY"), the last one holding today's values. */
+export function yearlyValues(points: ValuePoint[]): ValuePoint[] {
+  const byYear = new Map<string, ValuePoint>()
+  for (const p of points) byYear.set(p.month.slice(0, 4), { ...p, month: p.month.slice(0, 4) })
+  return [...byYear.values()]
+}
+
 export interface WineGain {
   wine: Wine
   bottles: number
@@ -231,6 +238,7 @@ export type DrinkStatus = 'ready' | 'peak' | 'decline'
 /**
  * Where a wine stands against its drink-before date: past it (decline), due
  * within the drink-soon horizon (peak), or later (ready). Null without a date.
+ * Stand-in until the drinking-window phases land; switch to them then.
  */
 export function drinkStatus(wine: Wine, today: string): DrinkStatus | null {
   if (!wine.drinkBy) return null
