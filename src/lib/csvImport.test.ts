@@ -65,6 +65,7 @@ describe('parseImport', () => {
           quantity: 6,
           price: 32.5,
           notes: 'from the fair',
+          window: { drinkFrom: null, peakFrom: null, peakUntil: null, drinkUntil: null },
           errors: [],
         },
       ],
@@ -118,6 +119,28 @@ describe('parseImport', () => {
       if (color !== undefined) expect(r.draft.color).toBe(color)
     })
   }
+})
+
+describe('parseImport drinking window', () => {
+  const header = 'name,drink from,peak from,peak until,drink until'
+  const none = { drinkFrom: null, peakFrom: null, peakUntil: null, drinkUntil: null }
+  const cases: { name: string; fields: string; window: ImportRow['window']; errors: string[] }[] = [
+    { name: 'empty', fields: 'A,,,,', window: none, errors: [] },
+    { name: 'full window', fields: 'A,2024,2026,2030,2035', window: { drinkFrom: 2024, peakFrom: 2026, peakUntil: 2030, drinkUntil: 2035 }, errors: [] },
+    { name: 'partial window', fields: 'A,,,2030,', window: { ...none, peakUntil: 2030 }, errors: [] },
+    { name: 'not a year', fields: 'A,soon,,,', window: none, errors: ['window'] },
+    { name: 'years out of order', fields: 'A,2030,,,2025', window: none, errors: ['window'] },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const r = row(c.fields, header)
+      expect([r.window, r.errors]).toEqual([c.window, c.errors])
+    })
+  }
+
+  it('reads French and German headers', () => {
+    expect(row('A,2025,2040', 'nom,à boire à partir de,trinken bis').window).toEqual({ ...none, drinkFrom: 2025, drinkUntil: 2040 })
+  })
 })
 
 describe('parseImport sizes without unit', () => {
@@ -203,6 +226,13 @@ describe('planImport', () => {
     expect(bottlesOf(stock, fresh.id, 'main')).toBe(3)
     expect(bottlesOf(stock, fresh.id, 'id4')).toBe(1)
     expect(plan.movements).toHaveLength(4)
+  })
+
+  it('gives new wines the drinking window of their row', () => {
+    const p = parseImport('name,drink from,drink until\nWindowed,2027,2040', 2026)
+    if (!p.ok) throw new Error(p.error)
+    const [wine] = planImport(p.rows, [], ctx).wines
+    expect([wine.drinkFrom, wine.peakFrom, wine.drinkUntil, wine.profile]).toEqual([2027, null, 2040, null])
   })
 
   it('builds complete new wines', () => {

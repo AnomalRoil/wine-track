@@ -22,7 +22,7 @@ export function withAging<T extends Partial<Aging>>(wine: T): T & Aging {
 /** Window years in chronological order. */
 export const WINDOW_KEYS = ['drinkFrom', 'peakFrom', 'peakUntil', 'drinkUntil'] as const satisfies (keyof Aging)[]
 
-function bounds(a: Aging): number[] {
+function bounds(a: Pick<Aging, (typeof WINDOW_KEYS)[number]>): number[] {
   return WINDOW_KEYS.map((k) => a[k]).filter((y) => y !== null)
 }
 
@@ -38,7 +38,7 @@ export function phaseOf(a: Aging, year: number): Phase | null {
 }
 
 /** True when the known window years never go backwards. */
-export function isWindowOrdered(a: Aging): boolean {
+export function isWindowOrdered(a: Pick<Aging, (typeof WINDOW_KEYS)[number]>): boolean {
   const years = bounds(a)
   return years.every((y, i) => i === 0 || years[i - 1] <= y)
 }

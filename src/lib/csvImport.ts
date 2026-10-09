@@ -1,8 +1,8 @@
-import { NO_AGING } from './aging'
+import { isWindowOrdered, NO_AGING, WINDOW_KEYS } from './aging'
 import { parseCsv } from './csv'
 import type { WineDraft } from './extract'
 import * as core from './messages/core'
-import { BOTTLE_SIZES, STANDARD_SIZE_CL, WINE_COLORS, type Cellar, type Movement, type Wine, type WineColor } from './types'
+import { BOTTLE_SIZES, STANDARD_SIZE_CL, WINE_COLORS, type Aging, type Cellar, type Movement, type Wine, type WineColor } from './types'
 
 /** Columns of the import template and of the CSV export, in order. */
 export const COLUMNS = [
@@ -19,6 +19,10 @@ export const COLUMNS = [
   'purchase_price',
   'notes',
   'tags',
+  'drink_from',
+  'peak_from',
+  'peak_until',
+  'drink_until',
 ] as const
 export type Column = (typeof COLUMNS)[number]
 
@@ -37,6 +41,10 @@ export const HEADERS: Record<Column, string> = {
   purchase_price: 'purchase price',
   notes: 'notes',
   tags: 'tags',
+  drink_from: 'drink from',
+  peak_from: 'peak from',
+  peak_until: 'peak until',
+  drink_until: 'drink until',
 }
 
 /** Lowercase, without accents, spaces or punctuation: "Größe (cl)" → "grossecl". */
@@ -64,7 +72,19 @@ const HEADER_ALIASES: Record<Column, string[]> = {
   purchase_price: ['purchaseprice', 'price', 'unitprice', 'prix', 'prixdachat', 'kaufpreis', 'preis'],
   notes: ['notes', 'note', 'comment', 'comments', 'commentaire', 'commentaires', 'notizen', 'bemerkung', 'bemerkungen'],
   tags: ['tags', 'tag', 'etiquettes', 'schlagworte', 'schlagworter'],
+  drink_from: ['drinkfrom', 'readyfrom', 'aboireapartirde', 'apartirde', 'trinkreifab', 'trinkenab'],
+  peak_from: ['peakfrom', 'debutapogee', 'apogeeapartirde', 'hohepunktab'],
+  peak_until: ['peakuntil', 'finapogee', 'apogeejusqua', 'hohepunktbis'],
+  drink_until: ['drinkuntil', 'aboirejusqua', 'jusqua', 'trinkenbis'],
 }
+
+/** CSV column of each drinking-window year. */
+const WINDOW_COLUMNS = {
+  drinkFrom: 'drink_from',
+  peakFrom: 'peak_from',
+  peakUntil: 'peak_until',
+  drinkUntil: 'drink_until',
+} as const satisfies Record<(typeof WINDOW_KEYS)[number], Column>
 
 const COLOR_ALIASES = new Map<string, WineColor>()
 for (const color of WINE_COLORS) {
@@ -96,7 +116,10 @@ for (const size of BOTTLE_SIZES) {
   for (const m of [core.en, core.fr, core.de]) SIZE_ALIASES.set(fold(m[`size.${size.name}`]), size.cl)
 }
 
-export type RowError = 'missing-name' | 'vintage' | 'quantity' | 'size' | 'color' | 'price'
+export type RowError = 'missing-name' | 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window'
+
+/** Drinking-window years of a row; all null when the row has none. */
+export type WindowYears = Pick<Aging, (typeof WINDOW_KEYS)[number]>
 
 export interface ImportRow {
   /** Line number in the file, header included, for error messages. */
@@ -108,6 +131,7 @@ export interface ImportRow {
   /** Purchase price per bottle. */
   price: number | null
   notes: string
+  window: WindowYears
   errors: RowError[]
 }
 
@@ -159,6 +183,10 @@ function parseList(raw: string): string[] {
   return [...new Set(raw.split(/[,;|]/).map((s) => s.trim()).filter(Boolean))]
 }
 
+function pickWindow(a: WindowYears): WindowYears {
+  return Object.fromEntries(WINDOW_KEYS.map((k) => [k, a[k]])) as WindowYears
+}
+
 /**
  * Reads an import CSV. Headers are matched loosely (case, accents, English,
  * French or German names); unknown columns are reported and skipped.
@@ -200,6 +228,16 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
     const price = rawPrice === '' ? null : parseNumber(rawPrice)
     if (price !== null && !(price >= 0)) errors.push('price')
 
+    const window = pickWindow(NO_AGING)
+    for (const key of WINDOW_KEYS) {
+      const raw = get(WINDOW_COLUMNS[key])
+      if (raw === '') continue
+      const year = Number(raw)
+      if (Number.isInteger(year) && year >= 1800 && year <= currentYear + 150) window[key] = year
+      else if (!errors.includes('window')) errors.push('window')
+    }
+    if (!isWindowOrdered(window) && !errors.includes('window')) errors.push('window')
+
     const name = get('name')
     const producer = get('producer')
     if (!name && !producer) errors.push('missing-name')
@@ -221,6 +259,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
       quantity: errors.includes('quantity') ? 0 : quantity,
       price: errors.includes('price') ? null : price,
       notes: get('notes'),
+      window: errors.includes('window') ? pickWindow(NO_AGING) : window,
       errors,
     }
   })
@@ -295,6 +334,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
         tasteAgainOn: null,
         createdAt: ctx.now,
         ...NO_AGING,
+        ...row.window,
       })
     }
     if (row.quantity === 0) continue
