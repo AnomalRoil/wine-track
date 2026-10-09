@@ -1,0 +1,51 @@
+agent = "codex"
+model = "gpt-6.1-sol"
+excluded_commit_patterns = ["[skip review]"]
+exclude_patterns = ["package-lock.json"]
+
+review_guidelines = """
+wine-track is a local-first PWA (Svelte 5 runes, TypeScript, Vite, IndexedDB). Flag:
+- Data loss: IndexedDB schema or backup format changes without a migration and a test.
+- Any network call other than api.anthropic.com label/wine lookups.
+- UI strings not going through t(), or a message key missing from en, fr or de.
+- Logic in components that belongs in a tested pure module under src/lib.
+- Over-engineering: abstractions with one caller, defensive code for impossible states.
+Do not flag style the code base already uses consistently.
+"""
+
+[review]
+hook_review_panel = "quick"
+default_panel = "full"
+
+[review.subagents.bugs]
+agent = "codex"
+model = "gpt-6.1-sol"
+review_type = "default"
+instructions = "Focus on correctness, regressions, edge cases and missing tests."
+
+[review.subagents.fable]
+agent = "claude-code"
+model = "claude-fable-5-1"
+review_type = "default"
+allow_failure = true
+instructions = "Focus on data integrity, state management and user-visible behavior on a phone."
+
+[review.subagents.security]
+agent = "claude-code"
+review_type = "security"
+allow_failure = true
+instructions = "Focus on XSS through user text or imported files, API key handling, and untrusted data from label extraction or imports."
+
+[review.subagents.design]
+agent = "codex"
+model = "gpt-6.1-sol"
+review_type = "design"
+allow_failure = true
+non_voting = true
+
+[review.panels.quick]
+members = ["bugs"]
+
+[review.panels.full]
+members = ["bugs", "fable", "security", "design"]
+synthesis_agent = "claude-code"

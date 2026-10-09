@@ -1,16 +1,14 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
 
-  export type Tab = 'wines' | 'add' | 'journal' | 'due' | 'settings'
+  export type Tab = 'wines' | 'add' | 'more'
 
   let { tab, onselect }: { tab: Tab; onselect: (tab: Tab) => void } = $props()
 
   const tabs: { id: Tab; icon: string; label: () => string }[] = [
     { id: 'wines', icon: '🍷', label: () => t('tab.wines') },
     { id: 'add', icon: '📷', label: () => t('tab.add') },
-    { id: 'journal', icon: '📖', label: () => t('tab.journal') },
-    { id: 'due', icon: '⏳', label: () => t('tab.due') },
-    { id: 'settings', icon: '⚙️', label: () => t('tab.settings') },
+    { id: 'more', icon: '☰', label: () => t('tab.more') },
   ]
 </script>
 
