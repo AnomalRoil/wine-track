@@ -127,6 +127,21 @@ export async function saveCellars(cellars: Cellar[]): Promise<void> {
   }
 }
 
+let storageWrites = Promise.resolve()
+
+/**
+ * Changes a cellar's storage answers. The store only changes once a write lands, so writes
+ * are queued and each builds on the cellar the previous one stored.
+ */
+export function patchStorage(cellarId: string, patch: (storage: Cellar['storage']) => Cellar['storage']): Promise<void> {
+  const run = async () => {
+    const current = store.cellars.find((c) => c.id === cellarId)
+    if (current) await saveCellars([{ ...current, storage: patch(current.storage) }])
+  }
+  storageWrites = storageWrites.then(run, run)
+  return storageWrites
+}
+
 /** Deletes a cellar, moving its bottles to `targetId` or, when null, out of stock. */
 export async function removeCellar(id: string, targetId: string | null): Promise<void> {
   const emptying = emptyCellar(stock, id, targetId, today(), () => crypto.randomUUID())

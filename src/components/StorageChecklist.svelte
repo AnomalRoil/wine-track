@@ -1,24 +1,13 @@
 <script lang="ts">
   import { t, type MessageKey } from '../lib/i18n.svelte'
   import { assessStorage, STORAGE_QUESTIONS } from '../lib/storage'
-  import { saveCellars, store } from '../lib/store.svelte'
+  import { patchStorage } from '../lib/store.svelte'
   import type { Cellar } from '../lib/types'
   import StorageAdvice from './StorageAdvice.svelte'
 
   let { cellar }: { cellar: Cellar } = $props()
 
   const assessment = $derived(assessStorage(cellar.storage))
-
-  // The store only changes once a save lands, so queue saves and build each from the latest stored cellar.
-  let saving = Promise.resolve()
-
-  function save(storage: (current: Cellar['storage']) => Cellar['storage']) {
-    const run = () => {
-      const current = store.cellars.find((c) => c.id === cellar.id) ?? cellar
-      return saveCellars([{ ...current, storage: storage(current.storage) }])
-    }
-    saving = saving.then(run, run)
-  }
 </script>
 
 <div class="checklist">
@@ -31,7 +20,7 @@
             class="chip"
             class:active={cellar.storage[q.factor] === option.id}
             aria-pressed={cellar.storage[q.factor] === option.id}
-            onclick={() => save((s) => ({ ...s, [q.factor]: option.id }))}
+            onclick={() => patchStorage(cellar.id, (s) => ({ ...s, [q.factor]: option.id }))}
           >
             {t(`storage.o.${q.factor}.${option.id}` as MessageKey)}
           </button>
@@ -42,7 +31,7 @@
   <p class="muted">{t('storage.answered', { n: assessment.answered, total: STORAGE_QUESTIONS.length })}</p>
   <StorageAdvice {assessment} />
   {#if assessment.answered > 0}
-    <button class="link danger" onclick={() => save(() => ({}))}>{t('storage.clear')}</button>
+    <button class="link danger" onclick={() => patchStorage(cellar.id, () => ({}))}>{t('storage.clear')}</button>
   {/if}
 </div>
 
