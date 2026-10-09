@@ -8,6 +8,7 @@
   import type { ScreenProps } from '../lib/screens'
   import { initStore, store } from '../lib/store.svelte'
   import CellarSettings from './CellarSettings.svelte'
+  import LwinSettings from './LwinSettings.svelte'
 
   let {}: Partial<ScreenProps> = $props()
 
@@ -98,6 +99,8 @@
 <p class="muted">{t('dashboard.hidePricesNote')}</p>
 
 <CellarSettings />
+
+<LwinSettings />
 
 <h2>{t('settings.backup')}</h2>
 {#if backupStale}
