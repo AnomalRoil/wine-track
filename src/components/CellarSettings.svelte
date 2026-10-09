@@ -1,12 +1,16 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
+  import { assessStorage } from '../lib/storage'
   import { currentStock, removeCellar, saveCellars, sortedCellars } from '../lib/store.svelte'
   import type { Cellar } from '../lib/types'
+  import StorageBadge from './StorageBadge.svelte'
+  import StorageChecklist from './StorageChecklist.svelte'
 
   let newName = $state('')
   /** Cellar awaiting a decision about its bottles before deletion. */
   let deleting = $state<{ cellar: Cellar; bottles: number } | null>(null)
+  let checking = $state<string | null>(null)
 
   const cellars = $derived(sortedCellars())
 
@@ -66,6 +70,20 @@
     <button class="link" onclick={() => rename(cellar)}>{t('cellar.rename')}</button>
     <button class="link danger" onclick={() => startDelete(cellar)}>{t('cellar.delete')}</button>
   </div>
+  <button
+    class="link storage"
+    aria-expanded={checking === cellar.id}
+    onclick={() => (checking = checking === cellar.id ? null : cellar.id)}
+  >
+    {t('storage.check')}
+    <StorageBadge score={assessStorage(cellar.storage).score} />
+  </button>
+  {#if checking === cellar.id}
+    <div class="card">
+      <StorageChecklist {cellar} />
+      <button class="primary done" onclick={() => (checking = null)}>{t('storage.done')}</button>
+    </div>
+  {/if}
 {/each}
 
 {#if deleting}
@@ -99,6 +117,18 @@
 
   .cellar {
     padding: 0.2rem 0;
+  }
+
+  .storage {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0 0 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  .done {
+    margin-top: 0.5rem;
   }
 
   .add {

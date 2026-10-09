@@ -2,6 +2,7 @@ import type { Component } from 'svelte'
 import DueView from '../components/DueView.svelte'
 import Journal from '../components/Journal.svelte'
 import Settings from '../components/Settings.svelte'
+import StorageOverview from '../components/StorageOverview.svelte'
 import type { MessageKey } from './i18n.svelte'
 import type { Wine } from './types'
 
@@ -21,5 +22,6 @@ export interface Screen {
 export const MORE_SCREENS: Screen[] = [
   { id: 'journal', icon: '📖', label: 'tab.journal', component: Journal },
   { id: 'due', icon: '⏳', label: 'tab.due', component: DueView },
+  { id: 'storage', icon: '🌡️', label: 'storage.title', component: StorageOverview },
   { id: 'settings', icon: '⚙️', label: 'tab.settings', component: Settings },
 ]
