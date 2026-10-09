@@ -8,7 +8,7 @@ export interface Totals {
   wines: number
   /** Purchase cost of the bottles in stock, from each wine's average buy price. */
   invested: number
-  /** Estimated value of the bottles in stock. */
+  /** Estimated value of the bottles in stock; bottles without a value count at their purchase price. */
   value: number
   /** Value minus cost, over bottles that have both. */
   added: number
@@ -29,7 +29,7 @@ export function totals(wines: Wine[], movements: Movement[], stock: Stock): Tota
     out.wines++
     if (buy === undefined) out.unpriced += bottles
     else out.invested += buy * bottles
-    if (wine.value !== null) out.value += wine.value * bottles
+    out.value += (wine.value ?? buy ?? 0) * bottles
     if (wine.value !== null && buy !== undefined) out.added += (wine.value - buy) * bottles
   }
   return out

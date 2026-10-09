@@ -28,6 +28,7 @@ export const en = {
   'dashboard.unset': 'Not set',
   'dashboard.nonVintage': 'Non-vintage',
   'dashboard.others': '{n} more',
+  'dashboard.fewer': 'Show fewer',
   'dashboard.grapeNote': 'A blend counts toward each of its grapes.',
 
   'dashboard.flows': 'Bottles in and out',
@@ -79,6 +80,7 @@ export const fr: Messages<typeof en> = {
   'dashboard.unset': 'Non renseigné',
   'dashboard.nonVintage': 'Sans millésime',
   'dashboard.others': '{n} de plus',
+  'dashboard.fewer': 'Afficher moins',
   'dashboard.grapeNote': 'Un assemblage compte pour chacun de ses cépages.',
 
   'dashboard.flows': 'Entrées et sorties',
@@ -131,6 +133,7 @@ export const de: Messages<typeof en> = {
   'dashboard.unset': 'Nicht angegeben',
   'dashboard.nonVintage': 'Ohne Jahrgang',
   'dashboard.others': '{n} weitere',
+  'dashboard.fewer': 'Weniger anzeigen',
   'dashboard.grapeNote': 'Eine Cuvée zählt für jede ihrer Rebsorten.',
 
   'dashboard.flows': 'Zu- und Abgänge',

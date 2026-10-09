@@ -46,6 +46,12 @@ describe('totals', () => {
     })
   })
 
+  it('values bottles without an estimate at their purchase price', () => {
+    const moves = [makeMovement({ wineId: 'x', quantity: 2, unitPrice: 12 })]
+    const got = totals([makeWine({ id: 'x', value: null })], moves, computeStock(moves))
+    expect([got.invested, got.value, got.added]).toEqual([24, 24, 0])
+  })
+
   it('is zero for an empty collection', () => {
     expect(totals([], [], new Map())).toEqual({ bottles: 0, wines: 0, invested: 0, value: 0, added: 0, unpriced: 0 })
   })
