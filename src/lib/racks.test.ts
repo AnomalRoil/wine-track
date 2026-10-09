@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellarLosing, matchesPerLayer, outside, place, placementsOf, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
+import { cellarLosing, matchesPerLayer, moveTransfers, outside, place, placementsOf, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
 import { computeStock } from './stock'
 import { makeMovement as mv } from './testing'
 import type { Rack } from './types'
@@ -135,6 +135,32 @@ describe('cellarLosing', () => {
   for (const c of cases) {
     it(c.name, () => {
       expect(cellarLosing(c.m)).toBe(c.want)
+    })
+  }
+})
+
+describe('moveTransfers', () => {
+  const cases = [
+    { name: 'same cellar', moved: 'w1', swapped: null, from: 'home', to: 'home', want: [] },
+    { name: 'into an empty slot', moved: 'w1', swapped: null, from: 'home', to: 'cave', want: [['w1', 'home', 'cave']] },
+    {
+      name: 'swap with another wine',
+      moved: 'w1',
+      swapped: 'w2',
+      from: 'home',
+      to: 'cave',
+      want: [
+        ['w1', 'home', 'cave'],
+        ['w2', 'cave', 'home'],
+      ],
+    },
+    { name: 'swap with the same wine', moved: 'w1', swapped: 'w1', from: 'home', to: 'cave', want: [] },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const got = moveTransfers(c.moved, c.swapped, c.from, c.to, '2026-10-09', () => 'id')
+      expect(got.map((m) => [m.wineId, m.cellarId, m.toCellarId])).toEqual(c.want)
+      for (const m of got) expect([m.kind, m.quantity, m.date]).toEqual(['transfer', 1, '2026-10-09'])
     })
   }
 })

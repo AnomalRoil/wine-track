@@ -9,7 +9,7 @@
   import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel } from '../lib/labels'
-  import { matchesPerLayer, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
+  import { matchesPerLayer, moveTransfers, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
     addMovements,
@@ -147,14 +147,26 @@
     else selected = slot
   }
 
+  // A move into another cellar's rack also records the transfers between the cellars.
   async function moveTo(slot: Slot) {
     const from = moving!
     moving = null
     const id = slotId(slot)
     if (id === from.id) return
     const other = placements.get(id)
-    if (other) await updatePlacements([place(slot, from.wineId), place(from, other.wineId)])
-    else await updatePlacements([place(slot, from.wineId)], [from.id])
+    const put = other ? [place(slot, from.wineId), place(from, other.wineId)] : [place(slot, from.wineId)]
+    const freed = other ? [] : [from.id]
+    const cellarOf = (rackId: string) => store.racks.find((r) => r.id === rackId)?.cellarId ?? cellarId
+    const transfers = moveTransfers(
+      from.wineId,
+      other?.wineId ?? null,
+      cellarOf(from.rackId),
+      cellarOf(slot.rackId),
+      today(),
+      () => crypto.randomUUID(),
+    )
+    if (transfers.length > 0) await addMovements(transfers, freed, put)
+    else await updatePlacements(put, freed)
     await showLanded(slot)
   }
 
@@ -216,7 +228,6 @@
 
   function selectCellar(id: string) {
     cellarId = id
-    moving = null
   }
 </script>
 

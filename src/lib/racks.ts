@@ -71,6 +71,35 @@ export function matchesPerLayer(rack: Rack, placements: Placement[], wineIds: Se
   return counts
 }
 
+/**
+ * Transfers recording a slot move between cellars: the moved bottle goes to `to`,
+ * and the bottle it swaps with, if any, comes back to `from`.
+ */
+export function moveTransfers(
+  moved: string,
+  swapped: string | null,
+  from: string,
+  to: string,
+  date: string,
+  newId: () => string,
+): Movement[] {
+  if (from === to || moved === swapped) return []
+  const transfer = (wineId: string, cellarId: string, toCellarId: string): Movement => ({
+    id: newId(),
+    wineId,
+    date,
+    kind: 'transfer',
+    quantity: 1,
+    cellarId,
+    toCellarId,
+    unitPrice: null,
+    note: '',
+  })
+  const out = [transfer(moved, from, to)]
+  if (swapped) out.push(transfer(swapped, to, from))
+  return out
+}
+
 /** The cellar whose stock drops when `m` is deleted from the history, or null. */
 export function cellarLosing(m: Movement): string | null {
   if (m.kind === 'add') return m.cellarId

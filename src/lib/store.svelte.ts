@@ -95,11 +95,16 @@ export async function removeTasting(id: string): Promise<void> {
   store.tastings = store.tastings.filter((t) => t.id !== id)
 }
 
-/** Records movements; `freed` lists the placements of bottles that left their slot. */
-export async function addMovements(movements: Movement[], freed: string[] = []): Promise<void> {
-  await db.putMovements(movements, freed)
+/**
+ * Records movements; `freed` lists the placements of bottles that left their slot
+ * and `placed` the bottles that moved into one.
+ */
+export async function addMovements(movements: Movement[], freed: string[] = [], placed: Placement[] = []): Promise<void> {
+  await db.putMovements(movements, freed, placed)
   store.movements.push(...movements)
-  if (freed.length > 0) store.placements = store.placements.filter((p) => !freed.includes(p.id))
+  if (freed.length === 0 && placed.length === 0) return
+  const gone = new Set([...freed, ...placed.map((p) => p.id)])
+  store.placements = [...store.placements.filter((p) => !gone.has(p.id)), ...placed]
 }
 
 /** Deletes a movement; `freed` lists the slots to empty first when its bottles disappear. */

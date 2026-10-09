@@ -110,12 +110,13 @@ export async function deleteWine(wine: Wine): Promise<void> {
   await done(tx)
 }
 
-/** Records movements and empties the slots of the bottles that left, atomically. */
-export async function putMovements(movements: Movement[], freed: string[] = []): Promise<void> {
+/** Records movements, empties the slots of the bottles that left and fills `placed`, atomically. */
+export async function putMovements(movements: Movement[], freed: string[] = [], placed: Placement[] = []): Promise<void> {
   const d = await openDb()
   const tx = d.transaction(['movements', 'placements'], 'readwrite')
   for (const m of movements) tx.objectStore('movements').put(m)
   for (const id of freed) tx.objectStore('placements').delete(id)
+  for (const p of placed) tx.objectStore('placements').put(p)
   await done(tx)
 }
 
