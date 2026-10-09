@@ -20,7 +20,7 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Tags and a wishlist, usable as filters; sort by value or purchase price.
 - Drinking window per wine (ready, peak, decline) with a phase badge, a timeline, and a phase filter and "drink first" sort; serving temperature in °C or °F, decanting time and a taste profile, all fillable by an online lookup.
 - Drink-before dates and "taste again in N years" reminders, with a due view that also lists wines reaching peak or decline this year, and `.ics` calendar export.
-- English and French UI.
+- English, French and German UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.
 - CSV import with a template (drinking-window years included), per-line validation and duplicate detection (matching wines get the bottles), optional batched completion of grapes and regions by Claude; CSV export in the same columns.
 - Printable insurance inventory per cellar with purchase prices, estimated values, totals and bottles without any price.
