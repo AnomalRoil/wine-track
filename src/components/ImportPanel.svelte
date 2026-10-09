@@ -60,7 +60,10 @@
       message = t('io.tooLarge', { mb: MAX_IMPORT_BYTES / 1_000_000 })
       return
     }
-    const parsed = parseImport(decodeText(await file.arrayBuffer()), new Date().getFullYear())
+    const gen = generation
+    const buffer = await file.arrayBuffer()
+    if (gen !== generation) return
+    const parsed = parseImport(decodeText(buffer), new Date().getFullYear())
     if (!parsed.ok) {
       message =
         parsed.error === 'too-many-rows'
