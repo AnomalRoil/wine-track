@@ -90,7 +90,7 @@
 </div>
 
 <label for="aging-decant">{t('aging.decant')}</label>
-<input id="aging-decant" type="number" inputmode="numeric" min="0" step="5" bind:value={aging.decantMinutes} />
+<input id="aging-decant" type="number" inputmode="numeric" min="0" bind:value={aging.decantMinutes} />
 
 <span class="label">{t('aging.profile')}</span>
 {#if aging.profile}
