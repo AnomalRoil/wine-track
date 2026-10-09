@@ -12,6 +12,7 @@ describe('toWineDraft', () => {
         region: 'Chablis',
         country: 'France',
         color: 'white',
+        volumeCl: 150,
       }),
     ).toEqual({
       name: 'Chablis',
@@ -21,6 +22,8 @@ describe('toWineDraft', () => {
       region: 'Chablis',
       country: 'France',
       color: 'white',
+      sizeCl: 150,
+      tags: [],
     })
   })
 
@@ -34,6 +37,7 @@ describe('toWineDraft', () => {
         region: null,
         country: null,
         color: 'unknown',
+        volumeCl: null,
       }),
     ).toEqual({ ...emptyDraft(), color: 'other' })
   })

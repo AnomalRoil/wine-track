@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { addDays, addYears, computeDue } from './due'
+import { makeWine } from './testing'
 import type { Wine } from './types'
 
 function wine(id: string, drinkBy: string | null, tasteAgainOn: string | null): Wine {
-  return {
-    id,
-    name: id,
-    producer: '',
-    vintage: null,
-    grapes: [],
-    region: '',
-    country: '',
-    color: 'red',
-    photoId: null,
-    bottlesOwned: 0,
-    drinkBy,
-    tasteAgainOn,
-    createdAt: 0,
-  }
+  return makeWine({ id, name: id, drinkBy, tasteAgainOn })
 }
 
 describe('addDays / addYears', () => {

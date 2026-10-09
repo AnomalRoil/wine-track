@@ -9,7 +9,11 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Snap a bottle photo; the Claude API extracts name, producer, vintage, grapes, region, and color for you to confirm.
 - Optional online lookup of grape varieties when the label doesn't state them.
 - Tasting notes with half-star ratings; filter the collection by vintage, grape, color, rating, or free text.
-- Cellar tracking: bottle counts, drink-before dates, "taste again in N years" reminders, with a due view and `.ics` calendar export.
+- Cellars: several named cellars, bottle sizes, additions with purchase price, removals (drunk, gifted, stock adjustment) and transfers between cellars.
+- Journal of every stock movement and tasting.
+- Value tracking: average purchase price, current value per bottle with history, added value of the bottles in stock.
+- Tags and a wishlist, usable as filters; sort by value or purchase price.
+- Drink-before dates and "taste again in N years" reminders, with a due view and `.ics` calendar export.
 - English and French UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.
 - Installable PWA, works offline. The only network calls are label extraction to `api.anthropic.com` with your own API key, entered in Settings and stored only on the device.

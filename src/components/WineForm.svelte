@@ -1,8 +1,13 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte'
   import { canLookupGrapes, lookupGrapes, type FailureKind, type WineDraft } from '../lib/extract'
+  import { distinctGrapes, distinctTags } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
+  import { sizeLabel } from '../lib/labels'
   import { settings } from '../lib/settings.svelte'
-  import { WINE_COLORS } from '../lib/types'
+  import { store } from '../lib/store.svelte'
+  import { BOTTLE_SIZES, WINE_COLORS } from '../lib/types'
+  import ChipInput from './ChipInput.svelte'
 
   let {
     draft = $bindable(),
@@ -10,29 +15,27 @@
     photoUrl = null,
     onsave,
     oncancel,
+    extra,
   }: {
     draft: WineDraft
     title: string
     photoUrl?: string | null
     onsave: () => void
     oncancel: () => void
+    /** Extra fields rendered above the actions. */
+    extra?: Snippet
   } = $props()
 
-  let grapeInput = $state('')
   let lookingUp = $state(false)
   let lookupNote = $state<string | null>(null)
+  let grapeInput: ChipInput
+  let tagInput: ChipInput
 
-  function addGrape() {
-    const grape = grapeInput.trim()
-    if (grape && !draft.grapes.some((g) => g.toLowerCase() === grape.toLowerCase())) {
-      draft.grapes = [...draft.grapes, grape]
-    }
-    grapeInput = ''
-  }
-
-  function removeGrape(grape: string) {
-    draft.grapes = draft.grapes.filter((g) => g !== grape)
-  }
+  const sizes = $derived(
+    BOTTLE_SIZES.some((s) => s.cl === draft.sizeCl)
+      ? BOTTLE_SIZES.map((s) => s.cl)
+      : [...BOTTLE_SIZES.map((s) => s.cl as number), draft.sizeCl].sort((a, b) => a - b),
+  )
 
   function failureText(kind: FailureKind, detail?: string): string {
     return t(`extract.${kind}`, { detail: detail ?? '' })
@@ -57,7 +60,8 @@
 
   function submit(e: SubmitEvent) {
     e.preventDefault()
-    addGrape()
+    grapeInput.commit()
+    tagInput.commit()
     onsave()
   }
 </script>
@@ -87,27 +91,12 @@
   />
 
   <label for="grape-input">{t('form.grapes')}</label>
-  {#if draft.grapes.length > 0}
-    <div class="chips wrap">
-      {#each draft.grapes as grape (grape)}
-        <button type="button" class="chip active" onclick={() => removeGrape(grape)}>
-          {grape} ✕
-        </button>
-      {/each}
-    </div>
-  {/if}
-  <input
+  <ChipInput
+    bind:this={grapeInput}
+    bind:values={draft.grapes}
     id="grape-input"
-    type="text"
     placeholder={t('form.addGrape')}
-    bind:value={grapeInput}
-    onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault()
-        addGrape()
-      }
-    }}
-    onblur={addGrape}
+    suggestions={distinctGrapes(store.wines)}
   />
   <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(draft)} onclick={doLookup}>
     {lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
@@ -136,6 +125,24 @@
     {/each}
   </div>
 
+  <label for="size">{t('form.size')}</label>
+  <select id="size" bind:value={draft.sizeCl}>
+    {#each sizes as cl (cl)}
+      <option value={cl}>{sizeLabel(cl)}</option>
+    {/each}
+  </select>
+
+  <label for="tag-input">{t('form.tags')}</label>
+  <ChipInput
+    bind:this={tagInput}
+    bind:values={draft.tags}
+    id="tag-input"
+    placeholder={t('form.addTag')}
+    suggestions={distinctTags(store.wines)}
+  />
+
+  {@render extra?.()}
+
   <div class="row actions">
     <button type="button" onclick={oncancel}>{t('form.cancel')}</button>
     <button type="submit" class="primary grow">{t('form.save')}</button>
@@ -148,10 +155,6 @@
     border-radius: 10px;
     display: block;
     margin: 0 auto;
-  }
-
-  .wrap {
-    flex-wrap: wrap;
   }
 
   .actions {

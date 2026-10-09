@@ -4,7 +4,9 @@
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { settings } from '../lib/settings.svelte'
-  import { saveWine } from '../lib/store.svelte'
+  import { today } from '../lib/due'
+  import { cellarName } from '../lib/labels'
+  import { addMovements, saveWine, sortedCellars } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
   import WineForm from './WineForm.svelte'
 
@@ -15,6 +17,9 @@
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
+  let quantity = $state(0)
+  let cellarId = $state(sortedCellars()[0].id)
+  let unitPrice = $state<number | null>(null)
   let generation = 0
 
   function reset() {
@@ -23,6 +28,8 @@
     photoBlob = null
     draft = emptyDraft()
     extractError = null
+    quantity = 0
+    unitPrice = null
     generation++
     step = 'idle'
   }
@@ -70,13 +77,30 @@
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...$state.snapshot(draft),
+      wished: false,
+      value: null,
+      valueHistory: [],
       photoId,
-      bottlesOwned: 0,
       drinkBy: null,
       tasteAgainOn: null,
       createdAt: Date.now(),
     }
     await saveWine(wine)
+    if (quantity > 0) {
+      await addMovements([
+        {
+          id: crypto.randomUUID(),
+          wineId: wine.id,
+          date: today(),
+          kind: 'add',
+          quantity,
+          cellarId,
+          toCellarId: null,
+          unitPrice: unitPrice ?? null,
+          note: '',
+        },
+      ])
+    }
     reset()
     onsaved(wine)
   }
@@ -109,7 +133,27 @@
       {/if}
     </p>
   {/if}
-  <WineForm bind:draft title={t('form.newWine')} {photoUrl} onsave={save} oncancel={reset} />
+  <WineForm bind:draft title={t('form.newWine')} {photoUrl} onsave={save} oncancel={reset}>
+    {#snippet extra()}
+      <h2>{t('capture.addToCellar')}</h2>
+      <div class="row">
+        <div class="grow">
+          <label for="qty">{t('stock.quantity')}</label>
+          <input id="qty" type="number" inputmode="numeric" min="0" bind:value={quantity} />
+        </div>
+        <div class="grow">
+          <label for="price">{t('stock.unitPrice')}</label>
+          <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+        </div>
+      </div>
+      {#if quantity > 0 && sortedCellars().length > 1}
+        <label for="cellar">{t('stock.cellar')}</label>
+        <select id="cellar" bind:value={cellarId}>
+          {#each sortedCellars() as c (c.id)}<option value={c.id}>{cellarName(c.id)}</option>{/each}
+        </select>
+      {/if}
+    {/snippet}
+  </WineForm>
 {/if}
 
 <style>
@@ -147,6 +191,10 @@
     max-height: 40vh;
     object-fit: contain;
     border-radius: 10px;
+  }
+
+  .grow {
+    flex: 1;
   }
 
   .pulse {

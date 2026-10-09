@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import type { Model } from './settings.svelte'
-import type { WineColor } from './types'
+import { STANDARD_SIZE_CL, type WineColor } from './types'
 
 const WineExtraction = z.object({
   name: z.string().nullable(),
@@ -12,6 +12,7 @@ const WineExtraction = z.object({
   region: z.string().nullable(),
   country: z.string().nullable(),
   color: z.enum(['red', 'white', 'rose', 'orange', 'sparkling', 'sweet', 'fortified', 'unknown']),
+  volumeCl: z.number().nullable(),
 })
 export type WineExtraction = z.infer<typeof WineExtraction>
 
@@ -44,10 +45,22 @@ export interface WineDraft {
   region: string
   country: string
   color: WineColor
+  sizeCl: number
+  tags: string[]
 }
 
 export function emptyDraft(): WineDraft {
-  return { name: '', producer: '', vintage: null, grapes: [], region: '', country: '', color: 'red' }
+  return {
+    name: '',
+    producer: '',
+    vintage: null,
+    grapes: [],
+    region: '',
+    country: '',
+    color: 'red',
+    sizeCl: STANDARD_SIZE_CL,
+    tags: [],
+  }
 }
 
 export function toWineDraft(e: WineExtraction | null): WineDraft {
@@ -60,6 +73,8 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
     region: e.region ?? '',
     country: e.country ?? '',
     color: e.color === 'unknown' ? 'other' : e.color,
+    sizeCl: e.volumeCl && e.volumeCl > 0 ? e.volumeCl : STANDARD_SIZE_CL,
+    tags: [],
   }
 }
 
@@ -70,7 +85,8 @@ Extract the wine's details. Use null for any field that is not legible or not pr
   (e.g. Chablis implies Chardonnay); otherwise an empty list.
 - region: the appellation or region as printed.
 - color: infer from the label and your knowledge of the appellation; "sweet" means
-  dessert wine; use "unknown" if you cannot tell.`
+  dessert wine; use "unknown" if you cannot tell.
+- volumeCl: the bottle volume printed on the label, in centiliters (75 cl → 75, 1.5 L → 150).`
 
 function failure<T>(err: unknown): Result<T> {
   if (err instanceof Anthropic.AuthenticationError) return { ok: false, kind: 'auth' }

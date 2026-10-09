@@ -5,8 +5,12 @@
   import type { Photo, Wine } from '../lib/types'
   import Stars from './Stars.svelte'
 
-  let { wine, rating, onopen }: { wine: Wine; rating: number | null; onopen: (wine: Wine) => void } =
-    $props()
+  let {
+    wine,
+    rating,
+    bottles,
+    onopen,
+  }: { wine: Wine; rating: number | null; bottles: number; onopen: (wine: Wine) => void } = $props()
 
   let photoUrl = $state<string | null>(null)
 
@@ -50,9 +54,10 @@
     <span class="meta">
       <span class="dot {wine.color}"></span>
       {#if rating !== null}<Stars value={rating} />{/if}
-      {#if wine.bottlesOwned > 0}
-        <span class="badge">{t('list.bottles', { n: wine.bottlesOwned })}</span>
+      {#if bottles > 0}
+        <span class="badge">{t('list.bottles', { n: bottles })}</span>
       {/if}
+      {#if wine.wished}<span class="wish">♥</span>{/if}
     </span>
   </span>
 </button>
@@ -112,6 +117,10 @@
     border-radius: 999px;
     padding: 0 0.5rem;
     color: var(--muted);
+  }
+
+  .wish {
+    color: var(--accent);
   }
 
   .dot {
