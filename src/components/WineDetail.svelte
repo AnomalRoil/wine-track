@@ -14,7 +14,11 @@
   import ValuePanel from './ValuePanel.svelte'
   import WineForm from './WineForm.svelte'
 
-  let { wineId, onclose }: { wineId: string; onclose: () => void } = $props()
+  let {
+    wineId,
+    onclose,
+    onlocate,
+  }: { wineId: string; onclose: () => void; onlocate?: (wineId: string) => void } = $props()
 
   const wine = $derived(store.wines.find((w) => w.id === wineId))
   const tastings = $derived(tastingsFor(wineId))
@@ -128,7 +132,7 @@
     {wine.wished ? `♥ ${t('stock.wished')}` : `♡ ${t('stock.wish')}`}
   </button>
 
-  <StockPanel wineId={wine.id} />
+  <StockPanel wineId={wine.id} {onlocate} />
   <ValuePanel {wine} />
 
   <label for="drinkby">{t('detail.drinkBy')}</label>

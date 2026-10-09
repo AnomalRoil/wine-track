@@ -1,12 +1,12 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
-  import { cellarName } from '../lib/labels'
+  import { cellarName, placementLabel } from '../lib/labels'
   import { bottlesOf } from '../lib/stock'
-  import { currentStock, movementsFor, removeMovement, sortedCellars } from '../lib/store.svelte'
+  import { currentStock, movementsFor, removeMovement, sortedCellars, store } from '../lib/store.svelte'
   import type { Movement } from '../lib/types'
   import MovementForm from './MovementForm.svelte'
 
-  let { wineId }: { wineId: string } = $props()
+  let { wineId, onlocate }: { wineId: string; onlocate?: (wineId: string) => void } = $props()
 
   let mode = $state<'add' | 'remove' | 'transfer' | null>(null)
 
@@ -17,6 +17,7 @@
   )
   const total = $derived(bottlesOf(currentStock(), wineId))
   const history = $derived(movementsFor(wineId))
+  const placed = $derived(store.placements.filter((p) => p.wineId === wineId).map(placementLabel).sort())
 
   function describe(m: Movement): string {
     const where =
@@ -42,6 +43,13 @@
       <span class="chip card">{cellarName(c.id)}: {c.n}</span>
     {/each}
   </div>
+{/if}
+
+{#if placed.length > 0}
+  <p class="muted placed">
+    📍 {t('rack.placedIn', { slots: placed.join(', ') })}
+    {#if onlocate}<button class="link" onclick={() => onlocate(wineId)}>{t('rack.locate')}</button>{/if}
+  </p>
 {/if}
 
 {#if mode}
@@ -80,6 +88,10 @@
 
   details {
     margin-top: 0.5rem;
+  }
+
+  .placed {
+    margin: 0.25rem 0 0.5rem;
   }
 
   .entry {
