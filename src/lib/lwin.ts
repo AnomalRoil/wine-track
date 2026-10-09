@@ -62,7 +62,7 @@ const RANKS = new Set(['premier', 'grand', 'cru', 'classe', 'eme', '1er', '2eme'
 
 /** Lowercase words without accents: "Château d'Yquem" → ["chateau", "d", "yquem"]. */
 export function words(s: string): string[] {
-  const plain = /^[\x20-\x7e]*$/.test(s) ? s.toLowerCase() : s.split(/[^\p{L}\p{N}]+/u).map(fold).join(' ')
+  const plain = /^[\x20-\x7e]*$/.test(s) ? s.toLowerCase() : s.split(/[^\p{L}\p{M}\p{N}]+/u).map(fold).join(' ')
   return plain.split(/[^a-z0-9]+/).filter(Boolean)
 }
 

@@ -33,6 +33,7 @@ describe('words', () => {
     ['Blaufränkisch Straße', ['blaufrankisch', 'strasse']],
     ['  ', []],
     ['N°41', ['n', '41']],
+    ['Romane\u0301e-Conti', ['romanee', 'conti']],
   ]
   for (const [input, want] of cases) {
     it(JSON.stringify(input), () => expect(words(input)).toEqual(want))
@@ -69,6 +70,7 @@ describe('search', () => {
     { query: 'chablis', want: ['1066540', '1066553', '1181812'] },
     { query: 'Château Yquem', want: ['1012361'] },
     { query: 'Romanée', want: ['1100002'] },
+    { query: 'Romane\u0301e', want: ['1100002'] },
     { query: 'champagne', want: ['1014033'] },
     { query: 'x', want: [] },
     { query: 'zzz', want: [] },
@@ -114,6 +116,12 @@ describe('match', () => {
       draft: draft({ producer: 'Vincent Dauvissat', name: 'Chablis', color: 'red' }),
       want: '1066540',
       confident: false,
+    },
+    {
+      name: 'decomposed accents',
+      draft: draft({ producer: 'Cha\u0302teau d’Yquem', name: 'Sauternes', color: 'sweet' }),
+      want: '1012361',
+      confident: true,
     },
     { name: 'unknown producer', draft: draft({ producer: 'Nobody', name: 'Chablis' }), want: null, confident: false },
     { name: 'title alone', draft: draft({ producer: 'Domaine' }), want: null, confident: false },
