@@ -5,20 +5,21 @@
 
 <script lang="ts">
   import { tick, untrack } from 'svelte'
-  import { thisYear, today } from '../lib/due'
+  import { thisYear } from '../lib/due'
   import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel, wineLabel } from '../lib/labels'
-  import { matchesPerLayer, place, planMove, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
-  import { serial } from '../lib/serial'
+  import { matchesPerLayer, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
-    addMovements,
     currentStock,
-    saveRacks,
+    drink as drinkBottle,
+    moveBottle,
+    placeBottle,
     sortedCellars,
     store,
-    updatePlacements,
+    swapRacks,
+    unplace as unplaceBottle,
   } from '../lib/store.svelte'
   import type { Placement, Rack, Wine } from '../lib/types'
   import BottleSheet from './BottleSheet.svelte'
@@ -95,8 +96,6 @@
 
   const racks = $derived(racksOf(store.racks, cellarId))
   const placements = $derived(new Map(store.placements.map((p) => [p.id, p])))
-  /** Placement writes, queued so each one checks the slots the previous ones filled. */
-  const placing = serial()
 
   // A bottle that left its slot meanwhile (drunk, rack deleted or resized) has nothing to move.
   $effect(() => {
@@ -165,28 +164,14 @@
     else selected = slot
   }
 
-  // A move into another cellar's rack also records the transfers between the cellars.
-  function moveTo(slot: Slot) {
+  async function moveTo(slot: Slot) {
     const from = moving!
     moving = null
-    return placing(async () => {
-      const move = planMove(from, slot, store.racks, store.placements, today(), () => crypto.randomUUID())
-      if (!move) return
-      if (move.transfers.length > 0) await addMovements(move.transfers, move.freed, move.put)
-      else await updatePlacements(move.put, move.freed)
-      await showLanded(slot)
-    })
+    if (await moveBottle(from, slot)) await showLanded(slot)
   }
 
-  /** Puts a bottle of `wine` in `slot` unless the slot was filled or the bottle placed meanwhile. */
-  function placeIn(slot: Slot, wine: Wine) {
-    return placing(async () => {
-      const rack = store.racks.find((r) => r.id === slot.rackId)
-      if (!rack || placements.has(slotId(slot))) return
-      if (!unplaced(currentStock(), store.racks, store.placements, rack.cellarId).has(wine.id)) return
-      await updatePlacements([place(slot, wine.id)])
-      await showLanded(slot)
-    })
+  async function placeIn(slot: Slot, wine: Wine) {
+    if (await placeBottle(slot, wine.id)) await showLanded(slot)
   }
 
   function pick(wine: Wine) {
@@ -210,24 +195,13 @@
     const p = selectedPlacement!
     if (!confirm(t('rack.drinkConfirm', { name: wineLabel(selectedWine!) }))) return
     selected = null
-    const consume = {
-      id: crypto.randomUUID(),
-      wineId: p.wineId,
-      date: today(),
-      kind: 'consume' as const,
-      quantity: 1,
-      cellarId,
-      toCellarId: null,
-      unitPrice: null,
-      note: '',
-    }
-    await addMovements([consume], [p.id])
+    await drinkBottle(p)
   }
 
   async function unplace() {
     const p = selectedPlacement!
     selected = null
-    await updatePlacements([], [p.id])
+    await unplaceBottle(p.id)
   }
 
   function startMove() {
@@ -236,11 +210,7 @@
   }
 
   async function moveUp(i: number) {
-    const [a, b] = [racks[i - 1], racks[i]]
-    await saveRacks([
-      { ...a, position: b.position },
-      { ...b, position: a.position },
-    ])
+    await swapRacks(racks[i - 1].id, racks[i].id)
   }
 
   function selectCellar(id: string) {

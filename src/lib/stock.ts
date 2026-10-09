@@ -37,6 +37,20 @@ export function bottlesOf(stock: Stock, wineId: string, cellarId?: string): numb
   return total
 }
 
+/** Whether recording `movements` leaves every cellar they take bottles from at zero or more. */
+export function withinStock(stock: Stock, movements: Movement[]): boolean {
+  const taken = new Map<string, Map<string, number>>()
+  for (const m of movements) {
+    if (m.kind === 'add') continue
+    const cellars = taken.get(m.wineId) ?? new Map<string, number>()
+    cellars.set(m.cellarId, (cellars.get(m.cellarId) ?? 0) + m.quantity)
+    taken.set(m.wineId, cellars)
+  }
+  for (const [wineId, cellars] of taken)
+    for (const [cellarId, n] of cellars) if (bottlesOf(stock, wineId, cellarId) < n) return false
+  return true
+}
+
 /** Average price paid per bottle across priced additions, or null if none is priced. */
 export function averageBuyPrice(movements: Movement[], wineId: string): number | null {
   let bottles = 0

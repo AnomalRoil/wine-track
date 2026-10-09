@@ -59,6 +59,13 @@ export function unplaced(stock: Stock, racks: Rack[], placements: Placement[], c
   return out
 }
 
+/** Whether a bottle of `wineId` can go in `slot`: the slot is empty and inside its rack, and the rack's cellar has a bottle of the wine in no slot. */
+export function canPlace(slot: Slot, wineId: string, racks: Rack[], placements: Placement[], stock: Stock): boolean {
+  const rack = racks.find((r) => r.id === slot.rackId)
+  if (!rack || !fits(rack, slot) || placements.some((p) => p.id === slotId(slot))) return false
+  return unplaced(stock, racks, placements, rack.cellarId).has(wineId)
+}
+
 /** How many of the `placed` slots empty when `quantity` of the `available` bottles leave the cellar. */
 export function slotsFreed(available: number, quantity: number, placed: number): number {
   return Math.min(placed, Math.max(0, placed - (available - quantity)))

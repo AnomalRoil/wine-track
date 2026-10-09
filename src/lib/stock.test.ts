@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageBuyPrice, averageBuyPrices, bottlesOf, computeStock, emptyCellar } from './stock'
+import { averageBuyPrice, averageBuyPrices, bottlesOf, computeStock, emptyCellar, withinStock } from './stock'
 import { makeMovement as mv } from './testing'
 
 const movements = [
@@ -59,4 +59,30 @@ describe('emptyCellar', () => {
     const out = emptyCellar(stock, 'cave', null, '2026-10-09', id)
     expect(out).toEqual([mv({ id: 'new2', date: '2026-10-09', kind: 'adjust', quantity: 2, cellarId: 'cave' })])
   })
+})
+
+describe('withinStock', () => {
+  // home: w1 4, cave: w1 2, w2 none
+  const stock = computeStock(movements)
+  const cases = [
+    { name: 'consume within stock', movements: [mv({ kind: 'consume', quantity: 4, cellarId: 'home' })], want: true },
+    { name: 'consume beyond stock', movements: [mv({ kind: 'consume', quantity: 5, cellarId: 'home' })], want: false },
+    { name: 'gift from an emptied wine', movements: [mv({ wineId: 'w2', kind: 'gift', quantity: 1, cellarId: 'cave' })], want: false },
+    {
+      name: 'transfer beyond stock',
+      movements: [mv({ kind: 'transfer', quantity: 3, cellarId: 'cave', toCellarId: 'home' })],
+      want: false,
+    },
+    {
+      name: 'removals summed per cellar',
+      movements: [mv({ kind: 'consume', quantity: 1, cellarId: 'cave' }), mv({ kind: 'gift', quantity: 2, cellarId: 'cave' })],
+      want: false,
+    },
+    { name: 'additions', movements: [mv({ wineId: 'w2', quantity: 3, cellarId: 'cave' })], want: true },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(withinStock(stock, c.movements)).toBe(c.want)
+    })
+  }
 })

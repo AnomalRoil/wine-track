@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellarLosing, matchesPerLayer, moveTransfers, outside, place, placementsOf, planMove, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
+import { canPlace, cellarLosing, matchesPerLayer, moveTransfers, outside, place, placementsOf, planMove, slotName, slotsFreed, stalePlacements, unplaced, type Slot } from './racks'
 import { computeStock } from './stock'
 import { makeMovement as mv } from './testing'
 import type { Rack } from './types'
@@ -196,6 +196,26 @@ describe('planMove', () => {
       const got = planMove(from, c.to, c.racks, c.placements, '2026-10-09', () => 'id')
       const shape = got && { ...got, transfers: got.transfers.map((m) => [m.wineId, m.cellarId, m.toCellarId]) }
       expect(shape).toEqual(c.want)
+    })
+  }
+})
+
+describe('canPlace', () => {
+  // home holds 3 w1 and 1 w2; w2 already sits in r1.
+  const placements = [place({ rackId: 'r1', layer: 0, row: 0, column: 0 }, 'w2')]
+  const slot = (overrides: Partial<Slot> = {}): Slot => ({ rackId: 'r1', layer: 0, row: 1, column: 1, ...overrides })
+  const cases = [
+    { name: 'empty slot, unplaced bottle', slot: slot(), wineId: 'w1', want: true },
+    { name: 'filled slot', slot: slot({ row: 0, column: 0 }), wineId: 'w1', want: false },
+    { name: 'every bottle placed', slot: slot(), wineId: 'w2', want: false },
+    { name: 'no bottle in the rack cellar', slot: slot({ rackId: 'r3' }), wineId: 'w2', want: false },
+    { name: 'row removed by a resize', slot: slot({ row: 3 }), wineId: 'w1', want: false },
+    { name: 'back layer of a single-layer rack', slot: slot({ layer: 1 }), wineId: 'w1', want: false },
+    { name: 'unknown rack', slot: slot({ rackId: 'gone' }), wineId: 'w1', want: false },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(canPlace(c.slot, c.wineId, racks, placements, stock)).toBe(c.want)
     })
   }
 })

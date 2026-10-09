@@ -73,12 +73,13 @@
       unitPrice: mode === 'add' ? (unitPrice ?? null) : null,
       note: note.trim(),
     }
+    let saved: boolean
     try {
-      await addMovements([movement], freed)
+      saved = await addMovements([movement], freed)
     } finally {
       saving = false
     }
-    ondone()
+    if (saved) ondone()
   }
 </script>
 

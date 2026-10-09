@@ -3,7 +3,7 @@
   import { t } from '../lib/i18n.svelte'
   import { rackName } from '../lib/labels'
   import { MAX_COLUMNS, MAX_ROWS, outside, racksOf } from '../lib/racks'
-  import { removeRack, saveRacks, store } from '../lib/store.svelte'
+  import { addRack, removeRack, store, updateRack } from '../lib/store.svelte'
   import { RACK_LAYOUTS, type Rack } from '../lib/types'
   import BottleGlyph from './BottleGlyph.svelte'
 
@@ -42,7 +42,7 @@
     const next = { ...$state.snapshot(draft), name: draft.name.trim() }
     const dropped = outside(next, store.placements)
     if (dropped.length > 0 && !confirm(t('rack.resizeConfirm', { n: dropped.length }))) return
-    await saveRacks([next], dropped.map((p) => p.id))
+    await (rack ? updateRack(next) : addRack(next))
     ondone()
   }
 

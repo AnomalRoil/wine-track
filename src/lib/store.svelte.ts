@@ -1,9 +1,10 @@
 import { withAging } from './aging'
 import * as db from './db'
 import { defaultCellar, normalizeCellar } from './migrate'
-import { computeStock, emptyCellar } from './stock'
+import { computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
-import { stalePlacements } from './racks'
+import { canPlace, outside, place, planMove, stalePlacements, type Slot } from './racks'
+import { serial } from './serial'
 import { normalizeTasting } from './tasting'
 import type { Cellar, Movement, Photo, Placement, Rack, Tasting, Wine } from './types'
 
@@ -20,6 +21,12 @@ export const store = $state({
 })
 
 const stock = $derived(computeStock(store.movements))
+
+/**
+ * Runs every write to stock, slots, racks or cellars in turn. Each write checks the
+ * state the previous ones committed, whichever view or screen started it.
+ */
+const writes = serial()
 
 /** Current bottles per cellar per wine, recomputed when movements change. */
 export function currentStock() {
@@ -77,12 +84,14 @@ export async function saveWine(wine: Wine): Promise<void> {
   else store.wines.push(wine)
 }
 
-export async function removeWine(wine: Wine): Promise<void> {
-  await db.deleteWine($state.snapshot(wine))
-  store.wines = store.wines.filter((w) => w.id !== wine.id)
-  store.tastings = store.tastings.filter((t) => t.wineId !== wine.id)
-  store.movements = store.movements.filter((m) => m.wineId !== wine.id)
-  store.placements = store.placements.filter((p) => p.wineId !== wine.id)
+export function removeWine(wine: Wine): Promise<void> {
+  return writes(async () => {
+    await db.deleteWine($state.snapshot(wine))
+    store.wines = store.wines.filter((w) => w.id !== wine.id)
+    store.tastings = store.tastings.filter((t) => t.wineId !== wine.id)
+    store.movements = store.movements.filter((m) => m.wineId !== wine.id)
+    store.placements = store.placements.filter((p) => p.wineId !== wine.id)
+  })
 }
 
 /** Saves a tasting with the photos it gained; `removedPhotoIds` are photos it no longer shows. */
@@ -100,25 +109,85 @@ export async function removeTasting(tasting: Tasting): Promise<void> {
 
 /**
  * Records movements; `freed` lists the placements of bottles that left their slot
- * and `placed` the bottles that moved into one.
+ * and `placed` the bottles that moved into one. False when a movement would take
+ * more bottles than its cellar holds.
  */
-export async function addMovements(movements: Movement[], freed: string[] = [], placed: Placement[] = []): Promise<void> {
+export function addMovements(movements: Movement[], freed: string[] = [], placed: Placement[] = []): Promise<boolean> {
+  return writes(() => recordMovements(movements, freed, placed))
+}
+
+async function recordMovements(movements: Movement[], freed: string[], placed: Placement[]): Promise<boolean> {
+  if (!withinStock(stock, movements)) return false
   await db.putMovements(movements, freed, placed)
   store.movements.push(...movements)
-  if (freed.length === 0 && placed.length === 0) return
+  if (freed.length === 0 && placed.length === 0) return true
   const gone = new Set([...freed, ...placed.map((p) => p.id)])
   store.placements = [...store.placements.filter((p) => !gone.has(p.id)), ...placed]
+  return true
+}
+
+/** Records drinking the bottle in `placement` and empties its slot. False when the slot no longer holds it. */
+export function drink(placement: Placement): Promise<boolean> {
+  return writes(async () => {
+    const rack = store.racks.find((r) => r.id === placement.rackId)
+    if (!rack || !store.placements.some((p) => p.id === placement.id && p.wineId === placement.wineId)) return false
+    const consume: Movement = {
+      id: crypto.randomUUID(),
+      wineId: placement.wineId,
+      date: today(),
+      kind: 'consume',
+      quantity: 1,
+      cellarId: rack.cellarId,
+      toCellarId: null,
+      unitPrice: null,
+      note: '',
+    }
+    return recordMovements([consume], [placement.id], [])
+  })
+}
+
+/** Puts a bottle of `wineId` in `slot`. False when the slot is filled or gone, or every bottle is placed. */
+export function placeBottle(slot: Slot, wineId: string): Promise<boolean> {
+  return writes(async () => {
+    if (!canPlace(slot, wineId, store.racks, store.placements, stock)) return false
+    await commitPlacements([place(slot, wineId)], [])
+    return true
+  })
+}
+
+/** Moves the bottle in `from` to `to`, recording transfers between cellars. False when the move no longer applies. */
+export function moveBottle(from: Placement, to: Slot): Promise<boolean> {
+  return writes(async () => {
+    const move = planMove(from, to, store.racks, store.placements, today(), () => crypto.randomUUID())
+    if (!move) return false
+    if (move.transfers.length > 0) return recordMovements(move.transfers, move.freed, move.put)
+    await commitPlacements(move.put, move.freed)
+    return true
+  })
+}
+
+/** Empties a slot. */
+export function unplace(id: string): Promise<void> {
+  return writes(() => commitPlacements([], [id]))
+}
+
+async function commitPlacements(put: Placement[], remove: string[]): Promise<void> {
+  await db.updatePlacements(put, remove)
+  const gone = new Set([...remove, ...put.map((p) => p.id)])
+  store.placements = [...store.placements.filter((p) => !gone.has(p.id)), ...put]
 }
 
 /** Deletes a movement; `freed` lists the slots to empty first when its bottles disappear. */
-export async function removeMovement(id: string, freed: string[] = []): Promise<void> {
-  await db.deleteMovement(id, freed)
-  store.movements = store.movements.filter((m) => m.id !== id)
-  if (freed.length > 0) store.placements = store.placements.filter((p) => !freed.includes(p.id))
-  await freeStalePlacements()
+export function removeMovement(id: string, freed: string[] = []): Promise<void> {
+  return writes(async () => {
+    await db.deleteMovement(id, freed)
+    store.movements = store.movements.filter((m) => m.id !== id)
+    if (freed.length > 0) store.placements = store.placements.filter((p) => !freed.includes(p.id))
+    await freeStalePlacements()
+  })
 }
 
-export async function saveCellars(cellars: Cellar[]): Promise<void> {
+async function putCellars(cellars: Cellar[]): Promise<void> {
   await db.putCellars($state.snapshot(cellars))
   for (const c of cellars) {
     const i = store.cellars.findIndex((x) => x.id === c.id)
@@ -127,34 +196,42 @@ export async function saveCellars(cellars: Cellar[]): Promise<void> {
   }
 }
 
-let storageWrites = Promise.resolve()
+export function addCellar(cellar: Cellar): Promise<void> {
+  return writes(() => putCellars([cellar]))
+}
 
-/**
- * Changes a cellar's storage answers. The store only changes once a write lands, so writes
- * are queued and each builds on the cellar the previous one stored.
- */
-export function patchStorage(cellarId: string, patch: (storage: Cellar['storage']) => Cellar['storage']): Promise<void> {
-  const run = async () => {
-    const current = store.cellars.find((c) => c.id === cellarId)
-    if (current) await saveCellars([{ ...current, storage: patch(current.storage) }])
-  }
-  storageWrites = storageWrites.then(run, run)
-  return storageWrites
+/** Changes a cellar, applying `patch` to the cellar as the previous writes left it. */
+export function patchCellar(id: string, patch: (cellar: Cellar) => Cellar): Promise<void> {
+  return writes(async () => {
+    const current = store.cellars.find((c) => c.id === id)
+    if (current) await putCellars([patch(current)])
+  })
+}
+
+/** Swaps the display positions of two cellars. */
+export function swapCellars(a: string, b: string): Promise<void> {
+  return writes(async () => {
+    const [x, y] = [store.cellars.find((c) => c.id === a), store.cellars.find((c) => c.id === b)]
+    if (x && y) await putCellars([{ ...x, position: y.position }, { ...y, position: x.position }])
+  })
 }
 
 /** Deletes a cellar, moving its bottles to `targetId` or, when null, out of stock. */
-export async function removeCellar(id: string, targetId: string | null): Promise<void> {
-  const emptying = emptyCellar(stock, id, targetId, today(), () => crypto.randomUUID())
-  await db.deleteCellar(id, emptying)
-  store.movements.push(...emptying)
-  store.cellars = store.cellars.filter((c) => c.id !== id)
-  const rackIds = new Set(store.racks.filter((r) => r.cellarId === id).map((r) => r.id))
-  store.racks = store.racks.filter((r) => !rackIds.has(r.id))
-  store.placements = store.placements.filter((p) => !rackIds.has(p.rackId))
+export function removeCellar(id: string, targetId: string | null): Promise<void> {
+  return writes(async () => {
+    const emptying = emptyCellar(stock, id, targetId, today(), () => crypto.randomUUID())
+    await db.deleteCellar(id, emptying)
+    store.movements.push(...emptying)
+    store.cellars = store.cellars.filter((c) => c.id !== id)
+    const rackIds = new Set(store.racks.filter((r) => r.cellarId === id).map((r) => r.id))
+    store.racks = store.racks.filter((r) => !rackIds.has(r.id))
+    store.placements = store.placements.filter((p) => !rackIds.has(p.rackId))
+  })
 }
 
-/** Saves racks; `dropped` lists placements a resize left outside them. */
-export async function saveRacks(racks: Rack[], dropped: string[] = []): Promise<void> {
+/** Saves racks and empties the slots they no longer hold. */
+async function putRacks(racks: Rack[]): Promise<void> {
+  const dropped = racks.flatMap((r) => outside(r, store.placements)).map((p) => p.id)
   await db.putRacks($state.snapshot(racks), dropped)
   for (const r of racks) {
     const i = store.racks.findIndex((x) => x.id === r.id)
@@ -164,23 +241,40 @@ export async function saveRacks(racks: Rack[], dropped: string[] = []): Promise<
   if (dropped.length > 0) store.placements = store.placements.filter((p) => !dropped.includes(p.id))
 }
 
-export async function removeRack(id: string): Promise<void> {
-  await db.deleteRack(id)
-  store.racks = store.racks.filter((r) => r.id !== id)
-  store.placements = store.placements.filter((p) => p.rackId !== id)
+export function addRack(rack: Rack): Promise<void> {
+  return writes(() => putRacks([rack]))
 }
 
-/** Puts bottles in slots and empties others, atomically. */
-export async function updatePlacements(put: Placement[], remove: string[] = []): Promise<void> {
-  await db.updatePlacements(put, remove)
-  const gone = new Set([...remove, ...put.map((p) => p.id)])
-  store.placements = [...store.placements.filter((p) => !gone.has(p.id)), ...put]
+/** Saves an edited rack, keeping its current position; bottles outside its new size leave their slots. */
+export function updateRack(rack: Rack): Promise<void> {
+  return writes(async () => {
+    const current = store.racks.find((r) => r.id === rack.id)
+    if (current) await putRacks([{ ...rack, position: current.position }])
+  })
+}
+
+/** Swaps the display positions of two racks. */
+export function swapRacks(a: string, b: string): Promise<void> {
+  return writes(async () => {
+    const [x, y] = [store.racks.find((r) => r.id === a), store.racks.find((r) => r.id === b)]
+    if (x && y) await putRacks([{ ...x, position: y.position }, { ...y, position: x.position }])
+  })
+}
+
+export function removeRack(id: string): Promise<void> {
+  return writes(async () => {
+    await db.deleteRack(id)
+    store.racks = store.racks.filter((r) => r.id !== id)
+    store.placements = store.placements.filter((p) => p.rackId !== id)
+  })
 }
 
 /** Commits an import atomically: new wines, new cellars and stock additions. */
-export async function applyImport(data: Pick<db.Data, 'wines' | 'cellars' | 'movements'>): Promise<void> {
-  await db.putImport(data)
-  store.wines.push(...data.wines)
-  store.cellars.push(...data.cellars)
-  store.movements.push(...data.movements)
+export function applyImport(data: Pick<db.Data, 'wines' | 'cellars' | 'movements'>): Promise<void> {
+  return writes(async () => {
+    await db.putImport(data)
+    store.wines.push(...data.wines)
+    store.cellars.push(...data.cellars)
+    store.movements.push(...data.movements)
+  })
 }
