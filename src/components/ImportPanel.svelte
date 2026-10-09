@@ -7,7 +7,7 @@
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
-  import { completeFromLwin, confidentMatch, displayName, type LwinWine } from '../lib/lwin'
+  import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
@@ -98,14 +98,16 @@
   }
 
   function toggleMatch(line: number, on: boolean) {
+    if (committing) return
     const original = unfilled.get(line)
+    const wine = lwinMatches.get(line)!
     const next = new Map(unfilled)
     if (on) next.set(line, rows!.find((r) => r.line === line)!.draft)
     else next.delete(line)
     unfilled = next
     rows = rows!.map((r) => {
       if (r.line !== line) return r
-      return { ...r, draft: on ? completeFromLwin(r.draft, lwinMatches.get(line)!) : original! }
+      return { ...r, draft: on ? completeFromLwin(r.draft, wine) : undoLwinCompletion(r.draft, original!, wine) }
     })
   }
 
@@ -113,7 +115,8 @@
     const todo = incomplete
     const batches = Math.ceil(todo.length / COMPLETION_BATCH)
     if (!confirm(t('io.completeConfirm', { n: todo.length, batches }))) return
-    const gen = ++generation
+    // Only a new file or leaving cancels it, so a pending LWIN lookup still lands.
+    const gen = generation
     completeError = null
     progress = { done: 0, total: todo.length }
     for (let i = 0; i < todo.length; i += COMPLETION_BATCH) {
@@ -239,6 +242,7 @@
             <input
               type="checkbox"
               checked={unfilled.has(row.line)}
+              disabled={committing}
               onchange={(e) => toggleMatch(row.line, e.currentTarget.checked)}
             />
             {t('lwin.importMatch', { name: displayName(lwinMatches.get(row.line)!) })}

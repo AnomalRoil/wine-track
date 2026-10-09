@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -212,6 +212,20 @@ describe('completeFromLwin', () => {
       color: 'white',
       lwin: '1066553',
     })
+  })
+})
+
+describe('undoLwinCompletion', () => {
+  const original = { ...emptyDraft(), name: 'Clos', color: 'other' as const }
+  const wine = byCode('1066553')
+
+  it('restores the fields it filled', () => {
+    expect(undoLwinCompletion(completeFromLwin(original, wine), original, wine)).toEqual(original)
+  })
+
+  it('keeps what was completed or edited since', () => {
+    const later = { ...completeFromLwin(original, wine), grapes: ['Chardonnay'], color: 'sweet' as const }
+    expect(undoLwinCompletion(later, original, wine)).toEqual({ ...original, grapes: ['Chardonnay'], color: 'sweet' })
   })
 })
 

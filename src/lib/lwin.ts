@@ -276,6 +276,13 @@ export function completeFromLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   }
 }
 
+/** Undoes completeFromLwin(original, wine) on `draft`, keeping the fields changed since. */
+export function undoLwinCompletion(draft: WineDraft, original: WineDraft, wine: LwinWine): WineDraft {
+  const filled = completeFromLwin(original, wine)
+  const back = <K extends 'region' | 'country' | 'color' | 'lwin'>(k: K) => (draft[k] === filled[k] ? original[k] : draft[k])
+  return { ...draft, region: back('region'), country: back('country'), color: back('color'), lwin: back('lwin') }
+}
+
 /**
  * A wine of the collection that `draft` repeats: same LWIN, vintage and size,
  * or same name, producer, vintage and size.
