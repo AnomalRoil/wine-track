@@ -135,6 +135,18 @@ describe('valueOverTime', () => {
     ])
   })
 
+  it('averages only the purchases made by each month', () => {
+    const wine = makeWine({ id: 'w', value: null })
+    const moves = [
+      makeMovement({ id: '1', wineId: 'w', quantity: 1, unitPrice: 10, date: '2026-01-05' }),
+      makeMovement({ id: '2', wineId: 'w', quantity: 1, unitPrice: 30, date: '2026-02-05' }),
+    ]
+    expect(valueOverTime([wine], moves, '2026-02-10')).toEqual([
+      { month: '2026-01', value: 10, invested: 10 },
+      { month: '2026-02', value: 40, invested: 40 },
+    ])
+  })
+
   it('ends on the current value once an estimate is cleared', () => {
     const wine = makeWine({ id: 'w', value: null, valueHistory: [{ date: '2026-01-05', value: 50 }] })
     const moves = [makeMovement({ wineId: 'w', quantity: 2, unitPrice: 20, date: '2026-01-02' })]

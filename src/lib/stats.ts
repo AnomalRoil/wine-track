@@ -163,14 +163,15 @@ function valueAt(wine: Wine, month: string, current: string, buy: number | undef
  */
 export function valueOverTime(wines: Wine[], movements: Movement[], today: string): ValuePoint[] {
   if (movements.length === 0) return []
-  const prices = averageBuyPrices(movements)
   const sorted = [...movements].sort((a, b) => a.date.localeCompare(b.date))
   const current = today.slice(0, 7)
   const points: ValuePoint[] = []
   let applied = 0
   for (let month = sorted[0].date.slice(0, 7); month <= current; month = addMonths(month, 1)) {
     while (applied < sorted.length && sorted[applied].date.slice(0, 7) <= month) applied++
-    const stock = computeStock(sorted.slice(0, applied))
+    const past = sorted.slice(0, applied)
+    const stock = computeStock(past)
+    const prices = averageBuyPrices(past)
     const point = { month, value: 0, invested: 0 }
     for (const { wine, bottles } of inStock(wines, stock)) {
       const buy = prices.get(wine.id)
