@@ -2,6 +2,7 @@
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
   import { putPhoto } from '../lib/db'
+  import { wineKey } from '../lib/csvImport'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
@@ -53,6 +54,14 @@
   let duplicate = $state.raw<Wine | null>(null)
   /** The duplicate the user chose to save past. */
   let allowedDuplicateId: string | null = null
+  let form = $state<WineForm>()
+
+  // A duplicate found for another name, producer, vintage, size or code no longer applies.
+  const identity = $derived(`${wineKey(draft)} ${draft.lwin}`)
+  $effect(() => {
+    void identity
+    untrack(() => (duplicate = null))
+  })
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -140,19 +149,35 @@
   }
 
   function saveAsNew() {
+    if (!form!.validate()) return
     allowedDuplicateId = duplicate!.id
     save()
   }
 
+  /** Stores the photo taken, once resized; null when there is none. */
+  async function storePhoto(): Promise<string | null> {
+    const blob = photoTask ? await photoTask.catch(() => null) : photoBlob
+    if (!blob) return null
+    const photoId = crypto.randomUUID()
+    await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
+    return photoId
+  }
+
   async function addToDuplicate() {
-    const wine = duplicate!
-    if (saving) return
+    if (saving || !form!.validate()) return
+    let wine = duplicate!
+    const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
     saving = true
     const current = session
     try {
-      if (quantity > 0) {
+      const photoId = wine.photoId ? null : await storePhoto()
+      if (photoId) {
+        wine = { ...wine, photoId }
+        await saveWine(wine)
+      }
+      if (stock.quantity > 0) {
         await addMovements([
-          { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', quantity, cellarId, unitPrice: unitPrice ?? null, toCellarId: null, note: '' },
+          { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', ...stock, toCellarId: null, note: '' },
         ])
       }
     } finally {
@@ -189,11 +214,7 @@
     const current = session
     const fields = { ...$state.snapshot(draft), ...cleanAging($state.snapshot(aging)) }
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
-    const blob = photoTask ? await photoTask.catch(() => null) : photoBlob
-    const photoId = blob ? crypto.randomUUID() : null
-    if (blob && photoId) {
-      await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
-    }
+    const photoId = await storePhoto()
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...fields,
@@ -256,7 +277,7 @@
       </div>
     </div>
   {/if}
-  <WineForm bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet extra()}
       {#if intoCellar}
         <label for="price">{t('stock.unitPrice')}</label>

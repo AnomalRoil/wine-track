@@ -84,15 +84,22 @@
     if (result.data.confidence === 'typical-blend') lookupNote = t('form.lookupTypical')
   }
 
-  function submit(e: SubmitEvent) {
-    e.preventDefault()
+  let form: HTMLFormElement
+
+  /** Commits the chips being typed and shows invalid fields; true when the draft can be saved. */
+  export function validate(): boolean {
     grapeInput.commit()
     tagInput.commit()
-    onsave()
+    return form.reportValidity()
+  }
+
+  function submit(e: SubmitEvent) {
+    e.preventDefault()
+    if (validate()) onsave()
   }
 </script>
 
-<form onsubmit={submit}>
+<form bind:this={form} onsubmit={submit}>
   <h1>{title}</h1>
 
   {#if photoUrl}
