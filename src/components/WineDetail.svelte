@@ -6,7 +6,7 @@
   import { emptyDraft, type WineDraft } from '../lib/extract'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
-  import { sizeLabel } from '../lib/labels'
+  import { sizeLabel, wineLabel } from '../lib/labels'
   import { removeTasting, removeWine, saveWine, store, tastingsFor } from '../lib/store.svelte'
   import type { Tasting, Wine } from '../lib/types'
   import AgingPanel from './AgingPanel.svelte'
@@ -52,10 +52,6 @@
     }
   })
 
-  function label(w: Wine): string {
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
-  }
-
   function startEdit() {
     if (!wine) return
     const { name, producer, vintage, grapes, region, country, color, sizeCl, tags } = wine
@@ -89,10 +85,10 @@
   function calendarItems(w: Wine): CalendarItem[] {
     const items: CalendarItem[] = []
     if (w.drinkBy) {
-      items.push({ uid: `${w.id}-drink`, date: w.drinkBy, summary: `${t('detail.drinkBy')}: ${label(w)}` })
+      items.push({ uid: `${w.id}-drink`, date: w.drinkBy, summary: `${t('detail.drinkBy')}: ${wineLabel(w)}` })
     }
     if (w.tasteAgainOn) {
-      items.push({ uid: `${w.id}-taste`, date: w.tasteAgainOn, summary: `${t('detail.tasteAgain')}: ${label(w)}` })
+      items.push({ uid: `${w.id}-taste`, date: w.tasteAgainOn, summary: `${t('detail.tasteAgain')}: ${wineLabel(w)}` })
     }
     return items
   }
@@ -117,7 +113,7 @@
 
   {#if photoUrl}
     <button class="photo" class:fullscreen onclick={() => (fullscreen = !fullscreen)}>
-      <img src={photoUrl} alt={label(wine)} />
+      <img src={photoUrl} alt={wineLabel(wine)} />
     </button>
   {/if}
 
