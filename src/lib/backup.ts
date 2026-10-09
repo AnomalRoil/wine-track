@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_YEAR, MIN_YEAR } from './aging'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
 import { normalizeTasting, SCALES, SHADES } from './tasting'
@@ -7,14 +8,15 @@ import { RACK_LAYOUTS } from './types'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
-const year = z.number().int().nullable().default(null)
+const calendarYear = z.number().int().min(MIN_YEAR).max(MAX_YEAR)
+const year = calendarYear.nullable().default(null)
 const axis = z.number().min(0).max(10)
 
 const WineV1Schema = z.object({
   id: z.string(),
   name: z.string(),
   producer: z.string(),
-  vintage: z.number().int().nullable(),
+  vintage: calendarYear.nullable(),
   grapes: z.array(z.string()),
   region: z.string(),
   country: z.string(),

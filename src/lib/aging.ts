@@ -19,6 +19,10 @@ export function withAging<T extends Partial<Aging>>(wine: T): T & Aging {
   return { ...NO_AGING, ...wine }
 }
 
+/** Calendar years the app accepts for vintages and drinking windows. */
+export const MIN_YEAR = 1800
+export const MAX_YEAR = 2200
+
 /** Window years in chronological order. */
 export const WINDOW_KEYS = ['drinkFrom', 'peakFrom', 'peakUntil', 'drinkUntil'] as const satisfies (keyof Aging)[]
 
@@ -71,18 +75,22 @@ export interface Timeline {
   segments: Segment[]
 }
 
-/** Phases year by year from the vintage (or first known year) to one year past the window. */
+/** Phases from the vintage (or first known year) to one year past the window. */
 export function timeline(a: Aging, vintage: number | null, year: number): Timeline | null {
   const years = bounds(a)
   if (years.length === 0) return null
   const start = Math.min(...years, year, vintage ?? Infinity)
   const end = Math.max(...years, year) + 2
+  // The phase only changes on a window year or the year after one.
+  const changes = [a.drinkFrom, a.peakFrom, a.peakUntil, a.drinkUntil].flatMap((y) => (y === null ? [] : [y, y + 1]))
+  const starts = [...new Set([start, ...changes.filter((y) => y > start && y < end)])].sort((x, y) => x - y)
   const segments: Segment[] = []
-  for (let y = start; y < end; y++) {
-    const phase = phaseOf(a, y)!
+  for (const [i, from] of starts.entries()) {
+    const phase = phaseOf(a, from)!
+    const to = starts[i + 1] ?? end
     const last = segments.at(-1)
-    if (last?.phase === phase) last.to = y + 1
-    else segments.push({ phase, from: y, to: y + 1 })
+    if (last?.phase === phase) last.to = to
+    else segments.push({ phase, from, to })
   }
   return { start, end, segments }
 }
@@ -127,14 +135,16 @@ export function neutralProfile(): TasteProfile {
 }
 
 function year(y: number | null): number | null {
-  return y === null ? null : Math.round(y)
+  if (y === null) return null
+  const rounded = Math.round(y)
+  return rounded >= MIN_YEAR && rounded <= MAX_YEAR ? rounded : null
 }
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n))
 }
 
-/** Cleans looked-up aging advice: whole years, ordered temperatures, profile axes within 0–10. */
+/** Cleans looked-up aging advice: whole years within MIN_YEAR–MAX_YEAR, ordered temperatures, profile axes within 0–10. */
 export function cleanAging(a: Aging): Aging {
   const temps = [a.servingMinC, a.servingMaxC]
   const [servingMinC, servingMaxC] =

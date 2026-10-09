@@ -124,6 +124,7 @@ describe('backup', () => {
   })
 
   const invalid: { name: string; json: string }[] = [
+    { name: 'oversized drinking year', json: JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, drinkUntil: 1_000_000_000 }], tastings: [], cellars: [{ id: 'a', name: '', position: 0 }], movements: [], photos: [] }) },
     { name: 'not JSON', json: 'not json {' },
     { name: 'foreign JSON', json: '{"foo": "bar"}' },
     { name: 'wrong app', json: '{"app":"other","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[{"id":"a","name":"","position":0}],"movements":[],"photos":[]}' },
