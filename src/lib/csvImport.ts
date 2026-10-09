@@ -146,7 +146,8 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
   if (!index.has('name') && !index.has('producer')) return { ok: false, error: 'no-name-column' }
 
   const rows = lines.map((cells, i): ImportRow => {
-    const get = (c: Column) => (index.has(c) ? (cells[index.get(c)!] ?? '').trim() : '')
+    // Undoes the formula guard of toCsv.
+    const get = (c: Column) => (index.has(c) ? (cells[index.get(c)!] ?? '').trim().replace(/^'(?=[=+\-@])/, '') : '')
     const errors: RowError[] = []
 
     const vintage = parseVintage(get('vintage'), currentYear + 1)
