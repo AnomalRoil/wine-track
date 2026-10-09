@@ -49,6 +49,13 @@ describe('exportCsv', () => {
   })
 })
 
+it('reimports a nonstandard size in centiliters', () => {
+  const odd = [makeWine({ id: 'w', name: 'Big', sizeCl: 500 })]
+  const parsed = parseImport(exportCsv(odd, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  expect(parsed.rows[0].draft.sizeCl).toBe(500)
+})
+
 describe('templateCsv', () => {
   it('holds the header only', () => {
     expect(cellsOf(templateCsv())).toEqual([HEADER])
