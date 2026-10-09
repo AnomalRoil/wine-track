@@ -1,3 +1,5 @@
+import type { SCALES, Shade } from './tasting'
+
 export type WineColor =
   | 'red'
   | 'white'
@@ -141,6 +143,31 @@ export interface Tasting {
   /** 1.0–5.0, one decimal. */
   rating: number
   notes: string
+  /** Detailed tasting sheet; absent for a quick tasting. */
+  sheet?: TastingSheet
+}
+
+type Answer<K extends keyof typeof SCALES> = (typeof SCALES)[K][number] | null
+
+export interface TastingSheet {
+  people: string[]
+  place: string
+  meal: string
+  /** Photos taken during the tasting, in the `photos` store. */
+  photoIds: string[]
+  clarity: Answer<'clarity'>
+  colorIntensity: Answer<'colorIntensity'>
+  shade: Shade | null
+  noseIntensity: Answer<'noseIntensity'>
+  openness: Answer<'openness'>
+  /** Aroma ids from `AROMA_GROUPS`. */
+  aromas: string[]
+  sweetness: Answer<'sweetness'>
+  acidity: Answer<'acidity'>
+  tannin: Answer<'tannin'>
+  body: Answer<'body'>
+  finish: Answer<'finish'>
+  conclusion: string
 }
 
 export interface Photo {

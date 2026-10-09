@@ -74,16 +74,19 @@ export async function putWine(wine: Wine): Promise<void> {
   await done(tx)
 }
 
-/** Deletes the wine plus its tastings, movements and photo in one transaction. */
+/** Deletes the wine plus its tastings, movements and photos in one transaction. */
 export async function deleteWine(wine: Wine): Promise<void> {
   const d = await openDb()
   const tx = d.transaction(['wines', 'tastings', 'movements', 'photos'], 'readwrite')
   tx.objectStore('wines').delete(wine.id)
   if (wine.photoId) tx.objectStore('photos').delete(wine.photoId)
-  for (const name of ['tastings', 'movements'] as const) {
-    const keys = await req(tx.objectStore(name).index('wineId').getAllKeys(wine.id))
-    for (const key of keys) tx.objectStore(name).delete(key)
+  const tastings = await req(tx.objectStore('tastings').index('wineId').getAll(wine.id) as IDBRequest<Tasting[]>)
+  for (const tasting of tastings) {
+    tx.objectStore('tastings').delete(tasting.id)
+    for (const id of tasting.sheet?.photoIds ?? []) tx.objectStore('photos').delete(id)
   }
+  const movements = await req(tx.objectStore('movements').index('wineId').getAllKeys(wine.id))
+  for (const key of movements) tx.objectStore('movements').delete(key)
   await done(tx)
 }
 
@@ -117,17 +120,21 @@ export async function deleteCellar(id: string, emptying: Movement[]): Promise<vo
   await done(tx)
 }
 
-export async function putTasting(tasting: Tasting): Promise<void> {
+/** Saves a tasting with its new photos and deletes the photos it no longer uses, atomically. */
+export async function putTasting(tasting: Tasting, added: Photo[] = [], removedPhotoIds: string[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('tastings', 'readwrite')
+  const tx = d.transaction(['tastings', 'photos'], 'readwrite')
   tx.objectStore('tastings').put(tasting)
+  for (const p of added) tx.objectStore('photos').put(p)
+  for (const id of removedPhotoIds) tx.objectStore('photos').delete(id)
   await done(tx)
 }
 
-export async function deleteTasting(id: string): Promise<void> {
+export async function deleteTasting(tasting: Tasting): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('tastings', 'readwrite')
-  tx.objectStore('tastings').delete(id)
+  const tx = d.transaction(['tastings', 'photos'], 'readwrite')
+  tx.objectStore('tastings').delete(tasting.id)
+  for (const id of tasting.sheet?.photoIds ?? []) tx.objectStore('photos').delete(id)
   await done(tx)
 }
 

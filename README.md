@@ -9,6 +9,7 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Snap a bottle photo; the Claude API extracts name, producer, vintage, grapes, region, and color for you to confirm.
 - Optional online lookup of grape varieties when the label doesn't state them.
 - Tasting notes with half-star ratings; filter the collection by vintage, grape, color, rating, or free text.
+- Optional detailed tasting sheet: who, where and what you ate, photos, appearance, nose with an aroma picker by family, palate and conclusion; summarized on the wine page and in the journal.
 - Cellars: several named cellars, bottle sizes, additions with purchase price, removals (drunk, gifted, stock adjustment) and transfers between cellars.
 - Journal of every stock movement and tasting.
 - Value tracking: average purchase price, current value per bottle with history, added value of the bottles in stock.

@@ -3,7 +3,8 @@ import * as db from './db'
 import { defaultCellar } from './migrate'
 import { computeStock, emptyCellar } from './stock'
 import { today } from './due'
-import type { Cellar, Movement, Tasting, Wine } from './types'
+import { normalizeTasting } from './tasting'
+import type { Cellar, Movement, Photo, Tasting, Wine } from './types'
 
 export const store = $state({
   wines: [] as Wine[],
@@ -31,7 +32,7 @@ export async function initStore(): Promise<void> {
     await db.putCellars(all.cellars)
   }
   store.wines = all.wines.map(withAging)
-  store.tastings = all.tastings
+  store.tastings = all.tastings.map(normalizeTasting)
   store.cellars = all.cellars
   store.movements = all.movements
   store.loaded = true
@@ -63,16 +64,17 @@ export async function removeWine(wine: Wine): Promise<void> {
   store.movements = store.movements.filter((m) => m.wineId !== wine.id)
 }
 
-export async function saveTasting(tasting: Tasting): Promise<void> {
-  await db.putTasting($state.snapshot(tasting))
+/** Saves a tasting with the photos it gained; `removedPhotoIds` are photos it no longer shows. */
+export async function saveTasting(tasting: Tasting, added: Photo[] = [], removedPhotoIds: string[] = []): Promise<void> {
+  await db.putTasting($state.snapshot(tasting), added, removedPhotoIds)
   const i = store.tastings.findIndex((t) => t.id === tasting.id)
   if (i >= 0) store.tastings[i] = tasting
   else store.tastings.push(tasting)
 }
 
-export async function removeTasting(id: string): Promise<void> {
-  await db.deleteTasting(id)
-  store.tastings = store.tastings.filter((t) => t.id !== id)
+export async function removeTasting(tasting: Tasting): Promise<void> {
+  await db.deleteTasting($state.snapshot(tasting))
+  store.tastings = store.tastings.filter((t) => t.id !== tasting.id)
 }
 
 export async function addMovements(movements: Movement[]): Promise<void> {

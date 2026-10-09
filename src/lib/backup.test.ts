@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { NO_AGING } from './aging'
 import { parseBackup, serializeBackup } from './backup'
-import { makeMovement, makeWine } from './testing'
+import { emptySheet } from './tasting'
+import { makeMovement, makeTasting, makeWine } from './testing'
 import type { Tasting } from './types'
 
 const wine = makeWine({
@@ -77,6 +78,28 @@ describe('backup', () => {
       makeMovement({ id: 'w1-v1', wineId: 'w1', date: '2026-08-28', quantity: 3, cellarId: 'main' }),
     ])
     expect(parsed?.tastings).toEqual([tasting])
+  })
+
+  function v2(tastings: unknown[]): string {
+    return JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [], tastings, cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+  }
+
+  it('roundtrips a detailed tasting sheet', () => {
+    const detailed = makeTasting({ sheet: { ...emptySheet(), people: ['Ana'], photoIds: ['p2'], shade: 'ruby', aromas: ['cork', 'plum'], tannin: 'high' } })
+    expect(parseBackup(v2([detailed]))?.tastings).toEqual([detailed])
+  })
+
+  it('fills fields missing from an older tasting sheet', () => {
+    const parsed = parseBackup(v2([{ ...makeTasting(), sheet: { place: 'Lyon' } }]))
+    expect(parsed?.tastings).toEqual([makeTasting({ sheet: { ...emptySheet(), place: 'Lyon' } })])
+  })
+
+  it('drops an empty tasting sheet', () => {
+    expect(parseBackup(v2([{ ...makeTasting(), sheet: {} }]))?.tastings).toEqual([makeTasting()])
+  })
+
+  it('rejects an unknown tasting answer', () => {
+    expect(parseBackup(v2([{ ...makeTasting(), sheet: { acidity: 'extreme' } }]))).toBeNull()
   })
 
   const invalid: { name: string; json: string }[] = [
