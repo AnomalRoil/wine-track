@@ -5,6 +5,8 @@ import {
   formatServing,
   fromUnit,
   isWindowOrdered,
+  lastYear,
+  mergeAging,
   NO_AGING,
   phaseOf,
   timeline,
@@ -154,4 +156,23 @@ describe('cleanAging', () => {
       profile: { body: 10, tannin: 8, sweetness: 0, acidity: 5, fizz: 0 },
     })
   })
+})
+
+describe('mergeAging', () => {
+  it('takes found values and keeps current ones the lookup lacks', () => {
+    const current: Aging = { ...full, servingMinC: 14, decantMinutes: 30 }
+    const found: Aging = { ...NO_AGING, drinkFrom: 2025, decantMinutes: 0, profile: { body: 7, tannin: 6, sweetness: 0, acidity: 5, fizz: 0 } }
+    expect(mergeAging(current, found)).toEqual({ ...current, drinkFrom: 2025, decantMinutes: 0, profile: found.profile })
+  })
+})
+
+describe('lastYear', () => {
+  const cases: { name: string; a: Aging; want: number }[] = [
+    { name: 'drinkUntil', a: full, want: 2036 },
+    { name: 'peakUntil fallback', a: win(2020, null, 2030, null), want: 2030 },
+    { name: 'open-ended', a: win(2020, null, null, null), want: Infinity },
+  ]
+  for (const c of cases) {
+    it(c.name, () => expect(lastYear(c.a)).toBe(c.want))
+  }
 })

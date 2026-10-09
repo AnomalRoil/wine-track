@@ -144,3 +144,17 @@ export function cleanAging(a: Aging): Aging {
     profile,
   }
 }
+
+/** Fills `current` with every value a lookup found, keeping what it did not find. */
+export function mergeAging(current: Aging, found: Aging): Aging {
+  const merged = { ...current }
+  for (const key of Object.keys(NO_AGING) as (keyof Aging)[]) {
+    if (found[key] !== null) Object.assign(merged, { [key]: found[key] })
+  }
+  return merged
+}
+
+/** Last year worth drinking, for ordering wines within a phase; Infinity when open-ended. */
+export function lastYear(a: Aging): number {
+  return a.drinkUntil ?? a.peakUntil ?? Infinity
+}

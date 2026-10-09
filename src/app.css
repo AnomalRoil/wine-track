@@ -8,6 +8,10 @@
   --accent-text: #ffffff;
   --danger: #b3261e;
   --star: #c9972a;
+  --phase-youth: #3f6fa3;
+  --phase-maturity: #2f7d4f;
+  --phase-peak: #a87a12;
+  --phase-decline: #a4462a;
   color-scheme: light dark;
 }
 
@@ -21,6 +25,10 @@
     --accent: #b05561;
     --accent-text: #ffffff;
     --danger: #ff6b5e;
+    --phase-youth: #7aa7d6;
+    --phase-maturity: #6cbf86;
+    --phase-peak: #e0b44f;
+    --phase-decline: #e0805c;
   }
 }
 

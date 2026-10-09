@@ -10,15 +10,15 @@ function ctx(tastings: Tasting[] = []): FilterContext {
     makeMovement({ id: 'm2', wineId: 'w1', quantity: 1, cellarId: 'other', unitPrice: 20 }),
     makeMovement({ id: 'm3', wineId: 'w1', kind: 'consume', quantity: 1, cellarId: 'other' }),
   ]
-  return { tastings, stock: computeStock(movements), buyPrices: new Map([['w1', 20], ['w2', 40]]) }
+  return { tastings, stock: computeStock(movements), buyPrices: new Map([['w1', 20], ['w2', 40]]), year: 2026 }
 }
 
 function tasting(overrides: Partial<Tasting>): Tasting {
   return { id: 't1', wineId: 'w1', date: '2026-01-01', rating: 3, notes: '', ...overrides }
 }
 
-const chablis = wine({ id: 'w1', name: 'Chablis', producer: 'Dauvissat', vintage: 2020, grapes: ['Chardonnay'], color: 'white', region: 'Chablis', country: 'France', tags: ['Fish'], createdAt: 1 })
-const margaux = wine({ id: 'w2', name: 'Château Margaux', producer: 'Margaux', vintage: 2015, grapes: ['Cabernet Sauvignon', 'Merlot'], color: 'red', region: 'Margaux', country: 'France', value: 500, createdAt: 2 })
+const chablis = wine({ id: 'w1', name: 'Chablis', producer: 'Dauvissat', vintage: 2020, grapes: ['Chardonnay'], color: 'white', region: 'Chablis', country: 'France', tags: ['Fish'], createdAt: 1, drinkFrom: 2021, drinkUntil: 2025 })
+const margaux = wine({ id: 'w2', name: 'Château Margaux', producer: 'Margaux', vintage: 2015, grapes: ['Cabernet Sauvignon', 'Merlot'], color: 'red', region: 'Margaux', country: 'France', value: 500, createdAt: 2, drinkFrom: 2022, peakFrom: 2026, peakUntil: 2040 })
 const champagne = wine({ id: 'w3', name: 'Brut Réserve', producer: 'Billecart', vintage: null, grapes: ['chardonnay', 'Pinot Noir'], color: 'sparkling', country: 'France', tags: ['fish', 'Party'], wished: true, value: 45, createdAt: 3 })
 const wines = [chablis, margaux, champagne]
 
@@ -40,6 +40,8 @@ describe('filterWines', () => {
     { name: 'emptied cellar', patch: { cellarId: 'other' }, want: [] },
     { name: 'tag is case-insensitive', patch: { tag: 'FISH' }, want: ['w1', 'w3'] },
     { name: 'search by tag', patch: { search: 'party' }, want: ['w3'] },
+    { name: 'phase', patch: { phases: ['peak'] }, want: ['w2'] },
+    { name: 'phases exclude unknown windows', patch: { phases: ['decline', 'peak'] }, want: ['w1', 'w2'] },
   ]
   for (const c of cases) {
     it(c.name, () => {
@@ -72,6 +74,14 @@ describe('sortWines', () => {
   })
   it('value puts unvalued last', () => {
     expect(sortWines(wines, ctx(), 'value').map((w) => w.id)).toEqual(['w2', 'w3', 'w1'])
+  })
+  it('urgency puts declining first and unknown windows last', () => {
+    expect(sortWines([champagne, margaux, chablis], ctx(), 'urgency').map((w) => w.id)).toEqual(['w1', 'w2', 'w3'])
+  })
+  it('urgency orders a phase by last drinking year', () => {
+    const late = wine({ id: 'late', drinkUntil: 2030 })
+    const early = wine({ id: 'early', drinkUntil: 2027 })
+    expect(sortWines([late, early], ctx(), 'urgency').map((w) => w.id)).toEqual(['early', 'late'])
   })
   it('buyPrice puts unpriced last', () => {
     expect(sortWines(wines, ctx(), 'buyPrice').map((w) => w.id)).toEqual(['w2', 'w1', 'w3'])
