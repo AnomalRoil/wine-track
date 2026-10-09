@@ -5,6 +5,7 @@
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
+  import { pushEntry } from './lib/navigation'
   import { MORE_SCREENS, type Screen } from './lib/screens'
   import { t } from './lib/i18n.svelte'
   import { initStore, store } from './lib/store.svelte'
@@ -35,7 +36,7 @@
 
   function push(view: Omit<ViewState, 'depth' | 'tab'>) {
     const depth = ((history.state as ViewState | null)?.depth ?? 0) + 1
-    history.pushState({ ...view, tab, depth } satisfies ViewState, '')
+    pushEntry({ ...view, tab, depth } satisfies ViewState)
   }
 
   function openWine(wine: Wine) {
