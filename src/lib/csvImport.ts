@@ -135,9 +135,15 @@ export interface ImportRow {
   errors: RowError[]
 }
 
+/** Largest CSV file accepted, in bytes; a bigger file would freeze the page while parsing. */
+export const MAX_IMPORT_BYTES = 5_000_000
+
+/** Most data lines accepted in one import; the preview renders each one. */
+export const MAX_IMPORT_ROWS = 5000
+
 export type ParsedImport =
   | { ok: true; rows: ImportRow[]; ignored: string[] }
-  | { ok: false; error: 'empty' | 'no-name-column' }
+  | { ok: false; error: 'empty' | 'no-name-column' | 'too-many-rows' }
 
 /** Parses "12,50", "€ 12.50", "1 234,5" or "1,234.50"; NaN when not a number. */
 export function parseNumber(raw: string): number {
@@ -194,6 +200,7 @@ function pickWindow(a: WindowYears): WindowYears {
 export function parseImport(text: string, currentYear: number): ParsedImport {
   const [first, ...lines] = parseCsv(text)
   if (!first) return { ok: false, error: 'empty' }
+  if (lines.length > MAX_IMPORT_ROWS) return { ok: false, error: 'too-many-rows' }
   const index = new Map<Column, number>()
   const ignored: string[] = []
   first.cells.forEach((h, i) => {

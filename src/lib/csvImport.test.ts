@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCompletion,
   incompleteRows,
+  MAX_IMPORT_ROWS,
   parseImport,
   parseNumber,
   planImport,
@@ -86,6 +87,7 @@ describe('parseImport', () => {
   const failures: { name: string; text: string; want: string }[] = [
     { name: 'empty file', text: '', want: 'empty' },
     { name: 'no name or producer column', text: 'vintage,quantity\n2019,1', want: 'no-name-column' },
+    { name: 'too many rows', text: 'name\n' + 'A\n'.repeat(MAX_IMPORT_ROWS + 1), want: 'too-many-rows' },
   ]
   for (const c of failures) {
     it(c.name, () => {

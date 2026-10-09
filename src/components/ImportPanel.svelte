@@ -1,7 +1,7 @@
 <script lang="ts">
   import { decodeText } from '../lib/csv'
   import { templateCsv } from '../lib/csvExport'
-  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
+  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
@@ -53,9 +53,16 @@
     if (!file) return
     reset()
     message = null
+    if (file.size > MAX_IMPORT_BYTES) {
+      message = t('io.tooLarge', { mb: MAX_IMPORT_BYTES / 1_000_000 })
+      return
+    }
     const parsed = parseImport(decodeText(await file.arrayBuffer()), new Date().getFullYear())
     if (!parsed.ok) {
-      message = t(parsed.error === 'empty' ? 'io.empty' : 'io.noNameColumn')
+      message =
+        parsed.error === 'too-many-rows'
+          ? t('io.tooManyRows', { n: MAX_IMPORT_ROWS })
+          : t(parsed.error === 'empty' ? 'io.empty' : 'io.noNameColumn')
       return
     }
     rows = parsed.rows
