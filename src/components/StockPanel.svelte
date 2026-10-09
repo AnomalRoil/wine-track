@@ -18,7 +18,16 @@
   )
   const total = $derived(bottlesOf(currentStock(), wineId))
   const history = $derived(movementsFor(wineId))
-  const placed = $derived(store.placements.filter((p) => p.wineId === wineId).map(placementLabel).sort())
+  const placed = $derived(
+    store.placements
+      .filter((p) => p.wineId === wineId)
+      .map((p) => {
+        const rack = store.racks.find((r) => r.id === p.rackId)
+        const cellar = rack && store.cellars.length > 1 ? `${cellarName(rack.cellarId)} · ` : ''
+        return cellar + placementLabel(p)
+      })
+      .sort(),
+  )
 
   function describe(m: Movement): string {
     const where =
