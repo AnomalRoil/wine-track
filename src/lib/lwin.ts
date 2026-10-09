@@ -195,6 +195,7 @@ export function match(index: LwinIndex, draft: WineDraft, limit: number): Scored
   const mentioned = new Set([...named, ...words(draft.region)])
   const producerKey = meaningful(words(draft.producer)).join(' ')
   const name = words(draft.name).join(' ')
+  const ranks = named.filter((w) => RANKS.has(w))
   const candidates = new Set<number>()
   for (const w of named) for (const i of index.byProducerWord.get(w) ?? []) candidates.add(i)
 
@@ -211,6 +212,8 @@ export function match(index: LwinIndex, draft: WineDraft, limit: number): Scored
       (producerKey && producerKey === index.producerKeys[i] ? 0.1 : 0) +
       (name && `${label.join(' ')} `.startsWith(`${name} `) ? 0.05 : 0)
     score /= 1.15
+    // A classification the label lacks: "Chablis Grand Cru" is not plain Chablis.
+    if (ranks.some((w) => !label.includes(w))) score *= 0.9
     const v = draft.vintage
     if (v !== null && ((wine.firstVintage && v < wine.firstVintage) || (wine.finalVintage && v > wine.finalVintage))) {
       score *= 0.5
@@ -219,6 +222,16 @@ export function match(index: LwinIndex, draft: WineDraft, limit: number): Scored
     insert(top, { wine, score: Math.round(score * 1000) / 1000 }, limit)
   }
   return top
+}
+
+/** How much a confident match must beat the next one by. */
+const MARGIN = 0.05
+
+/** The wine that `results` (best first) name with confidence: likely and clearly ahead of the next. */
+export function confidentMatch(results: Scored[]): LwinWine | null {
+  const [best, next] = results
+  if (!best || best.score < CONFIDENT || (next && best.score - next.score < MARGIN)) return null
+  return best.wine
 }
 
 const FORTIFIED = new Set(['Fortified', 'Port', 'Sherry', 'Madeira', 'Marsala', 'Vin Doux Naturel', 'Moscatel de Setubal', 'Rutherglen', 'Montilla-Moriles'])

@@ -7,7 +7,7 @@
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
-  import { completeFromLwin, CONFIDENT, displayName, type LwinWine } from '../lib/lwin'
+  import { completeFromLwin, confidentMatch, displayName, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
@@ -87,12 +87,12 @@
   async function suggestMatches(gen: number) {
     const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
     if (todo.length === 0) return
-    const results = await matchLwin(todo.map((r) => r.draft))
+    const results = await matchLwin(todo.map((r) => r.draft), 2)
     if (gen !== generation) return
     lwinMatches = new Map(
       todo.flatMap((r, i) => {
-        const best = results[i][0]
-        return best && best.score >= CONFIDENT ? [[r.line, best.wine] as const] : []
+        const wine = confidentMatch(results[i])
+        return wine ? [[r.line, wine] as const] : []
       }),
     )
   }

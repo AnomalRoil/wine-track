@@ -108,7 +108,7 @@ export async function searchLwin(query: string, limit: number): Promise<Scored[]
 }
 
 /** The best matches of each draft; empty lists when the database is not installed. */
-export async function matchLwin(drafts: WineDraft[], limit = 1): Promise<Scored[][]> {
+export async function matchLwin(drafts: WineDraft[], limit: number): Promise<Scored[][]> {
   await initLwin()
   const none = drafts.map(() => [])
   if (!lwin.installed) return none

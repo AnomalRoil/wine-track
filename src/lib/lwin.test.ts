@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, CONFIDENT, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -123,6 +123,12 @@ describe('match', () => {
       want: '1012361',
       confident: true,
     },
+    {
+      name: 'classification the plain wine lacks',
+      draft: draft({ producer: 'Vincent Dauvissat', name: 'Chablis Grand Cru' }),
+      want: '1066553',
+      confident: true,
+    },
     { name: 'unknown producer', draft: draft({ producer: 'Nobody', name: 'Chablis' }), want: null, confident: false },
     { name: 'title alone', draft: draft({ producer: 'Domaine' }), want: null, confident: false },
   ]
@@ -132,6 +138,20 @@ describe('match', () => {
       expect(best?.wine.lwin ?? null).toBe(c.want)
       expect((best?.score ?? 0) >= CONFIDENT).toBe(c.confident)
     })
+  }
+})
+
+describe('confidentMatch', () => {
+  const scored = (...scores: number[]) => scores.map((score, i) => ({ wine: index.wines[i], score }))
+  const cases: { name: string; results: ReturnType<typeof scored>; want: string | null }[] = [
+    { name: 'none', results: [], want: null },
+    { name: 'alone', results: scored(0.8), want: '1066540' },
+    { name: 'clearly ahead', results: scored(0.87, 0.78), want: '1066540' },
+    { name: 'tied', results: scored(0.87, 0.87), want: null },
+    { name: 'too low', results: scored(0.7), want: null },
+  ]
+  for (const c of cases) {
+    it(c.name, () => expect(confidentMatch(c.results)?.lwin ?? null).toBe(c.want))
   }
 })
 

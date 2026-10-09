@@ -8,7 +8,7 @@
   import { settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
   import { cellarName, wineLabel } from '../lib/labels'
-  import { applyLwin, CONFIDENT, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
+  import { applyLwin, confidentMatch, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
   import { addMovements, saveWine, sortedCellars, store } from '../lib/store.svelte'
   import type { Aging, Wine } from '../lib/types'
@@ -130,8 +130,8 @@
   }
 
   async function suggestMatch(gen: number) {
-    const [[best]] = await matchLwin([draft])
-    if (gen === generation && best && best.score >= CONFIDENT) lwinMatch = best.wine
+    const [results] = await matchLwin([draft], 2)
+    if (gen === generation) lwinMatch = confidentMatch(results)
   }
 
   function applyMatch() {
