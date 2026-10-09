@@ -1,16 +1,20 @@
 <script lang="ts">
   import CaptureFlow from './components/CaptureFlow.svelte'
+  import CellarView from './components/CellarView.svelte'
   import More from './components/More.svelte'
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
   import { MORE_SCREENS, type Screen } from './lib/screens'
+  import { t } from './lib/i18n.svelte'
   import { initStore, store } from './lib/store.svelte'
   import type { Wine } from './lib/types'
 
   let tab = $state<Tab>('wines')
   let screen = $state<Screen | null>(null)
   let selectedWineId = $state<string | null>(null)
+  /** Wine whose slots the Cellar tab highlights. */
+  let locatedWineId = $state<string | null>(null)
 
   initStore()
 
@@ -31,6 +35,7 @@
   }
 
   function openWine(wine: Wine) {
+    locatedWineId = null
     selectedWineId = wine.id
     push({ wine: wine.id, screen: screen?.id ?? null })
   }
@@ -60,7 +65,13 @@
     if (depth > 0) history.go(-depth)
     selectedWineId = null
     screen = null
+    locatedWineId = null
     tab = next
+  }
+
+  function locate(wineId: string) {
+    selectTab('cellar')
+    locatedWineId = wineId
   }
 
   function onWineSaved(wine: Wine) {
@@ -71,13 +82,15 @@
 
 <main>
   {#if !store.loaded}
-    <p class="muted">…</p>
+    <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
   {:else if selectedWineId}
-    <WineDetail wineId={selectedWineId} onclose={closeWine} />
+    <WineDetail wineId={selectedWineId} onclose={closeWine} onlocate={locate} />
   {:else if tab === 'wines'}
     <WineList onopen={openWine} />
   {:else if tab === 'add'}
     <CaptureFlow onsaved={onWineSaved} />
+  {:else if tab === 'cellar'}
+    <CellarView onopen={openWine} focus={locatedWineId} />
   {:else if screen}
     <screen.component onopen={openWine} />
   {:else}

@@ -11,6 +11,7 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Tasting notes with half-star ratings; filter the collection by vintage, grape, color, rating, or free text.
 - Optional detailed tasting sheet: who, where and what you ate, photos, appearance, nose with an aroma picker by family, palate and conclusion; summarized on the wine page and in the journal.
 - Cellars: several named cellars, bottle sizes, additions with purchase price, removals (drunk, gifted, stock adjustment) and transfers between cellars.
+- Cellar view: racks drawn as grids of bottle slots (lying, standing or shifted rows, optional back layer). Place, move and drink bottles, highlight them with the search and filters, and photograph a new bottle straight into an empty slot.
 - Journal of every stock movement and tasting.
 - Value tracking: average purchase price, current value per bottle with history, added value of the bottles in stock.
 - Overview: bottle, wine and cellar totals, invested and estimated value, composition by type, country, region, grape, vintage, size and cellar, bottles added, drunk and gifted per month and year, cellar value over time, top gains, most drunk regions, rating distribution, and ready / at peak / in decline shortcuts.
