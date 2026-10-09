@@ -23,17 +23,19 @@ const tasting: Tasting = { id: 't1', wineId: 'w1', date: '2026-08-28', rating: 4
 const photo = { id: 'p1', mediaType: 'image/jpeg', data: 'AAAA' }
 
 describe('backup', () => {
-  it('roundtrips through serialize and parse', () => {
+  it('roundtrips every feature through serialize and parse', () => {
+    const detailed = makeTasting({ id: 't2', sheet: { ...emptySheet(), photoIds: ['p2'], aromas: ['plum'] } })
+    const tastingPhoto = { id: 'p2', mediaType: 'image/jpeg', data: 'BBBB' }
     const data = {
       wines: [wine],
-      tastings: [tasting],
+      tastings: [tasting, detailed],
       cellars: [{ id: 'main', name: '', position: 0, storage: { temperature: 'cool', light: 'bright' } }],
       movements: [makeMovement({ unitPrice: 12.5 })],
       racks: [{ id: 'r1', cellarId: 'main', name: 'Left wall', columns: 6, rows: 4, depth: 2, layout: 'diamond' as const, position: 0 }],
       placements: [{ id: 'r1/1/0/2', rackId: 'r1', layer: 1, row: 0, column: 2, wineId: 'w1' }],
     }
-    const parsed = parseBackup(serializeBackup(data, [photo], '2026-08-28T10:00:00Z'))
-    expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo] })
+    const parsed = parseBackup(serializeBackup(data, [photo, tastingPhoto], '2026-08-28T10:00:00Z'))
+    expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo, tastingPhoto] })
   })
 
   it('fills aging fields missing from an older version 2 backup', () => {
