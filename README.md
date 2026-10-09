@@ -10,7 +10,7 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Optional online lookup of grape varieties when the label doesn't state them.
 - Tasting notes with half-star ratings; filter the collection by vintage, grape, color, rating, or free text.
 - Cellars: several named cellars, bottle sizes, additions with purchase price, removals (drunk, gifted, stock adjustment) and transfers between cellars.
-- Cellar view: racks drawn as grids of bottle slots (lying, standing or shifted rows, optional back layer). Place bottles, find them with search, and photograph a new bottle straight into an empty slot.
+- Cellar view: racks drawn as grids of bottle slots (lying, standing or shifted rows, optional back layer). Place, move and drink bottles, highlight them with the search and filters, and photograph a new bottle straight into an empty slot.
 - Journal of every stock movement and tasting.
 - Value tracking: average purchase price, current value per bottle with history, added value of the bottles in stock.
 - Tags and a wishlist, usable as filters; sort by value or purchase price.
