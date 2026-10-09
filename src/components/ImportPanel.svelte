@@ -1,7 +1,7 @@
 <script lang="ts">
   import { decodeText } from '../lib/csv'
   import { templateCsv } from '../lib/csvExport'
-  import { applyCompletion, COLUMNS, incompleteRows, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
+  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
@@ -115,7 +115,7 @@
 </script>
 
 <h2>{t('io.import')}</h2>
-<p class="muted">{t('io.importHelp', { columns: COLUMNS.join(', ') })}</p>
+<p class="muted">{t('io.importHelp', { columns: COLUMNS.map((c) => HEADERS[c]).join(', ') })}</p>
 <p class="muted">{t('io.importRules')}</p>
 <div class="row wrap">
   <label class="file">
