@@ -1,16 +1,23 @@
 <script lang="ts">
   import { t, type MessageKey } from '../lib/i18n.svelte'
   import { assessStorage, STORAGE_QUESTIONS } from '../lib/storage'
-  import { saveCellars } from '../lib/store.svelte'
-  import type { Cellar, StorageFactor } from '../lib/types'
+  import { saveCellars, store } from '../lib/store.svelte'
+  import type { Cellar } from '../lib/types'
   import StorageAdvice from './StorageAdvice.svelte'
 
   let { cellar }: { cellar: Cellar } = $props()
 
   const assessment = $derived(assessStorage(cellar.storage))
 
-  async function answer(factor: StorageFactor, id: string) {
-    await saveCellars([{ ...cellar, storage: { ...cellar.storage, [factor]: id } }])
+  // The store only changes once a save lands, so queue saves and build each from the latest stored cellar.
+  let saving = Promise.resolve()
+
+  function save(storage: (current: Cellar['storage']) => Cellar['storage']) {
+    const run = () => {
+      const current = store.cellars.find((c) => c.id === cellar.id) ?? cellar
+      return saveCellars([{ ...current, storage: storage(current.storage) }])
+    }
+    saving = saving.then(run, run)
   }
 </script>
 
@@ -24,7 +31,7 @@
             class="chip"
             class:active={cellar.storage[q.factor] === option.id}
             aria-pressed={cellar.storage[q.factor] === option.id}
-            onclick={() => answer(q.factor, option.id)}
+            onclick={() => save((s) => ({ ...s, [q.factor]: option.id }))}
           >
             {t(`storage.o.${q.factor}.${option.id}` as MessageKey)}
           </button>
@@ -35,7 +42,7 @@
   <p class="muted">{t('storage.answered', { n: assessment.answered, total: STORAGE_QUESTIONS.length })}</p>
   <StorageAdvice {assessment} />
   {#if assessment.answered > 0}
-    <button class="link danger" onclick={() => saveCellars([{ ...cellar, storage: {} }])}>{t('storage.clear')}</button>
+    <button class="link danger" onclick={() => save(() => ({}))}>{t('storage.clear')}</button>
   {/if}
 </div>
 
