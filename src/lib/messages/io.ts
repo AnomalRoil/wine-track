@@ -12,7 +12,7 @@ export const en = {
   'io.empty': 'The file is empty.',
   'io.noNameColumn': 'No “name” or “producer” column found. Start from the template.',
   'io.ignored': 'Ignored columns: {columns}',
-  'io.summary': '{rows} line(s): {new} new wine(s), {existing} addition(s) to wines you have, {errors} with errors.',
+  'io.summary': '{rows} line(s): {new} new wine(s), {existing} addition(s) to wines you have, {repeat} repeated wine(s), {errors} with errors.',
   'io.newCellars': 'New cellars: {names}',
   'io.line': 'Line {n}',
   'io.status.new': 'New wine',
@@ -26,6 +26,7 @@ export const en = {
   'io.error.color': 'Color not understood. Examples: red, white, rosé, sparkling.',
   'io.error.price': 'The purchase price must be a number.',
   'io.bottlesTo': '{n} bottle(s) → {cellar}',
+  'io.notesDropped': 'Notes are kept with added bottles only; this line adds none, so its notes are not imported.',
   'io.complete': 'Complete with Claude ({n})',
   'io.completeHelp':
     '{n} new wine(s) lack grapes or a region. Claude can search the web for them with your API key, {size} wines per request. Only empty fields are filled.',
@@ -45,6 +46,7 @@ export const en = {
   'io.owner': 'Owner name',
   'io.address': 'Address',
   'io.openInventory': 'Open the printable inventory',
+  'io.saveInventory': 'Save as HTML',
   'io.popupBlocked': 'The browser blocked the new window, so the inventory was downloaded instead.',
 
   'io.doc.title': 'Wine inventory',
@@ -84,7 +86,7 @@ export const fr: Messages<typeof en> = {
   'io.empty': 'Le fichier est vide.',
   'io.noNameColumn': 'Aucune colonne « name » ou « producer » trouvée. Partez du modèle.',
   'io.ignored': 'Colonnes ignorées : {columns}',
-  'io.summary': '{rows} ligne(s) : {new} nouveau(x) vin(s), {existing} ajout(s) à des vins existants, {errors} en erreur.',
+  'io.summary': '{rows} ligne(s) : {new} nouveau(x) vin(s), {existing} ajout(s) à des vins existants, {repeat} vin(s) répété(s), {errors} en erreur.',
   'io.newCellars': 'Nouvelles caves : {names}',
   'io.line': 'Ligne {n}',
   'io.status.new': 'Nouveau vin',
@@ -98,6 +100,7 @@ export const fr: Messages<typeof en> = {
   'io.error.color': 'Couleur non reconnue. Exemples : rouge, blanc, rosé, effervescent.',
   'io.error.price': 'Le prix d’achat doit être un nombre.',
   'io.bottlesTo': '{n} bouteille(s) → {cellar}',
+  'io.notesDropped': 'Les notes sont gardées avec les bouteilles ajoutées ; cette ligne n’en ajoute aucune, ses notes ne sont donc pas importées.',
   'io.complete': 'Compléter avec Claude ({n})',
   'io.completeHelp':
     '{n} nouveau(x) vin(s) sans cépages ou sans région. Claude peut les chercher sur le web avec votre clé API, {size} vins par requête. Seuls les champs vides sont remplis.',
@@ -117,6 +120,7 @@ export const fr: Messages<typeof en> = {
   'io.owner': 'Nom du propriétaire',
   'io.address': 'Adresse',
   'io.openInventory': 'Ouvrir l’inventaire imprimable',
+  'io.saveInventory': 'Enregistrer en HTML',
   'io.popupBlocked': 'Le navigateur a bloqué la nouvelle fenêtre : l’inventaire a été téléchargé à la place.',
 
   'io.doc.title': 'Inventaire de cave',
@@ -156,7 +160,7 @@ export const de: Messages<typeof en> = {
   'io.empty': 'Die Datei ist leer.',
   'io.noNameColumn': 'Keine Spalte „name“ oder „producer“ gefunden. Beginnen Sie mit der Vorlage.',
   'io.ignored': 'Ignorierte Spalten: {columns}',
-  'io.summary': '{rows} Zeile(n): {new} neue(r) Wein(e), {existing} Zugang/Zugänge zu vorhandenen Weinen, {errors} mit Fehlern.',
+  'io.summary': '{rows} Zeile(n): {new} neue(r) Wein(e), {existing} Zugang/Zugänge zu vorhandenen Weinen, {repeat} wiederholte(r) Wein(e), {errors} mit Fehlern.',
   'io.newCellars': 'Neue Keller: {names}',
   'io.line': 'Zeile {n}',
   'io.status.new': 'Neuer Wein',
@@ -170,6 +174,7 @@ export const de: Messages<typeof en> = {
   'io.error.color': 'Farbe nicht erkannt. Beispiele: rot, weiß, rosé, Schaumwein.',
   'io.error.price': 'Der Kaufpreis muss eine Zahl sein.',
   'io.bottlesTo': '{n} Flasche(n) → {cellar}',
+  'io.notesDropped': 'Notizen werden nur mit zugefügten Flaschen gespeichert; diese Zeile fügt keine hinzu, ihre Notizen werden daher nicht importiert.',
   'io.complete': 'Mit Claude ergänzen ({n})',
   'io.completeHelp':
     '{n} neue(n) Wein(en) fehlen Rebsorten oder Region. Claude kann sie mit Ihrem API-Schlüssel im Web suchen, {size} Weine pro Anfrage. Nur leere Felder werden gefüllt.',
@@ -189,6 +194,7 @@ export const de: Messages<typeof en> = {
   'io.owner': 'Name des Eigentümers',
   'io.address': 'Adresse',
   'io.openInventory': 'Druckbares Inventar öffnen',
+  'io.saveInventory': 'Als HTML speichern',
   'io.popupBlocked': 'Der Browser hat das neue Fenster blockiert, daher wurde das Inventar heruntergeladen.',
 
   'io.doc.title': 'Weininventar',

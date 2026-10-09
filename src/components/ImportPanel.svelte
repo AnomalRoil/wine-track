@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { decodeText } from '../lib/csv'
   import { templateCsv } from '../lib/csvExport'
   import { applyCompletion, COLUMNS, incompleteRows, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
@@ -15,6 +16,7 @@
   let completed = $state.raw(new Set<number>())
   let progress = $state<{ done: number; total: number } | null>(null)
   let completeError = $state<{ kind: FailureKind; detail?: string } | null>(null)
+  let committing = $state(false)
   let generation = 0
 
   const plan = $derived(
@@ -51,7 +53,7 @@
     if (!file) return
     reset()
     message = null
-    const parsed = parseImport(await file.text(), new Date().getFullYear())
+    const parsed = parseImport(decodeText(await file.arrayBuffer()), new Date().getFullYear())
     if (!parsed.ok) {
       message = t(parsed.error === 'empty' ? 'io.empty' : 'io.noNameColumn')
       return
@@ -84,9 +86,14 @@
   }
 
   async function commit() {
-    if (!plan) return
+    if (!plan || committing) return
     const { wines, cellars, movements } = plan
-    await applyImport({ wines, cellars, movements })
+    committing = true
+    try {
+      await applyImport({ wines, cellars, movements })
+    } finally {
+      committing = false
+    }
     const bottles = movements.reduce((n, m) => n + m.quantity, 0)
     reset()
     message = t('io.done', { wines: wines.length, bottles })
@@ -123,7 +130,7 @@
 
 {#if rows && plan}
   <p class="summary">
-    {t('io.summary', { rows: rows.length, new: counts.new, existing: counts.existing, errors: counts.invalid })}
+    {t('io.summary', { rows: rows.length, new: counts.new, existing: counts.existing, repeat: counts.repeat, errors: counts.invalid })}
   </p>
   {#if plan.cellars.length > 0}
     <p class="muted">{t('io.newCellars', { names: plan.cellars.map((c) => c.name).join(', ') })}</p>
@@ -147,10 +154,10 @@
   {/if}
 
   <div class="row actions">
-    <button class="primary" disabled={validRows === 0 || progress !== null} onclick={commit}>
+    <button class="primary" disabled={validRows === 0 || progress !== null || committing} onclick={commit}>
       {t('io.commit', { n: validRows })}
     </button>
-    <button onclick={reset}>{t('form.cancel')}</button>
+    <button onclick={reset} disabled={committing}>{t('form.cancel')}</button>
   </div>
 
   {#each rows as row, i (row.line)}
@@ -174,6 +181,8 @@
         </div>
         {#if row.quantity > 0}
           <div class="muted">{t('io.bottlesTo', { n: row.quantity, cellar: destination(row) })}</div>
+        {:else if row.notes}
+          <div class="muted">{t('io.notesDropped')}</div>
         {/if}
       {/if}
     </div>

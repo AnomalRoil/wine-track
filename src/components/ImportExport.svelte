@@ -23,7 +23,7 @@
     downloadFile(`wine-track-${today()}.csv`, new Blob([csv], { type: 'text/csv' }))
   }
 
-  function openInventory() {
+  function inventoryBlob(): Blob {
     const html = renderInventory(buildInventory(store.wines, store.movements, store.cellars), {
       owner: owner.trim(),
       address: address.trim(),
@@ -33,7 +33,11 @@
       money,
       cellarName,
     })
-    const blob = new Blob([html], { type: 'text/html' })
+    return new Blob([html], { type: 'text/html' })
+  }
+
+  function openInventory() {
+    const blob = inventoryBlob()
     const url = URL.createObjectURL(blob)
     inventoryMessage = null
     if (!window.open(url, '_blank')) {
@@ -41,6 +45,11 @@
       inventoryMessage = t('io.popupBlocked')
     }
     setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+
+  // Installed iOS apps hand window.open to Safari, which cannot read this app's blob URLs.
+  function saveInventory() {
+    downloadFile(`wine-inventory-${today()}.html`, inventoryBlob())
   }
 </script>
 
@@ -58,7 +67,17 @@
 <input id="owner" type="text" autocomplete="name" bind:value={owner} />
 <label for="address">{t('io.address')}</label>
 <textarea id="address" rows="3" autocomplete="street-address" bind:value={address}></textarea>
-<p><button onclick={openInventory}>🖨️ {t('io.openInventory')}</button></p>
+<div class="row wrap">
+  <button onclick={openInventory}>🖨️ {t('io.openInventory')}</button>
+  <button class="link" onclick={saveInventory}>{t('io.saveInventory')}</button>
+</div>
 {#if inventoryMessage}
   <p class="muted">{inventoryMessage}</p>
 {/if}
+
+<style>
+  .wrap {
+    flex-wrap: wrap;
+    margin: 0.75rem 0;
+  }
+</style>
