@@ -58,6 +58,25 @@
     lastCellarId = cellarId
   })
 
+  // An open sheet, rack form or capture owns a history entry, so the back button closes it
+  // instead of leaving the app. Entries left behind by an unmounted view are popped on return.
+  const overlay = $derived(selected !== null || capture !== null || editing !== null)
+  $effect(() => {
+    const state = history.state as { depth?: number; overlay?: boolean } | null
+    if (overlay && !state?.overlay) history.pushState({ ...state, depth: (state?.depth ?? 0) + 1, overlay: true }, '')
+    else if (!overlay && state?.overlay) history.back()
+  })
+  $effect(() => {
+    const onpop = () => {
+      if (history.state?.overlay) return
+      selected = null
+      capture = null
+      editing = null
+    }
+    window.addEventListener('popstate', onpop)
+    return () => window.removeEventListener('popstate', onpop)
+  })
+
   const racks = $derived(racksOf(store.racks, cellarId))
   const placements = $derived(new Map(store.placements.map((p) => [p.id, p])))
   const wines = $derived(new Map(store.wines.map((w) => [w.id, w])))
