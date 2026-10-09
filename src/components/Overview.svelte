@@ -2,7 +2,7 @@
   import type { Series } from '../lib/chart'
   import { today } from '../lib/due'
   import { t, type MessageKey } from '../lib/i18n.svelte'
-  import { cellarName, sizeLabel } from '../lib/labels'
+  import { cellarName, sizeLabel, wineLabel } from '../lib/labels'
   import { money } from '../lib/money'
   import type { ScreenProps } from '../lib/screens'
   import { settings } from '../lib/settings.svelte'
@@ -22,7 +22,6 @@
     type Flow,
   } from '../lib/stats'
   import { currentStock, store } from '../lib/store.svelte'
-  import type { Wine } from '../lib/types'
   import ColumnChart from './ColumnChart.svelte'
   import LineChart from './LineChart.svelte'
   import ShareList from './ShareList.svelte'
@@ -69,10 +68,6 @@
     if (dimension === 'cellar') return cellarName(key)
     if (key === '') return t(dimension === 'vintage' ? 'dashboard.nonVintage' : 'dashboard.unset')
     return key
-  }
-
-  function wineLabel(w: Wine): string {
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
   }
 </script>
 

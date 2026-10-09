@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { journal, type JournalEntry } from '../lib/journal'
-  import { cellarName } from '../lib/labels'
+  import { cellarName, wineLabel } from '../lib/labels'
   import { store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
   import Stars from './Stars.svelte'
@@ -14,7 +14,7 @@
 
   function label(w: Wine | undefined): string {
     if (!w) return t('journal.deletedWine')
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
+    return wineLabel(w)
   }
 
   function icon(e: JournalEntry): string {
