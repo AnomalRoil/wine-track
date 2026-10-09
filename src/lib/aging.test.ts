@@ -111,8 +111,9 @@ describe('timeline', () => {
 
 describe('temperatures', () => {
   it('converts both ways', () => {
-    expect(toUnit(18, 'F')).toBe(64)
+    expect(toUnit(18, 'F')).toBe(64.4)
     expect(toUnit(18, 'C')).toBe(18)
+    expect(toUnit(8.5, 'C')).toBe(8.5)
     expect(fromUnit(64, 'F')).toBe(17.8)
     expect(fromUnit(17, 'C')).toBe(17)
   })
@@ -121,6 +122,7 @@ describe('temperatures', () => {
     { min: null, max: null, unit: 'C', want: null },
     { min: 16, max: 18, unit: 'C', want: '16–18 °C' },
     { min: 8, max: 8, unit: 'C', want: '8 °C' },
+    { min: 8.5, max: 17.5, unit: 'C', want: '8.5–17.5 °C' },
     { min: null, max: 10, unit: 'F', want: '50 °F' },
     { min: 16, max: 18, unit: 'F', want: '61–64 °F' },
   ]

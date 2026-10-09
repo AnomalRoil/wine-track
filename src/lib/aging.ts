@@ -96,9 +96,9 @@ export function segmentYears(s: Segment, last: boolean): string {
 export const TEMP_UNITS = ['C', 'F'] as const
 export type TempUnit = (typeof TEMP_UNITS)[number]
 
-/** A °C temperature in the display unit, rounded to a whole degree. */
+/** A °C temperature in the display unit, to one decimal. */
 export function toUnit(celsius: number, unit: TempUnit): number {
-  return Math.round(unit === 'F' ? (celsius * 9) / 5 + 32 : celsius)
+  return Math.round((unit === 'F' ? (celsius * 9) / 5 + 32 : celsius) * 10) / 10
 }
 
 /** A temperature typed in the display unit, in °C to one decimal. */
@@ -106,9 +106,10 @@ export function fromUnit(value: number, unit: TempUnit): number {
   return Math.round((unit === 'F' ? ((value - 32) * 5) / 9 : value) * 10) / 10
 }
 
-/** "16–18 °C", "16 °C", or null when no temperature is known. */
+/** "16–18 °C", "8.5 °C", or null when no temperature is known; °F in whole degrees. */
 export function formatServing(min: number | null, max: number | null, unit: TempUnit): string | null {
-  const values = [min, max].filter((c) => c !== null).map((c) => toUnit(c, unit))
+  const shown = (c: number) => (unit === 'F' ? Math.round(toUnit(c, unit)) : toUnit(c, unit))
+  const values = [min, max].filter((c) => c !== null).map(shown)
   if (values.length === 0) return null
   const range = values.length === 2 && values[0] !== values[1] ? `${values[0]}–${values[1]}` : `${values[0]}`
   return `${range} °${unit}`
