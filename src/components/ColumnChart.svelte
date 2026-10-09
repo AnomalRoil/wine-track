@@ -19,6 +19,8 @@
   const LEFT = 22
 
   let selected = $state<number | null>(null)
+  // A shrunk dataset can leave the selection past its end.
+  const shown = $derived(selected !== null && selected < labels.length ? selected : null)
 
   const max = $derived(niceMax(Math.max(0, ...series.flatMap((s) => s.values))))
   const slot = $derived((W - LEFT) / labels.length)
@@ -65,13 +67,13 @@
 </svg>
 
 <div class="legend muted">
-  {#if selected !== null}
-    <strong>{titles[selected]}</strong>
+  {#if shown !== null}
+    <strong>{titles[shown]}</strong>
   {/if}
   {#each series as s (s.label)}
     <span class="key">
       {#if series.length > 1}<span class="swatch" style:background={s.color}></span>{/if}
-      {s.label}{#if selected !== null}&nbsp;<strong>{s.values[selected]}</strong>{/if}
+      {s.label}{#if shown !== null}&nbsp;<strong>{s.values[shown]}</strong>{/if}
     </span>
   {/each}
 </div>

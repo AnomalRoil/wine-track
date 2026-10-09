@@ -25,7 +25,8 @@
 
   const max = $derived(niceMax(Math.max(0, ...series.flatMap((s) => s.values))))
   const stride = $derived(labelStride(labels.length, 6))
-  const active = $derived(selected ?? labels.length - 1)
+  // A shrunk dataset can leave the selection past its end.
+  const active = $derived(selected !== null && selected < labels.length ? selected : labels.length - 1)
 
   function x(i: number): number {
     return labels.length < 2 ? (LEFT + RIGHT) / 2 : LEFT + (i / (labels.length - 1)) * (RIGHT - LEFT)
