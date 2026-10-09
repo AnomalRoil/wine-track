@@ -61,6 +61,12 @@ export function shadesFor(color: WineColor): Shade[] {
   }
 }
 
+/** Shades to offer, keeping a stored shade the wine's color no longer offers so it stays visible and clearable. */
+export function shadeChoices(color: WineColor, current: Shade | null): Shade[] {
+  const shades = shadesFor(color)
+  return current && !shades.includes(current) ? [...shades, current] : shades
+}
+
 export type AromaFamily = 'fruit' | 'floral' | 'vegetal' | 'spice' | 'earthy' | 'animal' | 'toasty' | 'faults'
 
 export interface AromaGroup {

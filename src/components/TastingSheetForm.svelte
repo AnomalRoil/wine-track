@@ -2,7 +2,7 @@
   import { t } from '../lib/i18n.svelte'
   import { answerLabel } from '../lib/labels'
   import { makeThumb, processPhoto } from '../lib/photo'
-  import { SCALES, SHADES, shadesFor, type ScaleName } from '../lib/tasting'
+  import { SCALES, SHADES, shadeChoices, type ScaleName } from '../lib/tasting'
   import type { Photo, TastingSheet, WineColor } from '../lib/types'
   import AromaPicker from './AromaPicker.svelte'
   import ChipInput from './ChipInput.svelte'
@@ -27,7 +27,7 @@
   }
 
   const shades = $derived(
-    shadesFor(color).map((value) => ({ value, label: t(`tasting.shade.${value}`), swatch: SHADES[value] })),
+    shadeChoices(color, sheet.shade).map((value) => ({ value, label: t(`tasting.shade.${value}`), swatch: SHADES[value] })),
   )
 
   async function addPhoto(e: Event) {

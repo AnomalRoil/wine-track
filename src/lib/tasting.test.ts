@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { en } from './messages/tasting'
-import { AROMA_FAMILIES, AROMA_GROUPS, answered, emptySheet, isEmptySheet, keyAromas, normalizeTasting, SCALES, shadesFor, SHADES } from './tasting'
+import { AROMA_FAMILIES, AROMA_GROUPS, answered, emptySheet, isEmptySheet, keyAromas, normalizeTasting, SCALES, shadeChoices, shadesFor, SHADES } from './tasting'
 import { makeTasting } from './testing'
 import { WINE_COLORS, type TastingSheet } from './types'
 
@@ -28,6 +28,19 @@ describe('shadesFor', () => {
       for (const s of shadesFor(color)) expect(SHADES, s).toHaveProperty(s)
     }
   })
+})
+
+describe('shadeChoices', () => {
+  const cases: { name: string; color: (typeof WINE_COLORS)[number]; current: keyof typeof SHADES | null; want: string[] }[] = [
+    { name: 'no shade', color: 'rose', current: null, want: ['salmon', 'pink', 'copper'] },
+    { name: 'shade of the color', color: 'rose', current: 'pink', want: ['salmon', 'pink', 'copper'] },
+    { name: 'shade of a former color', color: 'rose', current: 'ruby', want: ['salmon', 'pink', 'copper', 'ruby'] },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(shadeChoices(c.color, c.current)).toEqual(c.want)
+    })
+  }
 })
 
 describe('AROMA_GROUPS', () => {
