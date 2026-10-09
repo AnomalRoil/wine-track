@@ -1,4 +1,4 @@
-import { deleteLwin, getLwin, putLwin } from './db'
+import { deleteLwin, getLwin, putLwin, type LwinCache } from './db'
 import type { WineDraft } from './extract'
 import { LWIN_FORMAT, type LwinMeta, type Scored } from './lwin'
 import type { LwinRequest, LwinResult } from './lwin.worker'
@@ -18,6 +18,14 @@ let worker: Worker | null = null
 let nextId = 0
 const pending = new Map<number, { resolve: (v: never) => void; reject: (e: Error) => void }>()
 
+/** Fails every pending request and drops the worker, so the next request starts a new one. */
+function stop(error: Error) {
+  for (const p of pending.values()) p.reject(error)
+  pending.clear()
+  worker?.terminate()
+  worker = null
+}
+
 function ask<K extends LwinRequest['kind']>(request: Extract<LwinRequest, { kind: K }>): Promise<LwinResult[K]> {
   if (!worker) {
     worker = new Worker(new URL('./lwin.worker.ts', import.meta.url), { type: 'module' })
@@ -28,6 +36,9 @@ function ask<K extends LwinRequest['kind']>(request: Extract<LwinRequest, { kind
       if (ok) p?.resolve(result as never)
       else p?.reject(new Error(error))
     }
+    // A worker script that cannot load (offline, or replaced by a deploy) would leave requests waiting.
+    worker.onerror = (e) => stop(new Error(e.message || 'LWIN worker failed'))
+    worker.onmessageerror = () => stop(new Error('unreadable LWIN worker message'))
   }
   const id = nextId++
   worker.postMessage({ id, request })
@@ -70,8 +81,10 @@ export async function downloadLwin(): Promise<void> {
   if (!meta || lwin.busy) return
   lwin.busy = true
   lwin.failed = false
-  const previous = await getLwin()
+  let previous: LwinCache | undefined
+  let replaced = false
   try {
+    previous = await getLwin()
     const response = await fetch(`${BASE}lwin-wines.tsv.gz`, { cache: 'no-cache' })
     if (!response.ok) throw new Error(`${response.status}`)
     const bytes = new Uint8Array(await response.arrayBuffer())
@@ -81,13 +94,16 @@ export async function downloadLwin(): Promise<void> {
       ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).blob()
       : new Blob([bytes])
     await putLwin({ meta, data: new Blob([data], { type: 'text/tab-separated-values' }) })
+    replaced = true
     if ((await ask({ kind: 'load' })) !== meta.rows) throw new Error('incomplete data')
     lwin.installed = meta
   } catch {
     lwin.failed = true
-    if (previous) await putLwin(previous)
-    else await deleteLwin()
-    await ask({ kind: 'load' }).catch(() => {})
+    if (replaced) {
+      if (previous) await putLwin(previous)
+      else await deleteLwin()
+      await ask({ kind: 'load' }).catch(() => {})
+    }
   } finally {
     lwin.busy = false
   }
