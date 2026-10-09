@@ -6,18 +6,20 @@ export interface StorageQuestion {
   factor: StorageFactor
   /** Relative importance in the overall score. */
   weight: number
-  options: readonly { id: string; grade: StorageGrade }[]
+  /** A null grade counts as answered but leaves the score unchanged. */
+  options: readonly { id: string; grade: StorageGrade | null }[]
 }
 
 const good = (id: string) => ({ id, grade: 'good' as const })
 const fair = (id: string) => ({ id, grade: 'fair' as const })
 const poor = (id: string) => ({ id, grade: 'poor' as const })
+const unscored = (id: string) => ({ id, grade: null })
 
 /** The checklist, in display order. Temperature and its stability weigh most on how a wine ages. */
 export const STORAGE_QUESTIONS: readonly StorageQuestion[] = [
   { factor: 'temperature', weight: 3, options: [fair('cold'), good('cool'), fair('mild'), poor('warm')] },
   { factor: 'stability', weight: 2, options: [good('steady'), fair('seasonal'), poor('daily')] },
-  { factor: 'humidity', weight: 2, options: [poor('dry'), good('ideal'), fair('damp'), fair('unknown')] },
+  { factor: 'humidity', weight: 2, options: [poor('dry'), good('ideal'), fair('damp'), unscored('unknown')] },
   { factor: 'airflow', weight: 1, options: [good('fresh'), fair('still'), poor('stuffy')] },
   { factor: 'light', weight: 1, options: [good('dark'), fair('dim'), poor('bright')] },
   { factor: 'position', weight: 1, options: [good('lying'), fair('mixed'), poor('standing')] },
@@ -26,11 +28,6 @@ export const STORAGE_QUESTIONS: readonly StorageQuestion[] = [
 ]
 
 const POINTS: Record<StorageGrade, number> = { good: 1, fair: 0.5, poor: 0 }
-
-export function gradeOf(factor: StorageFactor, answers: StorageAnswers): StorageGrade | null {
-  const question = STORAGE_QUESTIONS.find((q) => q.factor === factor)
-  return question?.options.find((o) => o.id === answers[factor])?.grade ?? null
-}
 
 export interface StorageAssessment {
   /** 0–100, weighted over the answered questions; null when none is answered. */
@@ -46,9 +43,11 @@ export function assessStorage(answers: StorageAnswers): StorageAssessment {
   let answered = 0
   const poor: StorageFactor[] = []
   for (const q of STORAGE_QUESTIONS) {
-    const grade = gradeOf(q.factor, answers)
-    if (!grade) continue
+    const option = q.options.find((o) => o.id === answers[q.factor])
+    if (!option) continue
     answered++
+    const grade = option.grade
+    if (!grade) continue
     points += q.weight * POINTS[grade]
     weights += q.weight
     if (grade === 'poor') poor.push(q.factor)

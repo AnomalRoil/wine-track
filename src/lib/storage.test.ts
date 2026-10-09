@@ -42,6 +42,8 @@ describe('assessStorage', () => {
         poor: ['temperature', 'stability', 'humidity', 'airflow', 'light', 'position', 'vibration', 'odors'],
       },
     },
+    { name: 'unmeasured humidity is answered but unscored', answers: { ...ideal, humidity: 'unknown' }, want: { score: 100, answered: 8, poor: [] } },
+    { name: 'only unmeasured humidity', answers: { humidity: 'unknown' }, want: { score: null, answered: 1, poor: [] } },
     { name: 'unknown option ignored', answers: { light: 'neon', odors: 'none' }, want: { score: 100, answered: 1, poor: [] } },
   ]
   for (const c of cases) {
