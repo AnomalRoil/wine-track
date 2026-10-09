@@ -54,8 +54,8 @@
 
   function startEdit() {
     if (!wine) return
-    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags } = wine
-    draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags] }
+    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = wine
+    draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags], lwin }
     editing = true
   }
 
@@ -129,6 +129,7 @@
   <div class="chips wrap">
     <span class="chip card">{t(`color.${wine.color}`)}</span>
     <span class="chip card">{sizeLabel(wine.sizeCl)}</span>
+    {#if wine.lwin}<span class="chip card">{t('lwin.code', { code: wine.lwin })}</span>{/if}
     {#each wine.tags as tag (tag)}<span class="chip card">#{tag}</span>{/each}
   </div>
   <button class="chip" class:active={wine.wished} onclick={() => update({ wished: !wine.wished })}>
