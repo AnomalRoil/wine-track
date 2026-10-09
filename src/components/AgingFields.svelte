@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import { cleanAging, fromUnit, isWindowOrdered, mergeAging, neutralProfile, profileAxes, toUnit, WINDOW_KEYS } from '../lib/aging'
-  import { canLookupGrapes, lookupAging, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, lookupAging, wineQuery, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
   import type { Aging } from '../lib/types'
@@ -32,10 +32,23 @@
     aging.servingMaxC = celsius(v)
   }
 
+  // A pending lookup is dropped when the wine changes or the fields close, so its answer
+  // never lands on another wine through the aging binding.
+  let generation = 0
+  $effect(() => {
+    void [wineQuery(wine), wine.color]
+    return () => {
+      generation++
+      lookingUp = false
+    }
+  })
+
   async function lookup() {
     lookingUp = true
     lookupNote = null
+    const gen = generation
     const result = await lookupAging(settings, settings.model, $state.snapshot(wine))
+    if (gen !== generation) return
     lookingUp = false
     if (!result.ok) {
       lookupNote = t(`extract.${result.kind}`, { detail: result.detail ?? '' })
