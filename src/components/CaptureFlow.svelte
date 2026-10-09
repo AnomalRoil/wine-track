@@ -64,6 +64,12 @@
 
   untrack(() => photo && usePhoto(photo))
 
+  // Leaving mid-extraction drops its result and frees the preview.
+  $effect(() => () => {
+    generation++
+    if (photoUrl) URL.revokeObjectURL(photoUrl)
+  })
+
   async function extract() {
     if (!photoBlob) return
     if (!settings.apiKey) {
