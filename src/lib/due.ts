@@ -6,7 +6,7 @@ export interface DueItem {
   /** "YYYY-MM-DD" */
   date: string
   overdue: boolean
-  /** Set when the wine joins the list by reaching peak or decline this year; `date` is then January 1. */
+  /** Set when the wine joins the list by reaching peak or decline this year; `date` is then today. */
   entering?: 'peak' | 'decline'
 }
 
@@ -37,7 +37,8 @@ export function computeDue(wines: Wine[], today: string): { drinkSoon: DueItem[]
   const year = Number(today.slice(0, 4))
   for (const wine of wines) {
     const entering = enteringPhase(wine, year)
-    if (entering) drinkSoon.push({ wine, date: `${year}-01-01`, overdue: false, entering })
+    // Dated today: it sorts after overdue bottles and the calendar event is not in the past.
+    if (entering) drinkSoon.push({ wine, date: today, overdue: false, entering })
     if (wine.drinkBy && wine.drinkBy <= drinkLimit) {
       drinkSoon.push({ wine, date: wine.drinkBy, overdue: wine.drinkBy < today })
     }

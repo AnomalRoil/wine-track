@@ -43,10 +43,14 @@ describe('computeDue', () => {
       makeWine({ id: 'decline', drinkUntil: 2025 }),
       makeWine({ id: 'old-decline', drinkUntil: 2020 }),
       makeWine({ id: 'young', drinkFrom: 2030 }),
+      wine('overdue', '2026-08-01', null),
+      wine('upcoming', '2026-09-01', null),
     ]
     expect(computeDue(wines, today).drinkSoon).toEqual([
-      { wine: wines[0], date: '2026-01-01', overdue: false, entering: 'peak' },
-      { wine: wines[1], date: '2026-01-01', overdue: false, entering: 'decline' },
+      { wine: wines[4], date: '2026-08-01', overdue: true },
+      { wine: wines[0], date: today, overdue: false, entering: 'peak' },
+      { wine: wines[1], date: today, overdue: false, entering: 'decline' },
+      { wine: wines[5], date: '2026-09-01', overdue: false },
     ])
   })
 
