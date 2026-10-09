@@ -134,6 +134,15 @@ describe('valueOverTime', () => {
     ])
   })
 
+  it('ends on the current value once an estimate is cleared', () => {
+    const wine = makeWine({ id: 'w', value: null, valueHistory: [{ date: '2026-01-05', value: 50 }] })
+    const moves = [makeMovement({ wineId: 'w', quantity: 2, unitPrice: 20, date: '2026-01-02' })]
+    expect(valueOverTime([wine], moves, '2026-02-10')).toEqual([
+      { month: '2026-01', value: 100, invested: 40 },
+      { month: '2026-02', value: 40, invested: 40 },
+    ])
+  })
+
   it('is empty without movements', () => {
     expect(valueOverTime(wines, [], '2026-04-10')).toEqual([])
   })

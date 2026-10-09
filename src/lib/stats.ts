@@ -145,8 +145,12 @@ export interface ValuePoint {
   invested: number
 }
 
-/** Latest value set by the end of `month`, else the purchase price, else 0. */
-function valueAt(wine: Wine, month: string, buy: number | undefined): number {
+/**
+ * Latest value set by the end of `month`, else the purchase price, else 0.
+ * The current month uses `wine.value`, since clearing an estimate keeps older history points.
+ */
+function valueAt(wine: Wine, month: string, current: string, buy: number | undefined): number {
+  if (month >= current) return wine.value ?? buy ?? 0
   let value: number | undefined
   for (const p of wine.valueHistory) if (p.date.slice(0, 7) <= month) value = p.value
   return value ?? buy ?? 0
@@ -169,7 +173,7 @@ export function valueOverTime(wines: Wine[], movements: Movement[], today: strin
     const point = { month, value: 0, invested: 0 }
     for (const { wine, bottles } of inStock(wines, stock)) {
       const buy = prices.get(wine.id)
-      point.value += valueAt(wine, month, buy) * bottles
+      point.value += valueAt(wine, month, current, buy) * bottles
       point.invested += (buy ?? 0) * bottles
     }
     points.push(point)
