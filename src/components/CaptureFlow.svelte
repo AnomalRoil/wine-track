@@ -7,8 +7,10 @@
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
-  import { cellarName } from '../lib/labels'
-  import { addMovements, saveWine, sortedCellars } from '../lib/store.svelte'
+  import { cellarName, wineLabel } from '../lib/labels'
+  import { applyLwin, CONFIDENT, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
+  import { matchLwin } from '../lib/lwinData.svelte'
+  import { addMovements, saveWine, sortedCellars, store } from '../lib/store.svelte'
   import type { Aging, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
   import WineForm from './WineForm.svelte'
@@ -45,6 +47,12 @@
   /** The photo being resized, which a save waits for. */
   let photoTask: Promise<Blob> | null = null
   let saving = $state(false)
+  /** A database wine the label looks like, offered until applied or ignored. */
+  let lwinMatch = $state.raw<LwinWine | null>(null)
+  /** A wine of the collection the draft repeats, shown instead of saving. */
+  let duplicate = $state.raw<Wine | null>(null)
+  /** The duplicate the user chose to save past. */
+  let allowedDuplicateId: string | null = null
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -54,6 +62,9 @@
     aging = { ...NO_AGING }
     extractError = null
     photoFailed = false
+    lwinMatch = null
+    duplicate = null
+    allowedDuplicateId = null
     quantity = 0
     unitPrice = null
     photoTask = null
@@ -115,6 +126,41 @@
       extractError = result
     }
     step = 'form'
+    if (result.ok) await suggestMatch(gen)
+  }
+
+  async function suggestMatch(gen: number) {
+    const [[best]] = await matchLwin([draft])
+    if (gen === generation && best && best.score >= CONFIDENT) lwinMatch = best.wine
+  }
+
+  function applyMatch() {
+    draft = applyLwin($state.snapshot(draft), lwinMatch!)
+    lwinMatch = null
+  }
+
+  function saveAsNew() {
+    allowedDuplicateId = duplicate!.id
+    save()
+  }
+
+  async function addToDuplicate() {
+    const wine = duplicate!
+    if (saving) return
+    saving = true
+    const current = session
+    try {
+      if (quantity > 0) {
+        await addMovements([
+          { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', quantity, cellarId, unitPrice: unitPrice ?? null, toCellarId: null, note: '' },
+        ])
+      }
+    } finally {
+      saving = false
+    }
+    if (current !== session) return
+    reset()
+    onsaved(wine)
   }
 
   function skipExtraction() {
@@ -124,6 +170,12 @@
 
   async function save() {
     if (saving) return
+    const existing = duplicateOf($state.snapshot(draft), store.wines)
+    if (existing && existing.id !== allowedDuplicateId) {
+      duplicate = existing
+      return
+    }
+    duplicate = null
     saving = true
     try {
       await write()
@@ -195,6 +247,15 @@
       {/if}
     </p>
   {/if}
+  {#if lwinMatch}
+    <div class="card match">
+      <p>{t('lwin.matches', { name: displayName(lwinMatch) })}</p>
+      <div class="row">
+        <button class="primary" onclick={applyMatch}>{t('lwin.apply')}</button>
+        <button onclick={() => (lwinMatch = null)}>{t('lwin.ignore')}</button>
+      </div>
+    </div>
+  {/if}
   <WineForm bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet extra()}
       {#if intoCellar}
@@ -223,6 +284,17 @@
         <summary>{t('aging.title')}</summary>
         <AgingFields bind:aging wine={draft} />
       </details>
+      {#if duplicate}
+        <div class="card duplicate">
+          <p>{t('dup.found', { name: wineLabel(duplicate) })}</p>
+          <div class="row wrap">
+            <button type="button" class="primary" disabled={saving} onclick={addToDuplicate}>
+              {quantity > 0 ? t('dup.addTo') : t('dup.open')}
+            </button>
+            <button type="button" disabled={saving} onclick={saveAsNew}>{t('dup.saveNew')}</button>
+          </div>
+        </div>
+      {/if}
     {/snippet}
   </WineForm>
 {/if}
@@ -230,6 +302,24 @@
 <style>
   .aging {
     margin-top: 1rem;
+  }
+
+  .match {
+    margin-bottom: 0.5rem;
+  }
+
+  .match p,
+  .duplicate p {
+    margin: 0 0 0.5rem;
+  }
+
+  .duplicate {
+    margin-top: 1rem;
+    border-color: var(--accent);
+  }
+
+  .wrap {
+    flex-wrap: wrap;
   }
 
   .aging summary {
