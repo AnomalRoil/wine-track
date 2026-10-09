@@ -17,9 +17,9 @@
   function exportAll() {
     const items: CalendarItem[] = [
       ...due.drinkSoon.map((d) => ({
-        uid: `${d.wine.id}-drink`,
+        uid: d.entering ? `${d.wine.id}-${d.entering}-${d.date.slice(0, 4)}` : `${d.wine.id}-drink`,
         date: d.date,
-        summary: `${t('due.drinkSoon')}: ${label(d.wine)}`,
+        summary: `${t('due.drinkSoon')}: ${label(d.wine)}${d.entering ? ` (${t(`aging.entering.${d.entering}`)})` : ''}`,
       })),
       ...due.tasteAgain.map((d) => ({
         uid: `${d.wine.id}-taste`,
@@ -35,12 +35,16 @@
 {#snippet section(title: string, items: DueItem[])}
   {#if items.length > 0}
     <h2>{title}</h2>
-    {#each items as item (item.wine.id + item.date)}
+    {#each items as item (item.wine.id + item.date + (item.entering ?? ''))}
       <button class="card item" onclick={() => onopen(item.wine)}>
         <span class="name">{label(item.wine)}</span>
-        <span class="date" class:overdue={item.overdue}>
-          {item.date}{item.overdue ? ` · ${t('due.overdue')}` : ''}
-        </span>
+        {#if item.entering}
+          <span class="date" style:color="var(--phase-{item.entering})">{t(`aging.entering.${item.entering}`)}</span>
+        {:else}
+          <span class="date" class:overdue={item.overdue}>
+            {item.date}{item.overdue ? ` · ${t('due.overdue')}` : ''}
+          </span>
+        {/if}
       </button>
     {/each}
   {/if}
