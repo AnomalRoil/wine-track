@@ -22,6 +22,22 @@ const GrapeLookup = z.object({
 })
 export type GrapeLookup = z.infer<typeof GrapeLookup>
 
+const year = z.number().int().nullable()
+const axis = z.number()
+
+const AgingLookup = z.object({
+  drinkFrom: year,
+  peakFrom: year,
+  peakUntil: year,
+  drinkUntil: year,
+  servingMinC: z.number().nullable(),
+  servingMaxC: z.number().nullable(),
+  decantMinutes: z.number().int().nullable(),
+  profile: z.object({ body: axis, tannin: axis, sweetness: axis, acidity: axis, fizz: axis }).nullable(),
+  confidence: z.enum(['this-wine', 'similar', 'unknown']),
+})
+export type AgingLookup = z.infer<typeof AgingLookup>
+
 export type FailureKind =
   | 'no-key'
   | 'auth'
@@ -159,39 +175,30 @@ export function canLookupGrapes(draft: WineDraft): boolean {
   return Boolean(draft.name.trim() || draft.producer.trim() || draft.region.trim())
 }
 
-export async function lookupGrapes(
-  auth: Auth,
-  model: Model,
-  draft: WineDraft,
-): Promise<Result<GrapeLookup>> {
-  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
-  if (!navigator.onLine) return { ok: false, kind: 'offline' }
-  const wine = [
-    draft.producer,
-    draft.name,
-    draft.vintage ?? '',
-    draft.region,
-    draft.country,
-  ]
+/** "Producer Name 2020 Region Country", skipping unknown parts. */
+function describeWine(draft: WineDraft): string {
+  return [draft.producer, draft.name, draft.vintage ?? '', draft.region, draft.country]
     .map(String)
     .filter(Boolean)
     .join(' ')
+}
+
+async function searchAndParse<S extends z.ZodType>(
+  auth: Auth,
+  model: Model,
+  prompt: string,
+  schema: S,
+): Promise<Result<z.infer<S>>> {
+  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
+  if (!navigator.onLine) return { ok: false, kind: 'offline' }
   try {
     const response = await client(auth, 120_000).messages.parse({
       model,
       max_tokens: 4000,
-      messages: [
-        {
-          role: 'user',
-          content: `What grape varieties (encépagement) is this wine made from: ${wine}?
-Search the web for this specific wine. Report confidence "printed-source" only when a
-source states this wine's varieties, "typical-blend" when inferred from what is typical
-for the appellation, "unknown" when you found nothing reliable (with an empty list).`,
-        },
-      ],
+      messages: [{ role: 'user', content: prompt }],
       tools: [webSearchTool(model)],
       // Low effort keeps the lookup fast; the answer needs a search, not deep reasoning.
-      output_config: { effort: 'low', format: zodOutputFormat(GrapeLookup) },
+      output_config: { effort: 'low', format: zodOutputFormat(schema) },
     })
     if (response.stop_reason === 'refusal') {
       return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
@@ -201,4 +208,35 @@ for the appellation, "unknown" when you found nothing reliable (with an empty li
   } catch (err) {
     return failure(err)
   }
+}
+
+export function lookupGrapes(auth: Auth, model: Model, draft: WineDraft): Promise<Result<GrapeLookup>> {
+  return searchAndParse(
+    auth,
+    model,
+    `What grape varieties (encépagement) is this wine made from: ${describeWine(draft)}?
+Search the web for this specific wine. Report confidence "printed-source" only when a
+source states this wine's varieties, "typical-blend" when inferred from what is typical
+for the appellation, "unknown" when you found nothing reliable (with an empty list).`,
+    GrapeLookup,
+  )
+}
+
+export function lookupAging(auth: Auth, model: Model, draft: WineDraft): Promise<Result<AgingLookup>> {
+  return searchAndParse(
+    auth,
+    model,
+    `Give the drinking window and serving advice for this wine: ${describeWine(draft)} (${draft.color}).
+Search the web for this exact wine and vintage (producer notes, critics, merchants).
+- drinkFrom: first year it is pleasant to drink; peakFrom/peakUntil: years of its best;
+  drinkUntil: last year before it fades. Calendar years; null when unknown.
+- servingMinC/servingMaxC: serving temperature range in °C.
+- decantMinutes: recommended decanting time; 0 when it should not be decanted.
+- profile: each axis from 0 to 10: body (light→bold), tannin (smooth→tannic),
+  sweetness (dry→sweet), acidity (soft→acidic), fizz (still→fizzy, 0 unless sparkling).
+- confidence: "this-wine" only when sources cover this wine and vintage, "similar" when
+  estimated from the appellation, producer or other vintages, "unknown" when you found
+  nothing reliable (then use null for everything you could not estimate).`,
+    AgingLookup,
+  )
 }
