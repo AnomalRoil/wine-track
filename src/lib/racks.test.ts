@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellarLosing, matchesPerLayer, moveTransfers, outside, place, placementsOf, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
+import { cellarLosing, matchesPerLayer, moveTransfers, outside, place, placementsOf, planMove, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
 import { computeStock } from './stock'
 import { makeMovement as mv } from './testing'
 import type { Rack } from './types'
@@ -161,6 +161,41 @@ describe('moveTransfers', () => {
       const got = moveTransfers(c.moved, c.swapped, c.from, c.to, '2026-10-09', () => 'id')
       expect(got.map((m) => [m.wineId, m.cellarId, m.toCellarId])).toEqual(c.want)
       for (const m of got) expect([m.kind, m.quantity, m.date]).toEqual(['transfer', 1, '2026-10-09'])
+    })
+  }
+})
+
+describe('planMove', () => {
+  const from = place({ rackId: 'r1', layer: 0, row: 0, column: 0 }, 'w1')
+  const free = { rackId: 'r3', layer: 0, row: 1, column: 1 }
+  const taken = place({ rackId: 'r1', layer: 0, row: 2, column: 3 }, 'w2')
+  const cases = [
+    {
+      name: 'into an empty slot of another cellar',
+      racks,
+      placements: [from],
+      to: free,
+      want: { put: [place(free, 'w1')], freed: [from.id], transfers: [['w1', 'home', 'cave']] },
+    },
+    {
+      name: 'swap within the cellar',
+      racks,
+      placements: [from, taken],
+      to: taken,
+      want: { put: [place(taken, 'w1'), place(from, 'w2')], freed: [], transfers: [] },
+    },
+    { name: 'onto itself', racks, placements: [from], to: from, want: null },
+    { name: 'source slot emptied', racks, placements: [], to: free, want: null },
+    { name: 'source slot holds another wine', racks, placements: [{ ...from, wineId: 'w2' }], to: free, want: null },
+    { name: 'source rack deleted', racks: racks.slice(1), placements: [from], to: free, want: null },
+    { name: 'source slot resized away', racks: [rack({ rows: 0 }), ...racks.slice(1)], placements: [from], to: free, want: null },
+    { name: 'target outside its rack', racks, placements: [from], to: { ...free, row: 9 }, want: null },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const got = planMove(from, c.to, c.racks, c.placements, '2026-10-09', () => 'id')
+      const shape = got && { ...got, transfers: got.transfers.map((m) => [m.wineId, m.cellarId, m.toCellarId]) }
+      expect(shape).toEqual(c.want)
     })
   }
 })

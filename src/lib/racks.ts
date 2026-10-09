@@ -100,6 +100,37 @@ export function moveTransfers(
   return out
 }
 
+/** The writes of a slot move: placements to put, slots to free and transfers between cellars. */
+export interface Move {
+  put: Placement[]
+  freed: string[]
+  transfers: Movement[]
+}
+
+/**
+ * Moves the bottle in `from` to `to`, swapping with the bottle already there. Null when
+ * `from` no longer holds that bottle, either slot left its rack, or both are the same slot.
+ */
+export function planMove(
+  from: Placement,
+  to: Slot,
+  racks: Rack[],
+  placements: Placement[],
+  date: string,
+  newId: () => string,
+): Move | null {
+  const source = racks.find((r) => r.id === from.rackId)
+  const target = racks.find((r) => r.id === to.rackId)
+  if (!source || !target || !fits(source, from) || !fits(target, to) || slotId(to) === from.id) return null
+  if (!placements.some((p) => p.id === from.id && p.wineId === from.wineId)) return null
+  const other = placements.find((p) => p.id === slotId(to))
+  return {
+    put: other ? [place(to, from.wineId), place(from, other.wineId)] : [place(to, from.wineId)],
+    freed: other ? [] : [from.id],
+    transfers: moveTransfers(from.wineId, other?.wineId ?? null, source.cellarId, target.cellarId, date, newId),
+  }
+}
+
 /** The cellar whose stock drops when `m` is deleted from the history, or null. */
 export function cellarLosing(m: Movement): string | null {
   if (m.kind === 'add') return m.cellarId

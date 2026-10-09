@@ -9,7 +9,7 @@
   import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel, wineLabel } from '../lib/labels'
-  import { matchesPerLayer, moveTransfers, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
+  import { matchesPerLayer, place, planMove, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
   import { serial } from '../lib/serial'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
@@ -87,6 +87,11 @@
   const placements = $derived(new Map(store.placements.map((p) => [p.id, p])))
   /** Placement writes, queued so each one checks the slots the previous ones filled. */
   const placing = serial()
+
+  // A bottle that left its slot meanwhile (drunk, rack deleted or resized) has nothing to move.
+  $effect(() => {
+    if (moving && placements.get(moving.id)?.wineId !== moving.wineId) moving = null
+  })
   const wines = $derived(new Map(store.wines.map((w) => [w.id, w])))
   const waiting = $derived(unplaced(currentStock(), store.racks, store.placements, cellarId))
   const waitingTotal = $derived([...waiting.values()].reduce((a, b) => a + b, 0))
@@ -154,23 +159,11 @@
   function moveTo(slot: Slot) {
     const from = moving!
     moving = null
-    const id = slotId(slot)
-    if (id === from.id) return
     return placing(async () => {
-      const other = placements.get(id)
-      const put = other ? [place(slot, from.wineId), place(from, other.wineId)] : [place(slot, from.wineId)]
-      const freed = other ? [] : [from.id]
-      const cellarOf = (rackId: string) => store.racks.find((r) => r.id === rackId)?.cellarId ?? cellarId
-      const transfers = moveTransfers(
-        from.wineId,
-        other?.wineId ?? null,
-        cellarOf(from.rackId),
-        cellarOf(slot.rackId),
-        today(),
-        () => crypto.randomUUID(),
-      )
-      if (transfers.length > 0) await addMovements(transfers, freed, put)
-      else await updatePlacements(put, freed)
+      const move = planMove(from, slot, store.racks, store.placements, today(), () => crypto.randomUUID())
+      if (!move) return
+      if (move.transfers.length > 0) await addMovements(move.transfers, move.freed, move.put)
+      else await updatePlacements(move.put, move.freed)
       await showLanded(slot)
     })
   }
