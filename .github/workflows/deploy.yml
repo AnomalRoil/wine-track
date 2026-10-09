@@ -36,6 +36,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Without the data the site still deploys; the app then hides the wine names database.
+      - name: Build the wine names database
+        continue-on-error: true
+        run: npm run lwin
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
