@@ -86,6 +86,12 @@
   {/each}
 </select>
 
+<label for="tempunit">{t('aging.tempUnit')}</label>
+<select id="tempunit" bind:value={settings.tempUnit}>
+  <option value="C">{t('aging.celsius')}</option>
+  <option value="F">{t('aging.fahrenheit')}</option>
+</select>
+
 <CellarSettings />
 
 <h2>{t('settings.backup')}</h2>

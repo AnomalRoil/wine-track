@@ -84,7 +84,8 @@ export function timeline(a: Aging, vintage: number | null, year: number): Timeli
   return { start, end, segments }
 }
 
-export type TempUnit = 'C' | 'F'
+export const TEMP_UNITS = ['C', 'F'] as const
+export type TempUnit = (typeof TEMP_UNITS)[number]
 
 /** A °C temperature in the display unit, rounded to a whole degree. */
 export function toUnit(celsius: number, unit: TempUnit): number {
