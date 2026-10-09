@@ -4,23 +4,35 @@
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
-  import type { Screen } from './lib/screens'
+  import { MORE_SCREENS, type Screen } from './lib/screens'
   import { initStore, store } from './lib/store.svelte'
   import type { Wine } from './lib/types'
 
   let tab = $state<Tab>('wines')
   let screen = $state<Screen | null>(null)
   let selectedWineId = $state<string | null>(null)
-  /** History entries pushed for open views, so a tab switch can unwind them all. */
-  let depth = 0
 
   initStore()
 
-  // A history entry per open detail view or More screen lets the mobile back button close it.
+  // Each open view pushes a history entry so the mobile back button closes it. Entries record
+  // the full view state plus their depth, so back, forward and tab switches all restore exactly.
+  interface ViewState {
+    wine: string | null
+    screen: string | null
+    depth: number
+  }
+
+  // Entries from an earlier page load point at views this load never opened.
+  history.replaceState({ wine: null, screen: null, depth: 0 } satisfies ViewState, '')
+
+  function push(view: Omit<ViewState, 'depth'>) {
+    const depth = ((history.state as ViewState | null)?.depth ?? 0) + 1
+    history.pushState({ ...view, depth } satisfies ViewState, '')
+  }
+
   function openWine(wine: Wine) {
     selectedWineId = wine.id
-    history.pushState({ wine: wine.id, screen: history.state?.screen }, '')
-    depth++
+    push({ wine: wine.id, screen: screen?.id ?? null })
   }
 
   function closeWine() {
@@ -30,23 +42,22 @@
 
   function openScreen(next: Screen) {
     screen = next
-    history.pushState({ screen: next.id }, '')
-    depth++
+    push({ wine: null, screen: next.id })
   }
 
   $effect(() => {
     const onpop = () => {
-      depth = Math.max(0, depth - 1)
-      if (!history.state?.wine) selectedWineId = null
-      if (!history.state?.screen) screen = null
+      const view = history.state as ViewState | null
+      selectedWineId = view?.wine ?? null
+      screen = MORE_SCREENS.find((s) => s.id === view?.screen) ?? null
     }
     window.addEventListener('popstate', onpop)
     return () => window.removeEventListener('popstate', onpop)
   })
 
   function selectTab(next: Tab) {
+    const depth = (history.state as ViewState | null)?.depth ?? 0
     if (depth > 0) history.go(-depth)
-    depth = 0
     selectedWineId = null
     screen = null
     tab = next
