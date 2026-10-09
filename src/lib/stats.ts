@@ -47,11 +47,15 @@ export interface Share {
   share: number
 }
 
+function groupKey(key: string): string {
+  return key.trim().toLowerCase()
+}
+
 /** Counts per key, merging keys case-insensitively under the first spelling seen, largest first. */
 function rank(entries: [key: string, count: number][], total: number): Share[] {
   const groups = new Map<string, Share>()
   for (const [key, count] of entries) {
-    const k = key.trim().toLowerCase()
+    const k = groupKey(key)
     const g = groups.get(k)
     if (g) g.count += count
     else groups.set(k, { key: key.trim(), count, share: 0 })
@@ -81,7 +85,8 @@ export function composition(wines: Wine[], stock: Stock, dimension: Dimension): 
         break
       case 'grape':
         if (wine.grapes.length === 0) entries.push(['', bottles])
-        for (const g of wine.grapes) entries.push([g, bottles])
+        for (const [i, g] of wine.grapes.entries())
+          if (wine.grapes.findIndex((x) => groupKey(x) === groupKey(g)) === i) entries.push([g, bottles])
         break
       case 'vintage':
         entries.push([wine.vintage === null ? '' : String(wine.vintage), bottles])

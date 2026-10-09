@@ -77,6 +77,11 @@ describe('composition', () => {
   }
 })
 
+it('counts a grape listed in two spellings once per wine', () => {
+  const wine = makeWine({ id: 'a', grapes: ['Merlot', 'merlot '] })
+  expect(composition([wine], computeStock([makeMovement({ wineId: 'a', quantity: 2 })]), 'grape')).toEqual([{ key: 'Merlot', count: 2, share: 1 }])
+})
+
 describe('flows', () => {
   it('counts additions, drinks and gifts per month over the last months', () => {
     const got = monthlyFlows(movements, '2026-03-31', 4)
