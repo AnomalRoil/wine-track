@@ -21,17 +21,21 @@
   // Each open view pushes a history entry so the mobile back button closes it. Entries record
   // the full view state plus their depth, so back, forward and tab switches all restore exactly.
   interface ViewState {
+    tab: Tab
     wine: string | null
     screen: string | null
     depth: number
   }
 
   // Entries from an earlier page load point at views this load never opened.
-  history.replaceState({ wine: null, screen: null, depth: 0 } satisfies ViewState, '')
+  history.replaceState({ tab: 'wines', wine: null, screen: null, depth: 0 } satisfies ViewState, '')
 
-  function push(view: Omit<ViewState, 'depth'>) {
+  /** Tab to land on once a tab switch has unwound the pushed entries. */
+  let unwindingTo: Tab | null = null
+
+  function push(view: Omit<ViewState, 'depth' | 'tab'>) {
     const depth = ((history.state as ViewState | null)?.depth ?? 0) + 1
-    history.pushState({ ...view, depth } satisfies ViewState, '')
+    history.pushState({ ...view, tab, depth } satisfies ViewState, '')
   }
 
   function openWine(wine: Wine) {
@@ -53,6 +57,13 @@
   $effect(() => {
     const onpop = () => {
       const view = history.state as ViewState | null
+      if (unwindingTo) {
+        tab = unwindingTo
+        unwindingTo = null
+        history.replaceState({ tab, wine: null, screen: null, depth: 0 } satisfies ViewState, '')
+      } else if (view?.tab) {
+        tab = view.tab
+      }
       selectedWineId = view?.wine ?? null
       screen = MORE_SCREENS.find((s) => s.id === view?.screen) ?? null
     }
@@ -62,7 +73,12 @@
 
   function selectTab(next: Tab) {
     const depth = (history.state as ViewState | null)?.depth ?? 0
-    if (depth > 0) history.go(-depth)
+    if (depth > 0) {
+      unwindingTo = next
+      history.go(-depth)
+    } else {
+      history.replaceState({ tab: next, wine: null, screen: null, depth: 0 } satisfies ViewState, '')
+    }
     selectedWineId = null
     screen = null
     locatedWineId = null
@@ -75,7 +91,7 @@
   }
 
   function onWineSaved(wine: Wine) {
-    tab = 'wines'
+    selectTab('wines')
     openWine(wine)
   }
 </script>
@@ -83,7 +99,8 @@
 <main>
   {#if !store.loaded}
     <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
-  {:else if selectedWineId}
+  {:else if selectedWineId && store.wines.some((w) => w.id === selectedWineId)}
+    <!-- A history entry can point at a wine deleted since; it then falls through to the tab. -->
     <WineDetail wineId={selectedWineId} onclose={closeWine} onlocate={locate} />
   {:else if tab === 'wines'}
     <WineList onopen={openWine} />
