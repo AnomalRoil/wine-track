@@ -69,7 +69,11 @@
   })
   $effect(() => {
     const onpop = () => {
-      if (history.state?.overlay) return
+      if (history.state?.overlay) {
+        // Landed back on an entry whose overlay closed while another view was on top.
+        if (!overlay) history.back()
+        return
+      }
       selected = null
       capture = null
       editing = null
