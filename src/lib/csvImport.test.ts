@@ -250,6 +250,15 @@ describe('planImport', () => {
   })
 })
 
+it('keeps distinct non-Latin wine and cellar names apart', () => {
+  const p = parseImport('cellar,name\n赤,赤\n白,白\n赤, 赤 ', 2026)
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const plan = planImport(p.rows, [], { cellars: [], defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.matches.map((m) => m.kind)).toEqual(['new', 'new', 'repeat'])
+  expect(plan.cellars.map((c) => c.name)).toEqual(['赤', '白'])
+})
+
 describe('applyCompletion', () => {
   const completion = { grapes: [' Syrah '], region: 'Cornas', country: 'France' }
   const cases: { name: string; draft: Partial<ReturnType<typeof emptyDraft>>; want: [string[], string, string] }[] = [

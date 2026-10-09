@@ -273,9 +273,14 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
   return { ok: true, rows, ignored }
 }
 
+/** Compares names ignoring case and spacing; unlike fold, keeps every script's letters apart. */
+function identity(s: string): string {
+  return s.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
 /** Identity used to detect duplicates: same name, producer, vintage and bottle size. */
 export function wineKey(w: Pick<WineDraft, 'name' | 'producer' | 'vintage' | 'sizeCl'>): string {
-  return [fold(w.name), fold(w.producer), w.vintage ?? 'nv', w.sizeCl].join('|')
+  return [identity(w.name), identity(w.producer), w.vintage ?? 'nv', w.sizeCl].join('|')
 }
 
 export type RowMatch =
@@ -310,7 +315,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
   const byKey = new Map(existing.map((w) => [wineKey(w), w.id]))
   const firstLine = new Map<string, number>()
   const sorted = [...ctx.cellars].sort((a, b) => a.position - b.position)
-  const cellarIds = new Map(sorted.map((c) => [fold(c.name || ctx.defaultCellarName), c.id]))
+  const cellarIds = new Map(sorted.map((c) => [identity(c.name || ctx.defaultCellarName), c.id]))
   let position = Math.max(-1, ...sorted.map((c) => c.position))
   const plan: ImportPlan = { matches: [], wines: [], cellars: [], movements: [] }
 
@@ -346,10 +351,10 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
     }
     if (row.quantity === 0) continue
 
-    let cellarId = row.cellar ? cellarIds.get(fold(row.cellar)) : sorted[0]?.id
+    let cellarId = row.cellar ? cellarIds.get(identity(row.cellar)) : sorted[0]?.id
     if (!cellarId) {
       cellarId = ctx.newId()
-      cellarIds.set(fold(row.cellar), cellarId)
+      cellarIds.set(identity(row.cellar), cellarId)
       plan.cellars.push({ id: cellarId, name: row.cellar, position: ++position, storage: {} })
     }
     plan.movements.push({
