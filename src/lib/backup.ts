@@ -31,7 +31,7 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   tags: z.array(z.string()),
   wished: z.boolean(),
   value: z.number().min(0).nullable(),
-  valueHistory: z.array(z.object({ date, value: z.number().min(0) })),
+  valueHistory: z.array(z.object({ date, value: z.number().min(0).nullable() })),
   // Aging fields arrived within version 2: older backups lack them.
   drinkFrom: year,
   peakFrom: year,

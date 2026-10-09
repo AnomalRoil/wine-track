@@ -147,12 +147,12 @@ export interface ValuePoint {
 }
 
 /**
- * Latest value set by the end of `month`, else the purchase price, else 0.
- * The current month uses `wine.value`, since clearing an estimate keeps older history points.
+ * Latest value set by the end of `month`, else the purchase price, else 0. The current
+ * month uses `wine.value`, which also covers estimates cleared before clearing was dated.
  */
 function valueAt(wine: Wine, month: string, current: string, buy: number | undefined): number {
   if (month >= current) return wine.value ?? buy ?? 0
-  let value: number | undefined
+  let value: number | null = null
   for (const p of wine.valueHistory) if (p.date.slice(0, 7) <= month) value = p.value
   return value ?? buy ?? 0
 }

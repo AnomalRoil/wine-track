@@ -43,7 +43,8 @@ export const STANDARD_SIZE_CL = 75
 export interface PricePoint {
   /** "YYYY-MM-DD" */
   date: string
-  value: number
+  /** Null when the estimate was cleared that day. */
+  value: number | null
 }
 
 /** How a wine tastes, each axis 0–10 from the first pole to the second. */

@@ -23,8 +23,7 @@
     if (value === wine.value) return
     // One point per day: a same-day correction replaces the earlier entry.
     const date = today()
-    const history = wine.valueHistory.filter((p) => p.date !== date)
-    if (value !== null) history.push({ date, value })
+    const history = [...wine.valueHistory.filter((p) => p.date !== date), { date, value }]
     await saveWine({ ...wine, value, valueHistory: history })
   }
 </script>
@@ -57,7 +56,7 @@
   <details>
     <summary class="muted">{t('value.history')}</summary>
     {#each [...wine.valueHistory].reverse() as p (p.date)}
-      <div class="row"><span class="muted grow">{p.date}</span>{money(p.value)}</div>
+      <div class="row"><span class="muted grow">{p.date}</span>{p.value === null ? '—' : money(p.value)}</div>
     {/each}
   </details>
 {/if}

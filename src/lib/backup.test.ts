@@ -11,7 +11,11 @@ const wine = makeWine({
   photoId: 'p1',
   tags: ['Fish'],
   value: 30,
-  valueHistory: [{ date: '2026-08-28', value: 30 }],
+  valueHistory: [
+    { date: '2026-08-20', value: 25 },
+    { date: '2026-08-25', value: null },
+    { date: '2026-08-28', value: 30 },
+  ],
   drinkFrom: 2024,
   peakUntil: 2030,
   servingMinC: 10,
