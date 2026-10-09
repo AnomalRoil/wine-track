@@ -192,7 +192,7 @@
   async function unplace() {
     const p = selectedPlacement!
     selected = null
-    await unplaceBottle(p.id)
+    await unplaceBottle(p)
   }
 
   function startMove() {

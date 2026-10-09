@@ -1,12 +1,12 @@
 <script lang="ts">
   import { parseBackup, serializeBackup, type BackupPhoto } from '../lib/backup'
-  import { getAllPhotos, replaceAll } from '../lib/db'
+  import { getAllPhotos } from '../lib/db'
   import { downloadFile } from '../lib/download'
   import { t } from '../lib/i18n.svelte'
   import { base64ToBlob, blobToBase64 } from '../lib/photo'
   import { CURRENCIES, MODELS, settings } from '../lib/settings.svelte'
   import type { ScreenProps } from '../lib/screens'
-  import { initStore, store } from '../lib/store.svelte'
+  import { restore, store } from '../lib/store.svelte'
   import CellarSettings from './CellarSettings.svelte'
 
   let {}: Partial<ScreenProps> = $props()
@@ -49,8 +49,7 @@
     }
     if (!confirm(t('settings.importConfirm', { n: store.wines.length }))) return
     const photos = backup.photos.map((p) => ({ id: p.id, blob: base64ToBlob(p.data, p.mediaType) }))
-    await replaceAll(backup, photos)
-    await initStore()
+    await restore(backup, photos)
     importMessage = t('settings.importDone', { n: backup.wines.length })
   }
 </script>

@@ -48,13 +48,18 @@
       deleting = { cellar, bottles }
       return
     }
-    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await removeCellar(cellar.id, null)
+    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await remove(cellar.id, null)
   }
 
   async function finishDelete(targetId: string | null) {
     if (!deleting) return
-    await removeCellar(deleting.cellar.id, targetId)
+    const id = deleting.cellar.id
     deleting = null
+    await remove(id, targetId)
+  }
+
+  async function remove(id: string, targetId: string | null) {
+    if (!(await removeCellar(id, targetId))) alert(t('form.stale'))
   }
 </script>
 

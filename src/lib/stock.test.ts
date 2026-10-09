@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageBuyPrice, averageBuyPrices, bottlesOf, computeStock, emptyCellar, withinStock } from './stock'
+import { averageBuyPrice, averageBuyPrices, bottlesOf, canRecord, canRemoveCellar, computeStock, emptyCellar, withinStock } from './stock'
 import { makeMovement as mv } from './testing'
 
 const movements = [
@@ -83,6 +83,46 @@ describe('withinStock', () => {
   for (const c of cases) {
     it(c.name, () => {
       expect(withinStock(stock, c.movements)).toBe(c.want)
+    })
+  }
+})
+
+describe('canRecord', () => {
+  // home: w1 4, cave: w1 2
+  const stock = computeStock(movements)
+  const wines = new Set(['w1', 'w2'])
+  const cellars = new Set(['home', 'cave'])
+  const cases = [
+    { name: 'removal within stock', movements: [mv({ kind: 'consume', quantity: 4, cellarId: 'home' })], want: true },
+    { name: 'removal beyond stock', movements: [mv({ kind: 'consume', quantity: 5, cellarId: 'home' })], want: false },
+    { name: 'addition of a deleted wine', movements: [mv({ wineId: 'gone', cellarId: 'home' })], want: false },
+    { name: 'addition to a deleted cellar', movements: [mv({ cellarId: 'gone' })], want: false },
+    {
+      name: 'transfer to a deleted cellar',
+      movements: [mv({ kind: 'transfer', cellarId: 'home', toCellarId: 'gone' })],
+      want: false,
+    },
+    { name: 'transfer between stored cellars', movements: [mv({ kind: 'transfer', cellarId: 'home', toCellarId: 'cave' })], want: true },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(canRecord(stock, c.movements, wines, cellars)).toBe(c.want)
+    })
+  }
+})
+
+describe('canRemoveCellar', () => {
+  const cases = [
+    { name: 'one of two, bottles dropped', cellars: ['a', 'b'], id: 'a', target: null, want: true },
+    { name: 'one of two, bottles moved', cellars: ['a', 'b'], id: 'a', target: 'b', want: true },
+    { name: 'the last one', cellars: ['a'], id: 'a', target: null, want: false },
+    { name: 'already deleted', cellars: ['b', 'c'], id: 'a', target: null, want: false },
+    { name: 'target deleted', cellars: ['a', 'c'], id: 'a', target: 'b', want: false },
+    { name: 'target is itself', cellars: ['a', 'b'], id: 'a', target: 'a', want: false },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(canRemoveCellar(c.cellars, c.id, c.target)).toBe(c.want)
     })
   }
 })

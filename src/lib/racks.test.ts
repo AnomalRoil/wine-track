@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canPlace, cellarLosing, matchesPerLayer, moveTransfers, outside, place, placementsOf, planMove, slotName, slotsFreed, stalePlacements, unplaced, type Slot } from './racks'
+import { approvedDrops, canPlace, cellarLosing, freedSlots, holds, matchesPerLayer, moveTransfers, outside, place, placementsOf, planMove, slotName, slotsFreed, stalePlacements, unplaced, type Slot } from './racks'
 import { computeStock } from './stock'
 import { makeMovement as mv } from './testing'
 import type { Rack } from './types'
@@ -216,6 +216,57 @@ describe('canPlace', () => {
   for (const c of cases) {
     it(c.name, () => {
       expect(canPlace(c.slot, c.wineId, racks, placements, stock)).toBe(c.want)
+    })
+  }
+})
+
+describe('approvedDrops', () => {
+  const placements = [place({ rackId: 'r1', layer: 0, row: 2, column: 0 }, 'w1'), place({ rackId: 'r1', layer: 0, row: 2, column: 1 }, 'w1')]
+  const cases = [
+    { name: 'nothing dropped', next: rack(), approved: [], want: [] },
+    { name: 'every drop approved', next: rack({ rows: 2 }), approved: ['r1/0/2/0', 'r1/0/2/1'], want: ['r1/0/2/0', 'r1/0/2/1'] },
+    { name: 'a drop not approved', next: rack({ rows: 2 }), approved: ['r1/0/2/0'], want: null },
+    { name: 'approved bottle already gone', next: rack({ rows: 2 }), approved: ['r1/0/2/0', 'r1/0/2/1', 'r1/0/1/3'], want: ['r1/0/2/0', 'r1/0/2/1'] },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(approvedDrops(c.next, placements, c.approved)).toEqual(c.want)
+    })
+  }
+})
+
+describe('holds', () => {
+  const bottle = place({ rackId: 'r1', layer: 0, row: 0, column: 0 }, 'w1')
+  const cases = [
+    { name: 'same bottle', placements: [bottle], want: true },
+    { name: 'slot emptied', placements: [], want: false },
+    { name: 'another wine swapped in', placements: [{ ...bottle, wineId: 'w2' }], want: false },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(holds(c.placements, bottle)).toBe(c.want)
+    })
+  }
+})
+
+describe('freedSlots', () => {
+  // home: w1 3 bottles, 2 in slots.
+  const a = place({ rackId: 'r1', layer: 0, row: 0, column: 0 }, 'w1')
+  const b = place({ rackId: 'r1', layer: 0, row: 0, column: 1 }, 'w1')
+  const loss = (quantity: number) => [{ wineId: 'w1', cellarId: 'home', quantity }]
+  const cases = [
+    { name: 'no loss', losses: [], chosen: [], placements: [a, b], want: [] },
+    { name: 'unplaced bottle leaves', losses: loss(1), chosen: [], placements: [a, b], want: [] },
+    { name: 'chosen slot empties', losses: loss(2), chosen: [b.id], placements: [a, b], want: [b.id] },
+    { name: 'choice missing', losses: loss(2), chosen: [], placements: [a, b], want: null },
+    { name: 'every slot empties', losses: loss(3), chosen: [], placements: [a, b], want: [a.id, b.id] },
+    { name: 'losses summed', losses: [...loss(1), ...loss(2)], chosen: [], placements: [a, b], want: [a.id, b.id] },
+    { name: 'chosen slot emptied meanwhile', losses: loss(2), chosen: [b.id], placements: [a], want: null },
+    { name: 'choice no longer needed', losses: loss(1), chosen: [b.id], placements: [a, b], want: null },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(freedSlots(c.losses, c.chosen, racks, c.placements, stock)).toEqual(c.want)
     })
   }
 })

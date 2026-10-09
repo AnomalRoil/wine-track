@@ -51,6 +51,13 @@ export function withinStock(stock: Stock, movements: Movement[]): boolean {
   return true
 }
 
+/** Whether `movements` name only stored wines and cellars and leave every cellar at zero or more. */
+export function canRecord(stock: Stock, movements: Movement[], wineIds: Set<string>, cellarIds: Set<string>): boolean {
+  const known = (m: Movement) =>
+    wineIds.has(m.wineId) && cellarIds.has(m.cellarId) && (m.toCellarId === null || cellarIds.has(m.toCellarId))
+  return movements.every(known) && withinStock(stock, movements)
+}
+
 /** Average price paid per bottle across priced additions, or null if none is priced. */
 export function averageBuyPrice(movements: Movement[], wineId: string): number | null {
   let bottles = 0
@@ -76,6 +83,12 @@ export function averageBuyPrices(movements: Movement[]): Map<string, number> {
   const prices = new Map<string, number>()
   for (const [wineId, t] of totals) if (t.bottles > 0) prices.set(wineId, t.spent / t.bottles)
   return prices
+}
+
+/** Whether cellar `id` can be deleted with its bottles going to `targetId`: another cellar remains and both still exist. */
+export function canRemoveCellar(cellarIds: string[], id: string, targetId: string | null): boolean {
+  if (cellarIds.length < 2 || !cellarIds.includes(id)) return false
+  return targetId === null || (targetId !== id && cellarIds.includes(targetId))
 }
 
 /**

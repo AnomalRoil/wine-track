@@ -36,6 +36,17 @@ export function outside(next: Rack, placements: Placement[]): Placement[] {
   return placements.filter((p) => p.rackId === next.id && !fits(next, p))
 }
 
+/** The placements resizing a rack to `next` drops, or null when one of them is not in `approved`. */
+export function approvedDrops(next: Rack, placements: Placement[], approved: string[]): string[] | null {
+  const dropped = outside(next, placements).map((p) => p.id)
+  return dropped.every((id) => approved.includes(id)) ? dropped : null
+}
+
+/** Whether `placements` still has the bottle of `p` in its slot. */
+export function holds(placements: Placement[], p: Placement): boolean {
+  return placements.some((x) => x.id === p.id && x.wineId === p.wineId)
+}
+
 export function racksOf(racks: Rack[], cellarId: string): Rack[] {
   return racks.filter((r) => r.cellarId === cellarId).sort((a, b) => a.position - b.position)
 }
@@ -69,6 +80,31 @@ export function canPlace(slot: Slot, wineId: string, racks: Rack[], placements: 
 /** How many of the `placed` slots empty when `quantity` of the `available` bottles leave the cellar. */
 export function slotsFreed(available: number, quantity: number, placed: number): number {
   return Math.min(placed, Math.max(0, placed - (available - quantity)))
+}
+
+/** Bottles of a wine leaving a cellar. */
+export type Loss = Pick<Movement, 'wineId' | 'cellarId' | 'quantity'>
+
+/**
+ * Slots that empty when the `losses` leave their cellars. When only some of a wine's
+ * slots in a cellar empty, `chosen` names them. Null when `chosen` no longer matches:
+ * it names a slot that would stay filled, or too few slots.
+ */
+export function freedSlots(losses: Loss[], chosen: string[], racks: Rack[], placements: Placement[], stock: Stock): string[] | null {
+  const taken = new Map<string, Loss>()
+  for (const l of losses) {
+    const key = `${l.wineId}\n${l.cellarId}`
+    taken.set(key, { ...l, quantity: (taken.get(key)?.quantity ?? 0) + l.quantity })
+  }
+  const freed: string[] = []
+  for (const { wineId, cellarId, quantity } of taken.values()) {
+    const placed = placementsOf(racks, placements, wineId, cellarId)
+    const n = slotsFreed(bottlesOf(stock, wineId, cellarId), quantity, placed.length)
+    const picked = n === placed.length ? placed : placed.filter((p) => chosen.includes(p.id))
+    if (picked.length !== n) return null
+    freed.push(...picked.map((p) => p.id))
+  }
+  return chosen.every((id) => freed.includes(id)) ? freed : null
 }
 
 /** Bottles of the `wineIds` wines per layer of the rack, front first. */
@@ -129,7 +165,7 @@ export function planMove(
   const source = racks.find((r) => r.id === from.rackId)
   const target = racks.find((r) => r.id === to.rackId)
   if (!source || !target || !fits(source, from) || !fits(target, to) || slotId(to) === from.id) return null
-  if (!placements.some((p) => p.id === from.id && p.wineId === from.wineId)) return null
+  if (!holds(placements, from)) return null
   const other = placements.find((p) => p.id === slotId(to))
   return {
     put: other ? [place(to, from.wineId), place(from, other.wineId)] : [place(to, from.wineId)],

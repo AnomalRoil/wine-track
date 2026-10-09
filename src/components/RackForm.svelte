@@ -27,6 +27,8 @@
     ),
   )
 
+  let stale = $state(false)
+
   const valid = $derived(
     Number.isInteger(draft.columns) &&
       Number.isInteger(draft.rows) &&
@@ -42,8 +44,8 @@
     const next = { ...$state.snapshot(draft), name: draft.name.trim() }
     const dropped = outside(next, store.placements)
     if (dropped.length > 0 && !confirm(t('rack.resizeConfirm', { n: dropped.length }))) return
-    await (rack ? updateRack(next) : addRack(next))
-    ondone()
+    stale = !(await (rack ? updateRack(next, dropped.map((p) => p.id)) : addRack(next)))
+    if (!stale) ondone()
   }
 
   async function del() {
@@ -98,6 +100,8 @@
     {/each}
   </div>
 
+  {#if stale}<p class="error">{t('form.stale')}</p>{/if}
+
   <div class="row actions">
     {#if rack}<button type="button" class="danger" onclick={del}>{t('rack.delete')}</button>{/if}
     <button type="button" onclick={ondone}>{t('rack.cancel')}</button>
@@ -106,6 +110,12 @@
 </form>
 
 <style>
+  .error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin: 0.75rem 0 0;
+  }
+
   .grow {
     flex: 1;
   }

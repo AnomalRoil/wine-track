@@ -56,7 +56,7 @@
       }
     }
     if (!confirm(t('journal.deleteMovement'))) return
-    await removeMovement(m.id)
+    await remove(m.id, [])
   }
 
   function toggle(id: string) {
@@ -66,7 +66,11 @@
   async function confirmDelete() {
     const { id } = deleting!
     deleting = null
-    await removeMovement(id, chosen)
+    await remove(id, chosen)
+  }
+
+  async function remove(id: string, freed: string[]) {
+    if (!(await removeMovement(id, freed))) alert(t('form.stale'))
   }
 </script>
 

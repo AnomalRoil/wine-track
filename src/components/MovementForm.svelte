@@ -26,6 +26,7 @@
   let date = $state(today())
   let note = $state('')
   let saving = $state(false)
+  let stale = $state(false)
 
   $effect(() => {
     if (toCellarId === cellarId) toCellarId = cellars.find((c) => c.id !== cellarId)?.id ?? cellarId
@@ -61,7 +62,6 @@
     e.preventDefault()
     if (!valid || saving) return
     saving = true
-    const freed = asking ? chosen : placed.slice(0, toFree).map((p) => p.id)
     const movement = {
       id: crypto.randomUUID(),
       wineId,
@@ -75,10 +75,11 @@
     }
     let saved: boolean
     try {
-      saved = await addMovements([movement], freed)
+      saved = await addMovements([movement], asking ? chosen : [])
     } finally {
       saving = false
     }
+    stale = !saved
     if (saved) ondone()
   }
 </script>
@@ -134,6 +135,8 @@
   {/if}
   {#if tooMany}
     <p class="error">{t('stock.tooMany', { n: available })}</p>
+  {:else if stale}
+    <p class="error">{t('form.stale')}</p>
   {/if}
 
   <label for="mv-date">{t('stock.date')}</label>

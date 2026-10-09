@@ -70,6 +70,7 @@ export const en = {
   'form.color': 'Type',
   'form.save': 'Save',
   'form.cancel': 'Cancel',
+  'form.stale': 'Something changed in the meantime. Check and try again.',
 
   'detail.drinkBy': 'Drink before',
   'detail.tasteAgain': 'Taste again on',
@@ -273,6 +274,7 @@ export const fr: Messages<typeof en> = {
   'form.color': 'Type',
   'form.save': 'Enregistrer',
   'form.cancel': 'Annuler',
+  'form.stale': 'Quelque chose a changé entre-temps. Vérifiez et réessayez.',
 
   'detail.drinkBy': 'À boire avant',
   'detail.tasteAgain': 'Regoûter le',
@@ -478,6 +480,7 @@ export const de: Messages<typeof en> = {
   'form.color': 'Weintyp',
   'form.save': 'Speichern',
   'form.cancel': 'Abbrechen',
+  'form.stale': 'Inzwischen hat sich etwas geändert. Bitte prüfen Sie und versuchen Sie es erneut.',
 
   'detail.drinkBy': 'Trinken vor',
   'detail.tasteAgain': 'Erneut verkosten am',
