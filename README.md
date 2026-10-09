@@ -13,10 +13,11 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Journal of every stock movement and tasting.
 - Value tracking: average purchase price, current value per bottle with history, added value of the bottles in stock.
 - Tags and a wishlist, usable as filters; sort by value or purchase price.
-- Drink-before dates and "taste again in N years" reminders, with a due view and `.ics` calendar export.
+- Drinking window per wine (ready, peak, decline) with a phase badge, a timeline, and a phase filter and "drink first" sort; serving temperature in °C or °F, decanting time and a taste profile, all fillable by an online lookup.
+- Drink-before dates and "taste again in N years" reminders, with a due view that also lists wines reaching peak or decline this year, and `.ics` calendar export.
 - English and French UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.
-- Installable PWA, works offline. The only network calls are label extraction to `api.anthropic.com` with your own API key, entered in Settings and stored only on the device.
+- Installable PWA, works offline. The only network calls are label extraction and wine lookups to `api.anthropic.com` with your own API key, entered in Settings and stored only on the device.
 
 ## Development
 
