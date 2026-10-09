@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cleanAging, formatServing, mergeAging, NO_AGING, profileAxes, timeline as timelineOf, WINDOW_KEYS } from '../lib/aging'
+  import { cleanAging, formatServing, lastYear, mergeAging, NO_AGING, profileAxes, timeline as timelineOf, WINDOW_KEYS } from '../lib/aging'
   import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
@@ -7,6 +7,7 @@
   import type { Aging, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
   import AgingTimeline from './AgingTimeline.svelte'
+  import StorageHint from './StorageHint.svelte'
 
   let { wine }: { wine: Wine } = $props()
 
@@ -52,6 +53,7 @@
         <span>{t(`aging.${key}`)} <strong>{wine[key]}</strong></span>
       {/each}
     </p>
+    <StorageHint wineId={wine.id} until={lastYear(wine)} />
   {/if}
   {#if serving || wine.decantMinutes !== null}
     <p class="serving">

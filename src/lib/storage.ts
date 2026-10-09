@@ -83,6 +83,14 @@ export function shortenedUntil(until: string, today: string, score: number | nul
   return new Date(start + days * 86_400_000).toISOString().slice(0, 10)
 }
 
+/** `shortenedUntil` for a drinking window ending in `until`, by calendar year. */
+export function shortenedYear(until: number, year: number, score: number | null): number | null {
+  const penalty = agingPenalty(score)
+  if (penalty === 0 || !Number.isFinite(until) || until <= year) return null
+  const shortened = year + Math.floor((until - year) * (1 - penalty))
+  return shortened < until ? shortened : null
+}
+
 /** Of the cellars holding a wine, the one with the lowest storage score; null when none is assessed. */
 export function worstCellar<C extends { id: string; storage: StorageAnswers }>(
   cellars: C[],

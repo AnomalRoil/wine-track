@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeCellar } from './migrate'
-import { agingPenalty, assessStorage, shortenedUntil, worstCellar, type StorageAssessment } from './storage'
+import { agingPenalty, assessStorage, shortenedUntil, shortenedYear, worstCellar, type StorageAssessment } from './storage'
 import type { StorageAnswers } from './types'
 
 const ideal: StorageAnswers = {
@@ -83,6 +83,22 @@ describe('shortenedUntil', () => {
   for (const c of cases) {
     it(c.name, () => {
       expect(shortenedUntil(c.until, '2026-01-01', c.score)).toBe(c.want)
+    })
+  }
+})
+
+describe('shortenedYear', () => {
+  const cases: { name: string; until: number; score: number | null; want: number | null }[] = [
+    { name: 'good storage keeps the year', until: 2036, score: 90, want: null },
+    { name: 'unassessed storage keeps the year', until: 2036, score: null, want: null },
+    { name: 'poor storage takes 30% off the years left', until: 2036, score: 10, want: 2033 },
+    { name: 'a window closing next year closes this year', until: 2027, score: 10, want: 2026 },
+    { name: 'a window closing this year stays', until: 2026, score: 10, want: null },
+    { name: 'open-ended window stays', until: Infinity, score: 10, want: null },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(shortenedYear(c.until, 2026, c.score)).toBe(c.want)
     })
   }
 })
