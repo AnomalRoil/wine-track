@@ -188,8 +188,8 @@
     <h2>{t('dashboard.ratings')}</h2>
     <div class="card">
       <ColumnChart
-        labels={ratings.map((b) => `${b.rating}`)}
-        titles={ratings.map((b) => `${b.rating} ★`)}
+        labels={ratings.map((b) => b.rating.toLocaleString(settings.locale))}
+        titles={ratings.map((b) => `${b.rating.toLocaleString(settings.locale)} ★`)}
         series={[
           { label: t('dashboard.tastings', { n: store.tastings.length }), color: 'var(--star)', values: ratings.map((b) => b.count) },
         ]}
