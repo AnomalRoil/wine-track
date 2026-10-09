@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cleanAging, NO_AGING } from '../lib/aging'
   import { putPhoto } from '../lib/db'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
@@ -7,13 +8,15 @@
   import { today } from '../lib/due'
   import { cellarName } from '../lib/labels'
   import { addMovements, saveWine, sortedCellars } from '../lib/store.svelte'
-  import type { Wine } from '../lib/types'
+  import type { Aging, Wine } from '../lib/types'
+  import AgingFields from './AgingFields.svelte'
   import WineForm from './WineForm.svelte'
 
   let { onsaved }: { onsaved: (wine: Wine) => void } = $props()
 
   let step = $state<'idle' | 'extracting' | 'form'>('idle')
   let draft = $state<WineDraft>(emptyDraft())
+  let aging = $state<Aging>({ ...NO_AGING })
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
@@ -27,6 +30,7 @@
     photoUrl = null
     photoBlob = null
     draft = emptyDraft()
+    aging = { ...NO_AGING }
     extractError = null
     quantity = 0
     unitPrice = null
@@ -77,6 +81,7 @@
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...$state.snapshot(draft),
+      ...cleanAging($state.snapshot(aging)),
       wished: false,
       value: null,
       valueHistory: [],
@@ -152,11 +157,24 @@
           {#each sortedCellars() as c (c.id)}<option value={c.id}>{cellarName(c.id)}</option>{/each}
         </select>
       {/if}
+      <details class="aging">
+        <summary>{t('aging.title')}</summary>
+        <AgingFields bind:aging wine={draft} />
+      </details>
     {/snippet}
   </WineForm>
 {/if}
 
 <style>
+  .aging {
+    margin-top: 1rem;
+  }
+
+  .aging summary {
+    font-weight: 600;
+    cursor: pointer;
+  }
+
   .start {
     display: flex;
     flex-direction: column;

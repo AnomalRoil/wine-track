@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { phaseOf } from '../lib/aging'
   import { getPhoto, putPhoto } from '../lib/db'
+  import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { makeThumb } from '../lib/photo'
   import type { Photo, Wine } from '../lib/types'
+  import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
 
   let {
@@ -13,6 +16,7 @@
   }: { wine: Wine; rating: number | null; bottles: number; onopen: (wine: Wine) => void } = $props()
 
   let photoUrl = $state<string | null>(null)
+  const phase = $derived(phaseOf(wine, thisYear()))
 
   // Photos saved before thumbnails existed get one generated and stored here.
   async function thumbOf(photo: Photo): Promise<Blob> {
@@ -53,6 +57,7 @@
     </span>
     <span class="meta">
       <span class="dot {wine.color}"></span>
+      {#if phase}<PhaseBadge {phase} />{/if}
       {#if rating !== null}<Stars value={rating} />{/if}
       {#if bottles > 0}
         <span class="badge">{t('list.bottles', { n: bottles })}</span>

@@ -1,3 +1,4 @@
+import { NO_AGING } from './aging'
 import type { Movement, Wine } from './types'
 
 /** A minimal wine for tests; override only the fields a test cares about. */
@@ -20,6 +21,7 @@ export function makeWine(overrides: Partial<Wine> = {}): Wine {
     drinkBy: null,
     tasteAgainOn: null,
     createdAt: 0,
+    ...NO_AGING,
     ...overrides,
   }
 }

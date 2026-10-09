@@ -1,3 +1,4 @@
+import { enteringPhase } from './aging'
 import type { Wine } from './types'
 
 export interface DueItem {
@@ -5,6 +6,8 @@ export interface DueItem {
   /** "YYYY-MM-DD" */
   date: string
   overdue: boolean
+  /** Set when the wine joins the list by reaching peak or decline this year; `date` is then today. */
+  entering?: 'peak' | 'decline'
 }
 
 const DRINK_HORIZON_DAYS = 183
@@ -22,13 +25,20 @@ export function addYears(date: string, years: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** Wines whose drink-by or taste-again date falls within the horizon of `today`. */
+/**
+ * Wines whose drink-by or taste-again date falls within the horizon of `today`,
+ * plus wines entering their peak or decline this year.
+ */
 export function computeDue(wines: Wine[], today: string): { drinkSoon: DueItem[]; tasteAgain: DueItem[] } {
   const drinkLimit = addDays(today, DRINK_HORIZON_DAYS)
   const tasteLimit = addDays(today, TASTE_HORIZON_DAYS)
   const drinkSoon: DueItem[] = []
   const tasteAgain: DueItem[] = []
+  const year = Number(today.slice(0, 4))
   for (const wine of wines) {
+    const entering = enteringPhase(wine, year)
+    // Dated today: it sorts after overdue bottles and the calendar event is not in the past.
+    if (entering) drinkSoon.push({ wine, date: today, overdue: false, entering })
     if (wine.drinkBy && wine.drinkBy <= drinkLimit) {
       drinkSoon.push({ wine, date: wine.drinkBy, overdue: wine.drinkBy < today })
     }
@@ -38,6 +48,10 @@ export function computeDue(wines: Wine[], today: string): { drinkSoon: DueItem[]
   }
   const byDate = (a: DueItem, b: DueItem) => a.date.localeCompare(b.date)
   return { drinkSoon: drinkSoon.sort(byDate), tasteAgain: tasteAgain.sort(byDate) }
+}
+
+export function thisYear(): number {
+  return new Date().getFullYear()
 }
 
 export function today(): string {

@@ -4,6 +4,9 @@ import { defaultCellar, migrateWinesV1 } from './migrate'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
+const year = z.number().int().nullable().default(null)
+const axis = z.number().min(0).max(10)
+
 const WineV1Schema = z.object({
   id: z.string(),
   name: z.string(),
@@ -26,6 +29,18 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   wished: z.boolean(),
   value: z.number().min(0).nullable(),
   valueHistory: z.array(z.object({ date, value: z.number().min(0) })),
+  // Aging fields arrived within version 2: older backups lack them.
+  drinkFrom: year,
+  peakFrom: year,
+  peakUntil: year,
+  drinkUntil: year,
+  servingMinC: z.number().nullable().default(null),
+  servingMaxC: z.number().nullable().default(null),
+  decantMinutes: z.number().int().min(0).nullable().default(null),
+  profile: z
+    .object({ body: axis, tannin: axis, sweetness: axis, acidity: axis, fizz: axis })
+    .nullable()
+    .default(null),
 })
 
 const TastingSchema = z.object({

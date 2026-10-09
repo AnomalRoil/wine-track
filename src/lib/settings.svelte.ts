@@ -1,3 +1,5 @@
+import { TEMP_UNITS, type TempUnit } from './aging'
+
 export const LOCALES = ['en', 'fr', 'de'] as const
 export type Locale = (typeof LOCALES)[number]
 
@@ -13,6 +15,7 @@ export interface Settings {
   model: Model
   locale: Locale
   currency: Currency
+  tempUnit: TempUnit
   lastBackupAt: number | null
 }
 
@@ -30,6 +33,7 @@ function load(): Settings {
     model: 'claude-opus-5',
     locale: detectLocale(),
     currency: 'EUR',
+    tempUnit: 'C',
     lastBackupAt: null,
   }
   try {
@@ -42,6 +46,7 @@ function load(): Settings {
       model: MODELS.includes(stored.model as Model) ? (stored.model as Model) : defaults.model,
       locale: LOCALES.includes(stored.locale as Locale) ? (stored.locale as Locale) : defaults.locale,
       currency: CURRENCIES.includes(stored.currency as Currency) ? (stored.currency as Currency) : defaults.currency,
+      tempUnit: TEMP_UNITS.includes(stored.tempUnit as TempUnit) ? (stored.tempUnit as TempUnit) : defaults.tempUnit,
     }
   } catch {
     return defaults

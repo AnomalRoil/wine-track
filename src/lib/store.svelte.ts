@@ -1,3 +1,4 @@
+import { withAging } from './aging'
 import * as db from './db'
 import { defaultCellar } from './migrate'
 import { computeStock, emptyCellar } from './stock'
@@ -29,7 +30,7 @@ export async function initStore(): Promise<void> {
     all.cellars = [defaultCellar()]
     await db.putCellars(all.cellars)
   }
-  store.wines = all.wines
+  store.wines = all.wines.map(withAging)
   store.tastings = all.tastings
   store.cellars = all.cellars
   store.movements = all.movements

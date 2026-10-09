@@ -1,13 +1,16 @@
 <script lang="ts">
+  import { phaseOf } from '../lib/aging'
   import { getPhoto } from '../lib/db'
   import { downloadFile } from '../lib/download'
-  import { addYears, today } from '../lib/due'
+  import { addYears, thisYear, today } from '../lib/due'
   import { emptyDraft, type WineDraft } from '../lib/extract'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
   import { removeTasting, removeWine, saveWine, store, tastingsFor } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
+  import AgingPanel from './AgingPanel.svelte'
+  import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
   import StockPanel from './StockPanel.svelte'
   import TastingForm from './TastingForm.svelte'
@@ -18,6 +21,7 @@
 
   const wine = $derived(store.wines.find((w) => w.id === wineId))
   const tastings = $derived(tastingsFor(wineId))
+  const phase = $derived(wine && phaseOf(wine, thisYear()))
 
   let editing = $state(false)
   let addingTasting = $state(false)
@@ -110,7 +114,7 @@
     </button>
   {/if}
 
-  <h1>{wine.name || wine.producer}</h1>
+  <h1>{wine.name || wine.producer} {#if phase}<PhaseBadge {phase} />{/if}</h1>
   <p class="muted">
     {[wine.producer, wine.vintage, wine.region, wine.country].filter(Boolean).join(' · ')}
   </p>
@@ -130,6 +134,7 @@
 
   <StockPanel wineId={wine.id} />
   <ValuePanel {wine} />
+  <AgingPanel {wine} />
 
   <label for="drinkby">{t('detail.drinkBy')}</label>
   <input

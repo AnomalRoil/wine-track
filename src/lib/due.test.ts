@@ -37,6 +37,23 @@ describe('computeDue', () => {
     expect(due.tasteAgain.map((d) => d.wine.id)).toEqual(['taste-now'])
   })
 
+  it('adds wines entering peak or decline this year', () => {
+    const wines = [
+      makeWine({ id: 'peak', peakFrom: 2026, peakUntil: 2030 }),
+      makeWine({ id: 'decline', drinkUntil: 2025 }),
+      makeWine({ id: 'old-decline', drinkUntil: 2020 }),
+      makeWine({ id: 'young', drinkFrom: 2030 }),
+      wine('overdue', '2026-08-01', null),
+      wine('upcoming', '2026-09-01', null),
+    ]
+    expect(computeDue(wines, today).drinkSoon).toEqual([
+      { wine: wines[4], date: '2026-08-01', overdue: true },
+      { wine: wines[0], date: today, overdue: false, entering: 'peak' },
+      { wine: wines[1], date: today, overdue: false, entering: 'decline' },
+      { wine: wines[5], date: '2026-09-01', overdue: false },
+    ])
+  })
+
   it('a wine can appear in both sections', () => {
     const both = wine('both', '2026-09-01', '2026-09-02')
     const due = computeDue([both], today)

@@ -1,11 +1,12 @@
+import * as aging from './messages/aging'
 import * as core from './messages/core'
 import * as nav from './messages/nav'
 import { settings, type Locale } from './settings.svelte'
 
 // Each feature keeps its messages in its own module under ./messages; list them here.
-const modules = [core, nav] as const
+const modules = [core, nav, aging] as const
 
-export type MessageKey = keyof typeof core.en | keyof typeof nav.en
+export type MessageKey = keyof typeof core.en | keyof typeof nav.en | keyof typeof aging.en
 
 const dict = Object.fromEntries(
   (['en', 'fr', 'de'] as const).map((locale) => [locale, Object.assign({}, ...modules.map((m) => m[locale]))]),
