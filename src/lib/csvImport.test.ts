@@ -25,6 +25,8 @@ describe('parseNumber', () => {
     ['', NaN],
     ['abc', NaN],
     ['12-15', NaN],
+    ['1.00E+02', NaN],
+    ['1,5 l', 1.5],
   ]
   for (const [raw, want] of cases) {
     it(JSON.stringify(raw), () => {

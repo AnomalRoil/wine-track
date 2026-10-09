@@ -145,10 +145,14 @@ export type ParsedImport =
   | { ok: true; rows: ImportRow[]; ignored: string[] }
   | { ok: false; error: 'empty' | 'no-name-column' | 'too-many-rows' }
 
-/** Parses "12,50", "€ 12.50", "1 234,5" or "1,234.50"; NaN when not a number. */
+/**
+ * Parses "12,50", "€ 12.50", "1 234,5", "1,234.50" or "75 cl"; NaN when not a number.
+ * Only a currency or unit around the number is dropped, so "1E+02" or "12-15" are rejected.
+ */
 export function parseNumber(raw: string): number {
-  let s = raw.replace(/[^\d.,-]/g, '')
-  if (s === '' || s === '-') return NaN
+  const number = /^[^\d-]*(-?\d(?:[\d.,'’\s]*\d)?)[^\d]*$/u.exec(raw)?.[1]
+  if (!number) return NaN
+  let s = number.replace(/['’\s]/g, '')
   const lastComma = s.lastIndexOf(',')
   const lastDot = s.lastIndexOf('.')
   if (lastComma > lastDot) s = s.replaceAll('.', '').replace(',', '.')
