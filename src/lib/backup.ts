@@ -80,7 +80,12 @@ const TastingSchema = z
   })
   .transform(normalizeTasting)
 
-const CellarSchema = z.object({ id: z.string(), name: z.string(), position: z.number() })
+const CellarSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  position: z.number(),
+  storage: z.record(z.string(), z.string()).default({}),
+})
 
 const MovementSchema = z.object({
   id: z.string(),

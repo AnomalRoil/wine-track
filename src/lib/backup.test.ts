@@ -27,7 +27,7 @@ describe('backup', () => {
     const data = {
       wines: [wine],
       tastings: [tasting],
-      cellars: [{ id: 'main', name: '', position: 0 }],
+      cellars: [{ id: 'main', name: '', position: 0, storage: { temperature: 'cool', light: 'bright' } }],
       movements: [makeMovement({ unitPrice: 12.5 })],
       racks: [{ id: 'r1', cellarId: 'main', name: 'Left wall', columns: 6, rows: 4, depth: 2, layout: 'diamond' as const, position: 0 }],
       placements: [{ id: 'r1/1/0/2', rackId: 'r1', layer: 1, row: 0, column: 2, wineId: 'w1' }],
@@ -77,7 +77,7 @@ describe('backup', () => {
     const json = JSON.stringify({ app: 'wine-track', version: 1, exportedAt: '', wines: [v1Wine, { ...v1Wine, id: 'w2', bottlesOwned: 0 }], tastings: [tasting], photos: [] })
     const parsed = parseBackup(json)
     expect(parsed?.version).toBe(2)
-    expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0 }])
+    expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0, storage: {} }])
     expect(parsed?.wines.map((w) => [w.id, w.sizeCl, w.tags, w.wished, w.value, w.drinkFrom, w.profile])).toEqual([
       ['w1', 75, [], false, null, null, null],
       ['w2', 75, [], false, null, null, null],
@@ -110,6 +110,11 @@ describe('backup', () => {
 
   it('rejects an unknown tasting answer', () => {
     expect(parseBackup(v2([{ ...makeTasting(), sheet: { acidity: 'extreme' } }]))).toBeNull()
+  })
+
+  it('gives cellars from older version 2 backups an empty storage checklist', () => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.cellars).toEqual([{ id: 'main', name: '', position: 0, storage: {} }])
   })
 
   const invalid: { name: string; json: string }[] = [

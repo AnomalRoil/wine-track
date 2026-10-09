@@ -13,6 +13,7 @@
   import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
   import StockPanel from './StockPanel.svelte'
+  import StorageHint from './StorageHint.svelte'
   import TastingForm from './TastingForm.svelte'
   import TastingSummary from './TastingSummary.svelte'
   import ValuePanel from './ValuePanel.svelte'
@@ -149,6 +150,7 @@
     value={wine.drinkBy}
     onchange={(e) => update({ drinkBy: e.currentTarget.value || null })}
   />
+  {#if wine.drinkBy}<StorageHint wineId={wine.id} until={wine.drinkBy} />{/if}
 
   <label for="tasteagain">{t('detail.tasteAgain')}</label>
   <input

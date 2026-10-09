@@ -3,11 +3,12 @@ import * as core from './messages/core'
 import * as dashboard from './messages/dashboard'
 import * as nav from './messages/nav'
 import * as rack from './messages/rack'
+import * as storage from './messages/storage'
 import * as tasting from './messages/tasting'
 import { settings, type Locale } from './settings.svelte'
 
 // Each feature keeps its messages in its own module under ./messages; list them here.
-const modules = [core, nav, aging, tasting, dashboard, rack] as const
+const modules = [core, nav, aging, tasting, dashboard, rack, storage] as const
 
 export type MessageKey =
   | keyof typeof core.en
@@ -16,6 +17,7 @@ export type MessageKey =
   | keyof typeof tasting.en
   | keyof typeof dashboard.en
   | keyof typeof rack.en
+  | keyof typeof storage.en
 
 const dict = Object.fromEntries(
   (['en', 'fr', 'de'] as const).map((locale) => [locale, Object.assign({}, ...modules.map((m) => m[locale]))]),

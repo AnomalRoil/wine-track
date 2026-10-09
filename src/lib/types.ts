@@ -108,6 +108,8 @@ export interface Cellar {
   name: string
   /** Display order, ascending. */
   position: number
+  /** Storage-conditions checklist; unanswered questions are absent. */
+  storage: StorageAnswers
 }
 
 export const RACK_LAYOUTS = ['lying', 'standing', 'diamond'] as const
@@ -138,6 +140,18 @@ export interface Placement {
   column: number
   wineId: string
 }
+export type StorageFactor =
+  | 'temperature'
+  | 'stability'
+  | 'humidity'
+  | 'airflow'
+  | 'light'
+  | 'position'
+  | 'vibration'
+  | 'odors'
+
+/** Chosen option id per checklist question; see STORAGE_QUESTIONS. */
+export type StorageAnswers = Partial<Record<StorageFactor, string>>
 
 export type MovementKind = 'add' | 'consume' | 'gift' | 'adjust' | 'transfer'
 
