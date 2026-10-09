@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { NO_AGING } from '../lib/aging'
   import { putPhoto } from '../lib/db'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
@@ -77,6 +78,7 @@
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...$state.snapshot(draft),
+      ...NO_AGING,
       wished: false,
       value: null,
       valueHistory: [],

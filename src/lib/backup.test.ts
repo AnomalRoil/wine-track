@@ -1,9 +1,23 @@
 import { describe, expect, it } from 'vitest'
+import { NO_AGING } from './aging'
 import { parseBackup, serializeBackup } from './backup'
 import { makeMovement, makeWine } from './testing'
 import type { Tasting } from './types'
 
-const wine = makeWine({ id: 'w1', name: 'Chablis', photoId: 'p1', tags: ['Fish'], value: 30, valueHistory: [{ date: '2026-08-28', value: 30 }] })
+const wine = makeWine({
+  id: 'w1',
+  name: 'Chablis',
+  photoId: 'p1',
+  tags: ['Fish'],
+  value: 30,
+  valueHistory: [{ date: '2026-08-28', value: 30 }],
+  drinkFrom: 2024,
+  peakUntil: 2030,
+  servingMinC: 10,
+  servingMaxC: 12,
+  decantMinutes: 0,
+  profile: { body: 4, tannin: 0, sweetness: 1, acidity: 8, fizz: 0 },
+})
 const tasting: Tasting = { id: 't1', wineId: 'w1', date: '2026-08-28', rating: 4.5, notes: 'minerality' }
 const photo = { id: 'p1', mediaType: 'image/jpeg', data: 'AAAA' }
 
@@ -17,6 +31,21 @@ describe('backup', () => {
     }
     const parsed = parseBackup(serializeBackup(data, [photo], '2026-08-28T10:00:00Z'))
     expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo] })
+  })
+
+  it('fills aging fields missing from an older version 2 backup', () => {
+    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, ...older } = wine
+    const json = JSON.stringify({
+      app: 'wine-track',
+      version: 2,
+      exportedAt: '',
+      wines: [older],
+      tastings: [],
+      cellars: [{ id: 'main', name: '', position: 0 }],
+      movements: [],
+      photos: [],
+    })
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING }])
   })
 
   it('upgrades a version 1 backup, turning stock counters into additions', () => {
@@ -39,9 +68,9 @@ describe('backup', () => {
     const parsed = parseBackup(json)
     expect(parsed?.version).toBe(2)
     expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0 }])
-    expect(parsed?.wines.map((w) => [w.id, w.sizeCl, w.tags, w.wished, w.value])).toEqual([
-      ['w1', 75, [], false, null],
-      ['w2', 75, [], false, null],
+    expect(parsed?.wines.map((w) => [w.id, w.sizeCl, w.tags, w.wished, w.value, w.drinkFrom, w.profile])).toEqual([
+      ['w1', 75, [], false, null, null, null],
+      ['w2', 75, [], false, null, null, null],
     ])
     expect(parsed?.wines[0]).not.toHaveProperty('bottlesOwned')
     expect(parsed?.movements).toEqual([

@@ -44,7 +44,36 @@ export interface PricePoint {
   value: number
 }
 
-export interface Wine {
+/** How a wine tastes, each axis 0–10 from the first pole to the second. */
+export interface TasteProfile {
+  /** light ↔ bold */
+  body: number
+  /** smooth ↔ tannic */
+  tannin: number
+  /** dry ↔ sweet */
+  sweetness: number
+  /** soft ↔ acidic */
+  acidity: number
+  /** still ↔ fizzy; shown for sparkling wines only. */
+  fizz: number
+}
+
+/** Drinking window and serving advice; every field is null when unknown. */
+export interface Aging {
+  /** Years: ready to drink from, at peak from/until, drinkable until. */
+  drinkFrom: number | null
+  peakFrom: number | null
+  peakUntil: number | null
+  drinkUntil: number | null
+  /** Serving temperature range, always stored in °C. */
+  servingMinC: number | null
+  servingMaxC: number | null
+  /** 0 means no decanting. */
+  decantMinutes: number | null
+  profile: TasteProfile | null
+}
+
+export interface Wine extends Aging {
   id: string
   name: string
   producer: string
