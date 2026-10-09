@@ -34,6 +34,7 @@
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
+  let photoFailed = $state(false)
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
   let unitPrice = $state<number | null>(null)
@@ -52,6 +53,7 @@
     draft = emptyDraft()
     aging = { ...NO_AGING }
     extractError = null
+    photoFailed = false
     quantity = 0
     unitPrice = null
     photoTask = null
@@ -71,9 +73,14 @@
     step = 'extracting'
     const current = session
     const task = (photoTask = processPhoto(file))
-    const blob = await task
+    const blob = await task.catch(() => null)
     if (current !== session) return
     photoTask = null
+    if (!blob) {
+      photoFailed = true
+      step = 'form'
+      return
+    }
     photoBlob = blob
     photoUrl = URL.createObjectURL(blob)
     if (step === 'extracting') await extract()
@@ -130,7 +137,7 @@
     const current = session
     const fields = { ...$state.snapshot(draft), ...cleanAging($state.snapshot(aging)) }
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
-    const blob = photoTask ? await photoTask : photoBlob
+    const blob = photoTask ? await photoTask.catch(() => null) : photoBlob
     const photoId = blob ? crypto.randomUUID() : null
     if (blob && photoId) {
       await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
@@ -179,6 +186,7 @@
     {#if oncancel}<button class="link" onclick={oncancel}>{t('form.cancel')}</button>{/if}
   </div>
 {:else}
+  {#if photoFailed}<p class="error card">{t('capture.photoFailed')}</p>{/if}
   {#if extractError}
     <p class="error card">
       {t(`extract.${extractError.kind}`, { detail: extractError.detail ?? '' })}

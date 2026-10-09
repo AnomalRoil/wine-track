@@ -41,6 +41,7 @@ export const en = {
   'capture.manual': 'Enter manually',
   'capture.extracting': 'Reading the label…',
   'capture.skip': 'Skip extraction',
+  'capture.photoFailed': 'The photo could not be read. The wine is saved without it; cancel to take another.',
 
   'extract.no-key': 'No API key configured. Add one in Settings, or fill the form manually.',
   'extract.auth': 'The API rejected your key. Check it in Settings.',
@@ -243,6 +244,7 @@ export const fr: Messages<typeof en> = {
   'capture.manual': 'Saisie manuelle',
   'capture.extracting': 'Lecture de l’étiquette…',
   'capture.skip': 'Passer l’extraction',
+  'capture.photoFailed': 'Photo illisible. Le vin sera enregistré sans elle ; annulez pour en prendre une autre.',
 
   'extract.no-key': 'Aucune clé API configurée. Ajoutez-en une dans Réglages, ou remplissez le formulaire.',
   'extract.auth': 'Clé API refusée. Vérifiez-la dans Réglages.',
@@ -445,6 +447,7 @@ export const de: Messages<typeof en> = {
   'capture.manual': 'Manuell eingeben',
   'capture.extracting': 'Etikett wird gelesen…',
   'capture.skip': 'Auslesen überspringen',
+  'capture.photoFailed': 'Das Foto ist nicht lesbar. Der Wein wird ohne Foto gespeichert; abbrechen, um ein neues aufzunehmen.',
 
   'extract.no-key':
     'Kein API-Schlüssel hinterlegt. In den Einstellungen eintragen oder das Formular manuell ausfüllen.',
