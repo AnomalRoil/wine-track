@@ -58,8 +58,8 @@ describe('agingPenalty', () => {
     [null, 0],
     [100, 0],
     [75, 0],
-    [74, 0.15],
-    [50, 0.15],
+    [74, 0],
+    [50, 0],
     [49, 0.3],
     [0, 0.3],
   ]
@@ -74,7 +74,7 @@ describe('shortenedUntil', () => {
   const cases: { name: string; until: string; score: number | null; want: string | null }[] = [
     { name: 'good storage keeps the date', until: '2036-01-01', score: 90, want: null },
     { name: 'unassessed storage keeps the date', until: '2036-01-01', score: null, want: null },
-    { name: 'fair storage takes 15% off the time left', until: '2026-04-11', score: 60, want: '2026-03-27' },
+    { name: 'fair storage keeps the date', until: '2026-04-11', score: 60, want: null },
     { name: 'poor storage takes 30% off the time left', until: '2026-04-11', score: 10, want: '2026-03-12' },
     { name: 'past dates stay as they are', until: '2025-12-31', score: 10, want: null },
     { name: 'year-only date is ignored', until: '2030', score: 10, want: null },

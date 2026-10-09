@@ -61,10 +61,9 @@ export function scoreGrade(score: number): StorageGrade {
   return 'poor'
 }
 
-/** Share of the remaining time in bottle a wine loses under conditions of this score. */
+/** Share of the remaining time in bottle a wine loses under conditions of this score; only poor storage costs any. */
 export function agingPenalty(score: number | null): number {
-  if (score === null) return 0
-  return { good: 0, fair: 0.15, poor: 0.3 }[scoreGrade(score)]
+  return score !== null && scoreGrade(score) === 'poor' ? 0.3 : 0
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
