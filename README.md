@@ -22,6 +22,8 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Drink-before dates and "taste again in N years" reminders, with a due view that also lists wines reaching peak or decline this year, and `.ics` calendar export.
 - English and French UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.
+- CSV import with a template, per-line validation and duplicate detection (matching wines get the bottles), optional batched completion of grapes and regions by Claude; CSV export in the same columns.
+- Printable insurance inventory per cellar with purchase prices, estimated values, totals and bottles without any price.
 - Installable PWA, works offline. The only network calls are label extraction and wine lookups to `api.anthropic.com` with your own API key, entered in Settings and stored only on the device.
 
 ## Development

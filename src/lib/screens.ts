@@ -1,5 +1,6 @@
 import type { Component } from 'svelte'
 import DueView from '../components/DueView.svelte'
+import ImportExport from '../components/ImportExport.svelte'
 import Journal from '../components/Journal.svelte'
 import Overview from '../components/Overview.svelte'
 import Settings from '../components/Settings.svelte'
@@ -25,5 +26,6 @@ export const MORE_SCREENS: Screen[] = [
   { id: 'journal', icon: '📖', label: 'tab.journal', component: Journal },
   { id: 'due', icon: '⏳', label: 'tab.due', component: DueView },
   { id: 'storage', icon: '🌡️', label: 'storage.title', component: StorageOverview },
+  { id: 'io', icon: '📦', label: 'io.title', component: ImportExport },
   { id: 'settings', icon: '⚙️', label: 'tab.settings', component: Settings },
 ]

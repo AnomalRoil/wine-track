@@ -161,3 +161,11 @@ export async function updatePlacements(put: Placement[], remove: string[] = []):
   const gone = new Set([...remove, ...put.map((p) => p.id)])
   store.placements = [...store.placements.filter((p) => !gone.has(p.id)), ...put]
 }
+
+/** Commits an import atomically: new wines, new cellars and stock additions. */
+export async function applyImport(data: Pick<db.Data, 'wines' | 'cellars' | 'movements'>): Promise<void> {
+  await db.putImport(data)
+  store.wines.push(...data.wines)
+  store.cellars.push(...data.cellars)
+  store.movements.push(...data.movements)
+}
