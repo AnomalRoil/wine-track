@@ -136,6 +136,11 @@
 {:else}
   {#if timeline}
     <AgingTimeline {timeline} {year} />
+    <p class="years">
+      {#each WINDOW_KEYS.filter((k) => wine[k] !== null) as key (key)}
+        <span>{t(`aging.${key}`)} <strong>{wine[key]}</strong></span>
+      {/each}
+    </p>
   {/if}
   {#if serving || wine.decantMinutes !== null}
     <p class="serving">
@@ -189,6 +194,14 @@
     color: var(--danger);
     font-size: 0.85rem;
     margin: 0.4rem 0 0;
+  }
+
+  .years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.9rem;
   }
 
   .serving {

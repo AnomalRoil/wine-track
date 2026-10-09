@@ -14,10 +14,6 @@
   {/each}
   <span class="now" style:left={pct(year + 0.5 - timeline.start)} title={t('aging.now')}></span>
 </div>
-<div class="ends muted">
-  <span>{timeline.start}</span>
-  <span>{timeline.end - 1}</span>
-</div>
 <div class="legend">
   {#each timeline.segments as s, i (s.from)}
     <span class="muted">
@@ -46,12 +42,6 @@
     margin-left: -1.5px;
     background: var(--text);
     box-shadow: 0 0 0 1px var(--surface);
-  }
-
-  .ends {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
   }
 
   .legend {
