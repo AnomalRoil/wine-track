@@ -76,6 +76,11 @@ export interface RenderOptions {
 const escape = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 
+// The document opens as a blob URL with the app's origin, so it could read the API key in
+// localStorage: only the print button's handler may run, whatever slips past escaping.
+const PRINT_HANDLER_HASH = 'sha256-Ul1RMxNBbPGH9E+ofhdT7m0RVSwiCXU33cMrTtNPpo8='
+const CSP = `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-hashes' '${PRINT_HANDLER_HASH}'`
+
 /** A standalone, print-friendly HTML document of the inventory. */
 export function renderInventory(inv: Inventory, o: RenderOptions): string {
   const t = (key: InventoryKey) => escape(o.t(key))
@@ -102,6 +107,7 @@ export function renderInventory(inv: Inventory, o: RenderOptions): string {
 <html lang="${escape(o.lang)}">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${CSP}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t('io.doc.title')} — ${escape(o.date)}</title>
 <style>

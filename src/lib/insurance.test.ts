@@ -71,6 +71,14 @@ describe('renderInventory', () => {
     })
   }
 
+  it('allows only the print handler to run', async () => {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('print()'))
+    const hash = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    expect(html).toContain(`onclick="print()"`)
+    expect(html).toContain(`script-src 'unsafe-hashes' 'sha256-${hash}'`)
+    expect(html).toContain(`default-src 'none'`)
+  })
+
   it('never injects markup from data', () => {
     expect(html).not.toContain('<script>')
     expect(html).not.toContain('<h2>Empty</h2>')
