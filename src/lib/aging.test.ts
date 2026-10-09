@@ -9,6 +9,8 @@ import {
   mergeAging,
   NO_AGING,
   phaseOf,
+  profileAxes,
+  segmentYears,
   timeline,
   toUnit,
   urgency,
@@ -175,4 +177,28 @@ describe('lastYear', () => {
   for (const c of cases) {
     it(c.name, () => expect(lastYear(c.a)).toBe(c.want))
   }
+})
+
+describe('segmentYears', () => {
+  const cases: { name: string; from: number; to: number; last: boolean; want: string }[] = [
+    { name: 'range', from: 2024, to: 2028, last: false, want: '2024–2027' },
+    { name: 'single year', from: 2024, to: 2025, last: false, want: '2024' },
+    { name: 'open-ended', from: 2033, to: 2038, last: true, want: '2033+' },
+  ]
+  for (const c of cases) {
+    it(c.name, () => expect(segmentYears({ phase: 'peak', from: c.from, to: c.to }, c.last)).toBe(c.want))
+  }
+})
+
+describe('profileAxes', () => {
+  const profile = { body: 5, tannin: 5, sweetness: 0, acidity: 5, fizz: 0 }
+  it('hides fizz for still wines', () => {
+    expect(profileAxes('red', profile)).toEqual(['body', 'tannin', 'sweetness', 'acidity'])
+  })
+  it('shows fizz for sparkling wines', () => {
+    expect(profileAxes('sparkling', null)).toContain('fizz')
+  })
+  it('shows fizz when set on another color', () => {
+    expect(profileAxes('white', { ...profile, fizz: 3 })).toContain('fizz')
+  })
 })

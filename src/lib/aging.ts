@@ -1,4 +1,4 @@
-import type { Aging, TasteProfile } from './types'
+import type { Aging, TasteProfile, WineColor } from './types'
 
 export const PHASES = ['youth', 'maturity', 'peak', 'decline'] as const
 export type Phase = (typeof PHASES)[number]
@@ -19,8 +19,11 @@ export function withAging<T extends Partial<Aging>>(wine: T): T & Aging {
   return { ...NO_AGING, ...wine }
 }
 
+/** Window years in chronological order. */
+export const WINDOW_KEYS = ['drinkFrom', 'peakFrom', 'peakUntil', 'drinkUntil'] as const satisfies (keyof Aging)[]
+
 function bounds(a: Aging): number[] {
-  return [a.drinkFrom, a.peakFrom, a.peakUntil, a.drinkUntil].filter((y) => y !== null)
+  return WINDOW_KEYS.map((k) => a[k]).filter((y) => y !== null)
 }
 
 /** The wine's phase in `year`, or null when no drinking window is known. */
@@ -84,6 +87,12 @@ export function timeline(a: Aging, vintage: number | null, year: number): Timeli
   return { start, end, segments }
 }
 
+/** "2024–2027", "2024", or "2033+" for the open-ended last segment. */
+export function segmentYears(s: Segment, last: boolean): string {
+  if (last) return `${s.from}+`
+  return s.to - 1 > s.from ? `${s.from}–${s.to - 1}` : `${s.from}`
+}
+
 export const TEMP_UNITS = ['C', 'F'] as const
 export type TempUnit = (typeof TEMP_UNITS)[number]
 
@@ -106,6 +115,11 @@ export function formatServing(min: number | null, max: number | null, unit: Temp
 }
 
 export const PROFILE_AXES = ['body', 'tannin', 'sweetness', 'acidity', 'fizz'] as const satisfies (keyof TasteProfile)[]
+
+/** Axes worth showing: fizz only for sparkling wines or when already set. */
+export function profileAxes(color: WineColor, profile: TasteProfile | null): (keyof TasteProfile)[] {
+  return PROFILE_AXES.filter((axis) => axis !== 'fizz' || color === 'sparkling' || (profile?.fizz ?? 0) > 0)
+}
 
 export function neutralProfile(): TasteProfile {
   return { body: 5, tannin: 5, sweetness: 0, acidity: 5, fizz: 0 }
