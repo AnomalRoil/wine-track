@@ -10,6 +10,7 @@
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel, wineLabel } from '../lib/labels'
   import { matchesPerLayer, moveTransfers, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
+  import { serial } from '../lib/serial'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
     addMovements,
@@ -84,6 +85,8 @@
 
   const racks = $derived(racksOf(store.racks, cellarId))
   const placements = $derived(new Map(store.placements.map((p) => [p.id, p])))
+  /** Placement writes, queued so each one checks the slots the previous ones filled. */
+  const placing = serial()
   const wines = $derived(new Map(store.wines.map((w) => [w.id, w])))
   const waiting = $derived(unplaced(currentStock(), store.racks, store.placements, cellarId))
   const waitingTotal = $derived([...waiting.values()].reduce((a, b) => a + b, 0))
@@ -148,33 +151,45 @@
   }
 
   // A move into another cellar's rack also records the transfers between the cellars.
-  async function moveTo(slot: Slot) {
+  function moveTo(slot: Slot) {
     const from = moving!
     moving = null
     const id = slotId(slot)
     if (id === from.id) return
-    const other = placements.get(id)
-    const put = other ? [place(slot, from.wineId), place(from, other.wineId)] : [place(slot, from.wineId)]
-    const freed = other ? [] : [from.id]
-    const cellarOf = (rackId: string) => store.racks.find((r) => r.id === rackId)?.cellarId ?? cellarId
-    const transfers = moveTransfers(
-      from.wineId,
-      other?.wineId ?? null,
-      cellarOf(from.rackId),
-      cellarOf(slot.rackId),
-      today(),
-      () => crypto.randomUUID(),
-    )
-    if (transfers.length > 0) await addMovements(transfers, freed, put)
-    else await updatePlacements(put, freed)
-    await showLanded(slot)
+    return placing(async () => {
+      const other = placements.get(id)
+      const put = other ? [place(slot, from.wineId), place(from, other.wineId)] : [place(slot, from.wineId)]
+      const freed = other ? [] : [from.id]
+      const cellarOf = (rackId: string) => store.racks.find((r) => r.id === rackId)?.cellarId ?? cellarId
+      const transfers = moveTransfers(
+        from.wineId,
+        other?.wineId ?? null,
+        cellarOf(from.rackId),
+        cellarOf(slot.rackId),
+        today(),
+        () => crypto.randomUUID(),
+      )
+      if (transfers.length > 0) await addMovements(transfers, freed, put)
+      else await updatePlacements(put, freed)
+      await showLanded(slot)
+    })
   }
 
-  async function pick(wine: Wine) {
+  /** Puts a bottle of `wine` in `slot` unless the slot was filled or the bottle placed meanwhile. */
+  function placeIn(slot: Slot, wine: Wine) {
+    return placing(async () => {
+      const rack = store.racks.find((r) => r.id === slot.rackId)
+      if (!rack || placements.has(slotId(slot))) return
+      if (!unplaced(currentStock(), store.racks, store.placements, rack.cellarId).has(wine.id)) return
+      await updatePlacements([place(slot, wine.id)])
+      await showLanded(slot)
+    })
+  }
+
+  function pick(wine: Wine) {
     const slot = selected!
     selected = null
-    await updatePlacements([place(slot, wine.id)])
-    await showLanded(slot)
+    return placeIn(slot, wine)
   }
 
   function startNew(photo: File | null) {
@@ -182,11 +197,10 @@
     selected = null
   }
 
-  async function captured(wine: Wine) {
+  function captured(wine: Wine) {
     const slot = capture!.slot
     capture = null
-    await updatePlacements([place(slot, wine.id)])
-    await showLanded(slot)
+    return placeIn(slot, wine)
   }
 
   async function drink() {
