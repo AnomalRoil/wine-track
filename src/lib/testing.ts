@@ -14,6 +14,7 @@ export function makeWine(overrides: Partial<Wine> = {}): Wine {
     color: 'red',
     sizeCl: 75,
     tags: [],
+    lwin: null,
     wished: false,
     value: null,
     valueHistory: [],

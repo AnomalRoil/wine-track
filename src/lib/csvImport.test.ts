@@ -65,6 +65,7 @@ describe('parseImport', () => {
             color: 'red',
             sizeCl: 150,
             tags: ['gift', 'party'],
+            lwin: null,
           },
           quantity: 6,
           price: 32.5,
@@ -75,6 +76,22 @@ describe('parseImport', () => {
       ],
     })
   })
+
+  const lwinCases: { raw: string; lwin: string | null; error: boolean }[] = [
+    { raw: '1066553', lwin: '1066553', error: false },
+    { raw: '1066553.0', lwin: '1066553', error: false },
+    { raw: '10665532019', lwin: '1066553', error: false },
+    { raw: '', lwin: null, error: false },
+    { raw: '106655', lwin: null, error: true },
+    { raw: 'abc', lwin: null, error: true },
+  ]
+  for (const c of lwinCases) {
+    it(`reads LWIN ${JSON.stringify(c.raw)}`, () => {
+      const r = row(`X,${c.raw}`, 'name,LWIN')
+      expect(r.draft.lwin).toBe(c.lwin)
+      expect(r.errors.includes('lwin')).toBe(c.error)
+    })
+  }
 
   it('matches French and German headers and reports unknown ones', () => {
     const parsed = parseImport('Nom;Millésime;Quantité;Couleur;Größe;Kaufpreis;Rating\nCuvée;2019;2;Rouge;Magnum;12,50;4', 2026)

@@ -24,6 +24,7 @@ describe('toWineDraft', () => {
       color: 'white',
       sizeCl: 150,
       tags: [],
+      lwin: null,
     })
   })
 

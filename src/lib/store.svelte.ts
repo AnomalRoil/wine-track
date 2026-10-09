@@ -1,6 +1,5 @@
-import { withAging } from './aging'
 import * as db from './db'
-import { defaultCellar, normalizeCellar } from './migrate'
+import { defaultCellar, normalizeCellar, normalizeWine } from './migrate'
 import { computeStock, emptyCellar } from './stock'
 import { today } from './due'
 import { stalePlacements } from './racks'
@@ -36,7 +35,7 @@ export async function initStore(): Promise<void> {
     all.cellars = [defaultCellar()]
     await db.putCellars(all.cellars)
   }
-  store.wines = all.wines.map(withAging)
+  store.wines = all.wines.map(normalizeWine)
   store.tastings = all.tastings.map(normalizeTasting)
   store.cellars = all.cellars.map(normalizeCellar)
   store.movements = all.movements
