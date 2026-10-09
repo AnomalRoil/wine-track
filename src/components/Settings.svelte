@@ -91,6 +91,11 @@
   <option value="C">{t('aging.celsius')}</option>
   <option value="F">{t('aging.fahrenheit')}</option>
 </select>
+<label class="toggle">
+  <input type="checkbox" bind:checked={settings.hidePrices} />
+  {t('dashboard.hidePrices')}
+</label>
+<p class="muted">{t('dashboard.hidePricesNote')}</p>
 
 <CellarSettings />
 
@@ -131,5 +136,13 @@
 
   .row {
     margin-top: 0.5rem;
+  }
+
+  .toggle {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 1rem;
+    color: var(--text);
   }
 </style>

@@ -16,6 +16,8 @@ export interface Settings {
   locale: Locale
   currency: Currency
   tempUnit: TempUnit
+  /** Masks every amount shown in the app. */
+  hidePrices: boolean
   lastBackupAt: number | null
 }
 
@@ -34,6 +36,7 @@ function load(): Settings {
     locale: detectLocale(),
     currency: 'EUR',
     tempUnit: 'C',
+    hidePrices: false,
     lastBackupAt: null,
   }
   try {

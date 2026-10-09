@@ -2,6 +2,7 @@
   import { today } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { money } from '../lib/money'
+  import { settings } from '../lib/settings.svelte'
   import { averageBuyPrice, bottlesOf } from '../lib/stock'
   import { currentStock, saveWine, store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
@@ -13,6 +14,8 @@
   const added = $derived(
     wine.value !== null && buyPrice !== null && bottles > 0 ? (wine.value - buyPrice) * bottles : null,
   )
+  // Gains and losses stay neutral when prices are hidden, so the color does not hint at them.
+  const tone = $derived(settings.hidePrices || added === null ? 0 : Math.sign(added))
 
   async function setValue(raw: string) {
     const value = raw === '' ? null : Number(raw)
@@ -30,20 +33,24 @@
 {#if buyPrice !== null}
   <p class="row"><span class="grow muted">{t('value.buyPrice')}</span>{money(buyPrice)}</p>
 {/if}
-<label for="value">{t('value.current')}</label>
-<input
-  id="value"
-  type="number"
-  inputmode="decimal"
-  min="0"
-  step="0.01"
-  value={wine.value}
-  onchange={(e) => setValue(e.currentTarget.value)}
-/>
+{#if settings.hidePrices}
+  <p class="row"><span class="grow muted">{t('value.current')}</span>{money(wine.value ?? 0)}</p>
+{:else}
+  <label for="value">{t('value.current')}</label>
+  <input
+    id="value"
+    type="number"
+    inputmode="decimal"
+    min="0"
+    step="0.01"
+    value={wine.value}
+    onchange={(e) => setValue(e.currentTarget.value)}
+  />
+{/if}
 {#if added !== null}
   <p class="row">
     <span class="grow muted">{t('value.added')}</span>
-    <span class:gain={added > 0} class:loss={added < 0}>{added > 0 ? '+' : ''}{money(added)}</span>
+    <span class:gain={tone > 0} class:loss={tone < 0}>{tone > 0 ? '+' : ''}{money(added)}</span>
   </p>
 {/if}
 {#if wine.valueHistory.length > 1}

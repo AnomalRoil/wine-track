@@ -10,7 +10,7 @@ export interface DueItem {
   entering?: 'peak' | 'decline'
 }
 
-const DRINK_HORIZON_DAYS = 183
+export const DRINK_HORIZON_DAYS = 183
 const TASTE_HORIZON_DAYS = 30
 
 export function addDays(date: string, days: number): string {
