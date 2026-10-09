@@ -273,9 +273,19 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
   return { ok: true, rows, ignored }
 }
 
-/** Compares names ignoring case and spacing; unlike fold, keeps every script's letters apart. */
-function identity(s: string): string {
-  return s.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim()
+/**
+ * Compares names ignoring case, spacing and accents on Latin letters (Château = Chateau).
+ * Unlike fold, it keeps every script's letters apart, including marks that change a
+ * non-Latin letter (は ≠ ば).
+ */
+export function identity(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /** Identity used to detect duplicates: same name, producer, vintage and bottle size. */

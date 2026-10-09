@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  identity,
   applyCompletion,
   incompleteRows,
   MAX_IMPORT_ROWS,
@@ -278,4 +279,19 @@ describe('applyCompletion', () => {
   it('accepts unknown answers', () => {
     expect(applyCompletion(emptyDraft(), { grapes: [], region: null, country: null }).region).toBe('')
   })
+})
+
+describe('identity', () => {
+  const cases: { name: string; a: string; b: string; same: boolean }[] = [
+    { name: 'Latin accents fold', a: 'Château Margaux', b: 'chateau  margaux', same: true },
+    { name: 'German umlaut folds', a: 'Müller-Thurgau', b: 'Muller-Thurgau', same: true },
+    { name: 'distinct CJK names stay apart', a: '赤', b: '白', same: false },
+    { name: 'kana voicing marks stay apart', a: 'は', b: 'ば', same: false },
+    { name: 'full-width letters match', a: 'ＡＢＣ', b: 'abc', same: true },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(identity(c.a) === identity(c.b), `identity(${c.a}) vs identity(${c.b})`).toBe(c.same)
+    })
+  }
 })
