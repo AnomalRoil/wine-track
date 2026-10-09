@@ -12,6 +12,8 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 - Cellars: several named cellars, bottle sizes, additions with purchase price, removals (drunk, gifted, stock adjustment) and transfers between cellars.
 - Journal of every stock movement and tasting.
 - Value tracking: average purchase price, current value per bottle with history, added value of the bottles in stock.
+- Overview: bottle, wine and cellar totals, invested and estimated value, composition by type, country, region, grape, vintage, size and cellar, bottles added, drunk and gifted per month and year, cellar value over time, top gains, most drunk regions, rating distribution, and ready / at peak / in decline shortcuts.
+- Optional "Hide prices" setting that masks every amount.
 - Tags and a wishlist, usable as filters; sort by value or purchase price.
 - Drink-before dates and "taste again in N years" reminders, with a due view and `.ics` calendar export.
 - English and French UI.
