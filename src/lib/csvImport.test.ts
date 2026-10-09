@@ -298,6 +298,7 @@ describe('identity', () => {
     { name: 'distinct CJK names stay apart', a: '赤', b: '白', same: false },
     { name: 'kana voicing marks stay apart', a: 'は', b: 'ば', same: false },
     { name: 'full-width letters match', a: 'ＡＢＣ', b: 'abc', same: true },
+    { name: 'compatibility ligature folds like its letters', a: 'ǅ', b: 'Dž', same: true },
   ]
   for (const c of cases) {
     it(c.name, () => {

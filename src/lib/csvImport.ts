@@ -284,7 +284,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
  */
 export function identity(s: string): string {
   return s
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
     .normalize('NFKC')
     .toLowerCase()
