@@ -5,7 +5,7 @@
   import { t } from '../lib/i18n.svelte'
   import { buildInventory, renderInventory } from '../lib/insurance'
   import { cellarName } from '../lib/labels'
-  import { money } from '../lib/money'
+  import { formatMoney } from '../lib/money'
   import type { ScreenProps } from '../lib/screens'
   import { settings } from '../lib/settings.svelte'
   import { store } from '../lib/store.svelte'
@@ -30,7 +30,7 @@
       date: new Intl.DateTimeFormat(settings.locale, { dateStyle: 'long' }).format(new Date()),
       lang: settings.locale,
       t,
-      money,
+      money: formatMoney,
       cellarName,
     })
     return new Blob([html], { type: 'text/html' })
