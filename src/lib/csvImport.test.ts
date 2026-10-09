@@ -27,6 +27,13 @@ describe('parseNumber', () => {
     ['12-15', NaN],
     ['1.00E+02', NaN],
     ['1,5 l', 1.5],
+    ['.50', 0.5],
+    ['0.50', 0.5],
+    ['€.50', 0.5],
+    ['.5 l', 0.5],
+    ['12-', NaN],
+    ['12.-', 12],
+    ['Fr. 12.50', 12.5],
   ]
   for (const [raw, want] of cases) {
     it(JSON.stringify(raw), () => {
@@ -113,6 +120,11 @@ describe('parseImport', () => {
     { name: 'bad price', fields: 'A,,,1,,,cheap', want: { errors: ['price'], price: null } },
     { name: 'centiliters below 10 under a cl header', fields: 'A,,,1,5,,', want: { sizeCl: 5, errors: [] } },
     { name: 'known cl format under a cl header', fields: 'A,,,1,1500,,', want: { sizeCl: 1500, errors: [] } },
+    { name: 'liters below 1 under a cl header', fields: 'A,,,1,"0,75",,', want: { sizeCl: 75, errors: [] } },
+    { name: 'liters with a leading separator', fields: 'A,,,1,.5 l,,', want: { sizeCl: 50, errors: [] } },
+    { name: 'below one centiliter', fields: 'A,,,1,5 ml,,', want: { errors: ['size'] } },
+    { name: 'price with a leading separator', fields: 'A,,,1,,,.50', want: { price: 0.5, errors: [] } },
+    { name: 'price with a trailing minus', fields: 'A,,,1,,,12-', want: { errors: ['price'] } },
   ]
   for (const c of cells) {
     it(c.name, () => {
@@ -148,6 +160,15 @@ describe('parseImport drinking window', () => {
   })
 })
 
+describe('parseImport size headers with a cl unit', () => {
+  for (const header of ['Contenance (cl)', 'Format (cl)', 'Volume (cl)', 'Taille (cl)', 'Größe (cl)']) {
+    it(header, () => {
+      const r = row('A,5', `name,${header}`)
+      expect([r.draft.sizeCl, r.errors]).toEqual([5, []])
+    })
+  }
+})
+
 describe('parseImport sizes without unit', () => {
   const cases: [string, number][] = [
     ['75', 75],
@@ -161,6 +182,18 @@ describe('parseImport sizes without unit', () => {
   for (const [raw, want] of cases) {
     it(raw, () => {
       expect(row(`A,${raw}`, 'name,volume').draft.sizeCl).toBe(want)
+    })
+  }
+})
+
+describe('parseImport with a leading blank line', () => {
+  for (const [name, text] of [
+    ['semicolons', '\nname;quantity\nClos;2'],
+    ['tabs', '\nname\tquantity\nClos\t2'],
+  ]) {
+    it(name, () => {
+      const parsed = parseImport(text, 2026)
+      expect(parsed.ok && parsed.rows.map((r) => [r.line, r.draft.name, r.quantity])).toEqual([[3, 'Clos', 2]])
     })
   }
 })

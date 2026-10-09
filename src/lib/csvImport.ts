@@ -146,17 +146,18 @@ export type ParsedImport =
   | { ok: false; error: 'empty' | 'no-name-column' | 'too-many-rows' }
 
 /**
- * Parses "12,50", "€ 12.50", "1 234,5", "1,234.50" or "75 cl"; NaN when not a number.
- * Only a currency or unit around the number is dropped, so "1E+02" or "12-15" are rejected.
+ * Parses "12,50", "€ 12.50", "1 234,5", "1,234.50", ".5 l", "12.-" or "75 cl"; NaN when not a number.
+ * Only a currency or unit around the number is dropped, so "1E+02", "12-15" or "12-" are rejected.
  */
 export function parseNumber(raw: string): number {
-  const number = /^[^\d-]*(-?\d(?:[\d.,'’\s]*\d)?)[^\d]*$/u.exec(raw)?.[1]
+  const number = /^[^\d-]*?(-?(?:\d(?:[\d.,'’\s]*\d)?|[.,]\d+))(?:[.,]-)?[^\d-]*$/u.exec(raw)?.[1]
   if (!number) return NaN
   let s = number.replace(/['’\s]/g, '')
   const lastComma = s.lastIndexOf(',')
   const lastDot = s.lastIndexOf('.')
   if (lastComma > lastDot) s = s.replaceAll('.', '').replace(',', '.')
   else s = s.replaceAll(',', '')
+  s = s.replace(/^(-?)\./, '$10.')
   return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN
 }
 
@@ -170,11 +171,11 @@ const KNOWN_CL = new Set<number>(BOTTLE_SIZES.map((s) => s.cl))
 
 /**
  * Unit of a number written without one: centiliters under a header that says
- * "cl", liters below 10 (0,75), milliliters when that gives a known format
- * (750, 1500), else centiliters.
+ * "cl" unless below 1 (0,75), liters below 10, milliliters when that gives a
+ * known format (750, 1500), else centiliters.
  */
 function bareUnit(n: number, clHeader: boolean): 'l' | 'ml' | 'cl' {
-  if (clHeader) return 'cl'
+  if (clHeader) return n < 1 ? 'l' : 'cl'
   if (n < 10) return 'l'
   return n >= 200 && KNOWN_CL.has(n / 10) ? 'ml' : 'cl'
 }
@@ -186,7 +187,7 @@ function parseSize(raw: string, clHeader: boolean): number | undefined {
   const n = parseNumber(raw)
   const unit = /(ml|cl|l)\s*$/i.exec(raw)?.[1].toLowerCase() ?? bareUnit(n, clHeader)
   const cl = unit === 'l' ? n * 100 : unit === 'ml' ? n / 10 : n
-  return cl > 0 && cl <= 3000 ? Math.round(cl * 10) / 10 : undefined
+  return cl >= 1 && cl <= 3000 ? Math.round(cl * 10) / 10 : undefined
 }
 
 function parseList(raw: string): string[] {
@@ -209,7 +210,10 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
   const ignored: string[] = []
   first.cells.forEach((h, i) => {
     const key = fold(h)
-    const column = COLUMNS.find((c) => HEADER_ALIASES[c].includes(key))
+    // "Contenance (cl)": a size alias with the unit appended.
+    const column =
+      COLUMNS.find((c) => HEADER_ALIASES[c].includes(key)) ??
+      (key.endsWith('cl') && HEADER_ALIASES.size_cl.includes(key.slice(0, -2)) ? 'size_cl' : undefined)
     if (column && !index.has(column)) index.set(column, i)
     else if (h.trim()) ignored.push(h.trim())
   })
