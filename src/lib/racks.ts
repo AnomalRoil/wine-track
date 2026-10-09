@@ -1,5 +1,5 @@
 import { bottlesOf, type Stock } from './stock'
-import type { Placement, Rack } from './types'
+import type { Movement, Placement, Rack } from './types'
 
 export const MAX_COLUMNS = 24
 /** Rows are lettered A–Z. */
@@ -62,6 +62,20 @@ export function unplaced(stock: Stock, racks: Rack[], placements: Placement[], c
 /** How many of the `placed` slots empty when `quantity` of the `available` bottles leave the cellar. */
 export function slotsFreed(available: number, quantity: number, placed: number): number {
   return Math.min(placed, Math.max(0, placed - (available - quantity)))
+}
+
+/** Bottles of the `wineIds` wines per layer of the rack, front first. */
+export function matchesPerLayer(rack: Rack, placements: Placement[], wineIds: Set<string>): number[] {
+  const counts = Array.from({ length: rack.depth }, () => 0)
+  for (const p of placements) if (p.rackId === rack.id && p.layer < rack.depth && wineIds.has(p.wineId)) counts[p.layer]++
+  return counts
+}
+
+/** The cellar whose stock drops when `m` is deleted from the history, or null. */
+export function cellarLosing(m: Movement): string | null {
+  if (m.kind === 'add') return m.cellarId
+  if (m.kind === 'transfer') return m.toCellarId
+  return null
 }
 
 /**

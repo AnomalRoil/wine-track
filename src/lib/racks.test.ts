@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { outside, place, placementsOf, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
+import { cellarLosing, matchesPerLayer, outside, place, placementsOf, slotName, slotsFreed, stalePlacements, unplaced } from './racks'
 import { computeStock } from './stock'
 import { makeMovement as mv } from './testing'
 import type { Rack } from './types'
@@ -103,4 +103,38 @@ describe('stalePlacements', () => {
     ]
     expect(stalePlacements(wines, racks, placements, stock).map((p) => p.id)).toEqual(['r2/1/0/0'])
   })
+})
+
+describe('matchesPerLayer', () => {
+  const placements = [
+    place({ rackId: 'r2', layer: 1, row: 0, column: 0 }, 'w1'),
+    place({ rackId: 'r2', layer: 1, row: 0, column: 1 }, 'w1'),
+    place({ rackId: 'r2', layer: 0, row: 0, column: 0 }, 'w2'),
+    place({ rackId: 'r1', layer: 0, row: 0, column: 0 }, 'w1'),
+  ]
+  const cases = [
+    { name: 'back layer only', rack: racks[1], wines: ['w1'], want: [0, 2] },
+    { name: 'both layers', rack: racks[1], wines: ['w1', 'w2'], want: [1, 2] },
+    { name: 'no match', rack: racks[1], wines: ['w3'], want: [0, 0] },
+    { name: 'single layer rack', rack: racks[0], wines: ['w1'], want: [1] },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(matchesPerLayer(c.rack, placements, new Set(c.wines))).toEqual(c.want)
+    })
+  }
+})
+
+describe('cellarLosing', () => {
+  const cases = [
+    { name: 'addition', m: mv({ kind: 'add', cellarId: 'home' }), want: 'home' },
+    { name: 'transfer', m: mv({ kind: 'transfer', cellarId: 'home', toCellarId: 'cave' }), want: 'cave' },
+    { name: 'consumption', m: mv({ kind: 'consume', cellarId: 'home' }), want: null },
+    { name: 'adjustment', m: mv({ kind: 'adjust', cellarId: 'home' }), want: null },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(cellarLosing(c.m)).toBe(c.want)
+    })
+  }
 })

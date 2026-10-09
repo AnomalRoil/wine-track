@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { rackName, slotLabel } from '../lib/labels'
-  import { slotId, type Slot } from '../lib/racks'
+  import { matchesPerLayer, slotId, type Slot } from '../lib/racks'
   import type { Placement, Rack, Wine } from '../lib/types'
   import BottleGlyph from './BottleGlyph.svelte'
 
@@ -11,6 +11,8 @@
     wines,
     highlight,
     selected,
+    layer,
+    onlayer,
     onslot,
     onedit,
     onup,
@@ -23,20 +25,19 @@
     highlight: Set<string> | null
     /** Slot id drawn as selected. */
     selected: string | null
+    /** Depth layer shown, 0 for the front. */
+    layer: number
+    onlayer: (layer: number) => void
     onslot: (slot: Slot) => void
     onedit: () => void
     onup: (() => void) | null
   } = $props()
 
-  let layer = $state(0)
-
   const rows = $derived(Array.from({ length: rack.rows }, (_, i) => i))
   const columns = $derived(Array.from({ length: rack.columns }, (_, i) => i))
   const filled = $derived([...placements.values()].filter((p) => p.rackId === rack.id).length)
 
-  $effect(() => {
-    if (layer >= rack.depth) layer = 0
-  })
+  const layerMatches = $derived(highlight ? matchesPerLayer(rack, [...placements.values()], highlight) : null)
 
   function cell(row: number, column: number) {
     const slot = { rackId: rack.id, layer, row, column }
@@ -63,8 +64,8 @@
   {#if rack.depth > 1}
     <div class="chips">
       {#each [0, 1] as l (l)}
-        <button class="chip" class:active={layer === l} onclick={() => (layer = l)}>
-          {l === 0 ? t('rack.front') : t('rack.back')}
+        <button class="chip" class:active={layer === l} onclick={() => onlayer(l)}>
+          {l === 0 ? t('rack.front') : t('rack.back')}{#if layerMatches?.[l]}<span class="badge">{layerMatches[l]}</span>{/if}
         </button>
       {/each}
     </div>
@@ -188,6 +189,15 @@
   .slot.match {
     border-color: var(--star);
     box-shadow: 0 0 0 2px var(--star);
+  }
+
+  .badge {
+    margin-left: 0.35rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--star);
+    color: #000;
+    font-size: 0.75rem;
   }
 
   .slot.dim {

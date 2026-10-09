@@ -9,7 +9,7 @@
   import { emptyFilter, filterWines } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel } from '../lib/labels'
-  import { place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
+  import { matchesPerLayer, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
     addMovements,
@@ -38,6 +38,8 @@
   let capture = $state<{ slot: Slot; photo: File | null } | null>(null)
   /** Slot that just received a bottle. */
   let landed = $state<string | null>(null)
+  /** Depth layer shown per rack id; missing means the front. */
+  let layers = $state<Record<string, number>>({})
 
   function initialCellar(): string {
     const ids = sortedCellars().map((c) => c.id)
@@ -83,6 +85,24 @@
     return store.placements.filter((p) => rackIds.has(p.rackId) && highlight.has(p.wineId)).length
   })
 
+  // Turn each rack to a layer holding highlighted bottles when the shown one holds none.
+  $effect(() => {
+    if (!highlight) return
+    for (const rack of racks) {
+      if (rack.depth < 2) continue
+      const counts = matchesPerLayer(rack, store.placements, highlight)
+      const shown = untrack(() => layerOf(rack))
+      if (counts[shown] > 0) continue
+      const other = counts.findIndex((n) => n > 0)
+      if (other >= 0) layers[rack.id] = other
+    }
+  })
+
+  function layerOf(rack: Rack): number {
+    const l = layers[rack.id] ?? 0
+    return l < rack.depth ? l : 0
+  }
+
   const selectedPlacement = $derived(selected ? placements.get(slotId(selected)) : undefined)
   const selectedWine = $derived(selectedPlacement ? wines.get(selectedPlacement.wineId) : undefined)
 
@@ -96,6 +116,7 @@
   }
 
   async function showLanded(slot: Slot) {
+    layers[slot.rackId] = slot.layer
     landed = slotId(slot)
     await tick()
     document.querySelector(`[data-slot="${landed}"]`)?.scrollIntoView({ block: 'center' })
@@ -224,6 +245,8 @@
       {wines}
       {highlight}
       selected={landed ?? (moving ? moving.id : selected && slotId(selected))}
+      layer={layerOf(rack)}
+      onlayer={(l) => (layers[rack.id] = l)}
       {onslot}
       onedit={() => (editing = { rack })}
       onup={i > 0 ? () => moveUp(i) : null}
