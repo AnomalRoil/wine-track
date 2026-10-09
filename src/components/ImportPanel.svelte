@@ -141,7 +141,7 @@
 <div class="row wrap">
   <label class="file">
     📄 {t('io.chooseFile')}
-    <input type="file" accept=".csv,.tsv,.txt,text/csv" onchange={onFile} />
+    <input type="file" accept=".csv,.tsv,.txt,text/csv" disabled={committing} onchange={onFile} />
   </label>
   <button class="link" onclick={downloadTemplate}>{t('io.template')}</button>
 </div>
@@ -228,6 +228,11 @@
 
   .file input {
     display: none;
+  }
+
+  .file:has(input:disabled) {
+    opacity: 0.5;
+    cursor: default;
   }
 
   .note {
