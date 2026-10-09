@@ -12,8 +12,15 @@
   let {
     sheet = $bindable(),
     pending = $bindable(),
+    processing = $bindable(0),
     color,
-  }: { sheet: TastingSheet; pending: Record<string, Photo>; color: WineColor } = $props()
+  }: {
+    sheet: TastingSheet
+    pending: Record<string, Photo>
+    /** Photos still being resized; saving now would drop them. */
+    processing?: number
+    color: WineColor
+  } = $props()
 
   let peopleInput: ChipInput | undefined = $state()
 
@@ -35,10 +42,15 @@
     const file = input.files?.[0]
     input.value = ''
     if (!file) return
-    const blob = await processPhoto(file)
-    const id = crypto.randomUUID()
-    pending[id] = { id, blob, thumb: await makeThumb(blob) }
-    sheet.photoIds = [...sheet.photoIds, id]
+    processing++
+    try {
+      const blob = await processPhoto(file)
+      const id = crypto.randomUUID()
+      pending[id] = { id, blob, thumb: await makeThumb(blob) }
+      sheet.photoIds = [...sheet.photoIds, id]
+    } finally {
+      processing--
+    }
   }
 
   function removePhoto(id: string) {
