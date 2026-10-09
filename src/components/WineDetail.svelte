@@ -10,6 +10,7 @@
   import type { Wine } from '../lib/types'
   import Stars from './Stars.svelte'
   import StockPanel from './StockPanel.svelte'
+  import StorageHint from './StorageHint.svelte'
   import TastingForm from './TastingForm.svelte'
   import ValuePanel from './ValuePanel.svelte'
   import WineForm from './WineForm.svelte'
@@ -138,6 +139,7 @@
     value={wine.drinkBy}
     onchange={(e) => update({ drinkBy: e.currentTarget.value || null })}
   />
+  {#if wine.drinkBy}<StorageHint wineId={wine.id} until={wine.drinkBy} />{/if}
 
   <label for="tasteagain">{t('detail.tasteAgain')}</label>
   <input
