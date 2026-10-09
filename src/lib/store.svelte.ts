@@ -2,6 +2,7 @@ import * as db from './db'
 import { defaultCellar } from './migrate'
 import { computeStock, emptyCellar } from './stock'
 import { today } from './due'
+import { normalizeTasting } from './tasting'
 import type { Cellar, Movement, Tasting, Wine } from './types'
 
 export const store = $state({
@@ -30,7 +31,7 @@ export async function initStore(): Promise<void> {
     await db.putCellars(all.cellars)
   }
   store.wines = all.wines
-  store.tastings = all.tastings
+  store.tastings = all.tastings.map(normalizeTasting)
   store.cellars = all.cellars
   store.movements = all.movements
   store.loaded = true

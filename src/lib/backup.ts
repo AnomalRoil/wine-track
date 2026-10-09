@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
+import { normalizeTasting, SCALES, SHADES } from './tasting'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
@@ -28,13 +29,39 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   valueHistory: z.array(z.object({ date, value: z.number().min(0) })),
 })
 
-const TastingSchema = z.object({
-  id: z.string(),
-  wineId: z.string(),
-  date: z.string(),
-  rating: z.number(),
-  notes: z.string(),
+function answer<K extends keyof typeof SCALES>(name: K) {
+  return z.enum(SCALES[name]).nullable().default(null)
+}
+
+const SheetSchema = z.object({
+  people: z.array(z.string()).default([]),
+  place: z.string().default(''),
+  meal: z.string().default(''),
+  photoIds: z.array(z.string()).default([]),
+  clarity: answer('clarity'),
+  colorIntensity: answer('colorIntensity'),
+  shade: z.enum(Object.keys(SHADES) as [keyof typeof SHADES]).nullable().default(null),
+  noseIntensity: answer('noseIntensity'),
+  openness: answer('openness'),
+  aromas: z.array(z.string()).default([]),
+  sweetness: answer('sweetness'),
+  acidity: answer('acidity'),
+  tannin: answer('tannin'),
+  body: answer('body'),
+  finish: answer('finish'),
+  conclusion: z.string().default(''),
 })
+
+const TastingSchema = z
+  .object({
+    id: z.string(),
+    wineId: z.string(),
+    date: z.string(),
+    rating: z.number(),
+    notes: z.string(),
+    sheet: SheetSchema.optional(),
+  })
+  .transform(normalizeTasting)
 
 const CellarSchema = z.object({ id: z.string(), name: z.string(), position: z.number() })
 
