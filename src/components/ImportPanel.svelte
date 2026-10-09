@@ -76,6 +76,7 @@
   }
 
   async function complete() {
+    if (committing) return
     const todo = incomplete
     const batches = Math.ceil(todo.length / COMPLETION_BATCH)
     if (!confirm(t('io.completeConfirm', { n: todo.length, batches }))) return
@@ -166,7 +167,7 @@
         <p class="pulse">{t('io.completing', progress)}</p>
       {:else}
         <p class="muted">{t('io.completeHelp', { n: incomplete.length, size: COMPLETION_BATCH })}</p>
-        <button onclick={complete}>✨ {t('io.complete', { n: incomplete.length })}</button>
+        <button disabled={committing} onclick={complete}>✨ {t('io.complete', { n: incomplete.length })}</button>
       {/if}
       {#if completeError}
         <p class="error-text">{t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>
