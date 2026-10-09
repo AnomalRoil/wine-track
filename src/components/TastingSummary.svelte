@@ -15,15 +15,19 @@
     ].filter(Boolean),
   )
 
-  function answers(names: readonly ScaleName[]): string {
+  // Palate answers like "medium" need their attribute name; appearance and nose answers stand alone.
+  function answers(names: readonly ScaleName[], named = false): string {
     return answered(sheet, names)
-      .map((a) => `${t(`tasting.${a.name}`)} ${answerLabel(a.name, a.value).toLowerCase()}`)
+      .map((a) => {
+        const value = answerLabel(a.name, a.value)
+        return named ? `${t(`tasting.${a.name}`)} ${value.toLowerCase()}` : value
+      })
       .join(' · ')
   }
 
   const appearance = $derived(answers(APPEARANCE_SCALES))
   const nose = $derived(answers(NOSE_SCALES))
-  const palate = $derived(answers(PALATE_SCALES))
+  const palate = $derived(answers(PALATE_SCALES, true))
 </script>
 
 <dl class="summary">

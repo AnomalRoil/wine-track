@@ -26,7 +26,7 @@
   </div>
 {/if}
 
-<div class="chips families" role="tablist">
+<div class="chips wrap" role="tablist">
   {#each AROMA_FAMILIES as f (f)}
     <button type="button" class="chip" class:current={family === f} role="tab" aria-selected={family === f} onclick={() => (family = f)}>
       {t(`tasting.family.${f}` as MessageKey)}{#if count(f) > 0}<span class="count">{count(f)}</span>{/if}
