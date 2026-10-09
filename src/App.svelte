@@ -1,6 +1,7 @@
 <script lang="ts">
   import CaptureFlow from './components/CaptureFlow.svelte'
   import DueView from './components/DueView.svelte'
+  import Journal from './components/Journal.svelte'
   import Settings from './components/Settings.svelte'
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
@@ -53,6 +54,8 @@
     <WineList onopen={openWine} />
   {:else if tab === 'add'}
     <CaptureFlow onsaved={onWineSaved} />
+  {:else if tab === 'journal'}
+    <Journal onopen={openWine} />
   {:else if tab === 'due'}
     <DueView onopen={openWine} />
   {:else}

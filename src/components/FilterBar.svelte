@@ -1,17 +1,18 @@
 <script lang="ts">
-  import { emptyFilter, isFilterActive, type SortKey, type WineFilter } from '../lib/filters'
+  import { emptyFilter, isFilterActive, SORT_KEYS, type SortKey, type WineFilter } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
+  import { cellarName } from '../lib/labels'
+  import { sortedCellars } from '../lib/store.svelte'
   import { WINE_COLORS, type WineColor } from '../lib/types'
 
   let {
     filter = $bindable(),
     sort = $bindable(),
     grapes,
-  }: { filter: WineFilter; sort: SortKey; grapes: string[] } = $props()
+    tags,
+  }: { filter: WineFilter; sort: SortKey; grapes: string[]; tags: string[] } = $props()
 
   let expanded = $state(false)
-
-  const sortKeys: SortKey[] = ['recent', 'name', 'vintage', 'rating']
 
   function toggleColor(color: WineColor) {
     filter.colors = filter.colors.includes(color)
@@ -30,6 +31,9 @@
   <button class="chip" class:active={filter.ownedOnly} onclick={() => (filter.ownedOnly = !filter.ownedOnly)}>
     {t('list.owned')}
   </button>
+  <button class="chip" class:active={filter.wishedOnly} onclick={() => (filter.wishedOnly = !filter.wishedOnly)}>
+    ♥ {t('list.wished')}
+  </button>
   {#each WINE_COLORS as color (color)}
     <button class="chip" class:active={filter.colors.includes(color)} onclick={() => toggleColor(color)}>
       {colorLabel(color)}
@@ -42,7 +46,7 @@
     {t('list.filters')} {expanded ? '▴' : '▾'}
   </button>
   <select bind:value={sort} aria-label="sort">
-    {#each sortKeys as key (key)}
+    {#each SORT_KEYS as key (key)}
       <option value={key}>{t(`sort.${key}`)}</option>
     {/each}
   </select>
@@ -67,6 +71,24 @@
         <option value={grape}>{grape}</option>
       {/each}
     </select>
+    {#if sortedCellars().length > 1}
+      <label for="cellar">{t('list.cellar')}</label>
+      <select id="cellar" bind:value={filter.cellarId}>
+        <option value={null}>{t('list.anyCellar')}</option>
+        {#each sortedCellars() as c (c.id)}
+          <option value={c.id}>{cellarName(c.id)}</option>
+        {/each}
+      </select>
+    {/if}
+    {#if tags.length > 0}
+      <label for="tag">{t('list.tag')}</label>
+      <select id="tag" bind:value={filter.tag}>
+        <option value={null}>{t('list.anyTag')}</option>
+        {#each tags as tag (tag)}
+          <option value={tag}>{tag}</option>
+        {/each}
+      </select>
+    {/if}
     <label for="minrating">{t('list.minRating')}: {filter.minRating ?? '—'}</label>
     <input
       id="minrating"

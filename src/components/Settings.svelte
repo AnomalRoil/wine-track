@@ -4,8 +4,9 @@
   import { downloadFile } from '../lib/download'
   import { t } from '../lib/i18n.svelte'
   import { base64ToBlob, blobToBase64 } from '../lib/photo'
-  import { MODELS, settings } from '../lib/settings.svelte'
+  import { CURRENCIES, MODELS, settings } from '../lib/settings.svelte'
   import { initStore, store } from '../lib/store.svelte'
+  import CellarSettings from './CellarSettings.svelte'
 
   let importMessage = $state<string | null>(null)
   let persisted = $state<boolean | null>(null)
@@ -25,12 +26,8 @@
         data: await blobToBase64(p.blob),
       })),
     )
-    const json = serializeBackup(
-      $state.snapshot(store.wines),
-      $state.snapshot(store.tastings),
-      photos,
-      new Date().toISOString(),
-    )
+    const { wines, tastings, cellars, movements } = $state.snapshot(store)
+    const json = serializeBackup({ wines, tastings, cellars, movements }, photos, new Date().toISOString())
     const date = new Date().toISOString().slice(0, 10)
     downloadFile(`wine-track-backup-${date}.json`, new Blob([json], { type: 'application/json' }))
     settings.lastBackupAt = Date.now()
@@ -49,7 +46,7 @@
     }
     if (!confirm(t('settings.importConfirm', { n: store.wines.length }))) return
     const photos = backup.photos.map((p) => ({ id: p.id, blob: base64ToBlob(p.data, p.mediaType) }))
-    await replaceAll(backup.wines, backup.tastings, photos)
+    await replaceAll(backup, photos)
     await initStore()
     importMessage = t('settings.importDone', { n: backup.wines.length })
   }
@@ -77,6 +74,15 @@
   <option value="en">English</option>
   <option value="fr">Français</option>
 </select>
+
+<label for="currency">{t('settings.currency')}</label>
+<select id="currency" bind:value={settings.currency}>
+  {#each CURRENCIES as currency (currency)}
+    <option value={currency}>{currency}</option>
+  {/each}
+</select>
+
+<CellarSettings />
 
 <h2>{t('settings.backup')}</h2>
 {#if backupStale}

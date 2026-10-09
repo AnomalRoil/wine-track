@@ -2,13 +2,16 @@
   import { getPhoto } from '../lib/db'
   import { downloadFile } from '../lib/download'
   import { addYears, today } from '../lib/due'
-  import type { WineDraft } from '../lib/extract'
+  import { emptyDraft, type WineDraft } from '../lib/extract'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
+  import { sizeLabel } from '../lib/labels'
   import { removeTasting, removeWine, saveWine, store, tastingsFor } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
   import Stars from './Stars.svelte'
+  import StockPanel from './StockPanel.svelte'
   import TastingForm from './TastingForm.svelte'
+  import ValuePanel from './ValuePanel.svelte'
   import WineForm from './WineForm.svelte'
 
   let { wineId, onclose }: { wineId: string; onclose: () => void } = $props()
@@ -19,7 +22,7 @@
   let editing = $state(false)
   let addingTasting = $state(false)
   let fullscreen = $state(false)
-  let draft = $state<WineDraft>({ name: '', producer: '', vintage: null, grapes: [], region: '', country: '', color: 'red' })
+  let draft = $state<WineDraft>(emptyDraft())
   let photoUrl = $state<string | null>(null)
 
   $effect(() => {
@@ -44,8 +47,8 @@
 
   function startEdit() {
     if (!wine) return
-    const { name, producer, vintage, grapes, region, country, color } = wine
-    draft = { name, producer, vintage, grapes: [...grapes], region, country, color }
+    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags } = wine
+    draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags] }
     editing = true
   }
 
@@ -116,14 +119,17 @@
       {#each wine.grapes as grape (grape)}<span class="chip card">{grape}</span>{/each}
     </div>
   {/if}
-  <p><span class="chip card">{t(`color.${wine.color}`)}</span></p>
-
-  <h2>{t('detail.bottles')}</h2>
-  <div class="row">
-    <button onclick={() => update({ bottlesOwned: Math.max(0, wine.bottlesOwned - 1) })}>−</button>
-    <span class="count">{wine.bottlesOwned}</span>
-    <button onclick={() => update({ bottlesOwned: wine.bottlesOwned + 1 })}>+</button>
+  <div class="chips wrap">
+    <span class="chip card">{t(`color.${wine.color}`)}</span>
+    <span class="chip card">{sizeLabel(wine.sizeCl)}</span>
+    {#each wine.tags as tag (tag)}<span class="chip card">#{tag}</span>{/each}
   </div>
+  <button class="chip" class:active={wine.wished} onclick={() => update({ wished: !wine.wished })}>
+    {wine.wished ? `♥ ${t('stock.wished')}` : `♡ ${t('stock.wish')}`}
+  </button>
+
+  <StockPanel wineId={wine.id} />
+  <ValuePanel {wine} />
 
   <label for="drinkby">{t('detail.drinkBy')}</label>
   <input
@@ -219,12 +225,6 @@
 
   .wrap {
     flex-wrap: wrap;
-  }
-
-  .count {
-    min-width: 2.5rem;
-    text-align: center;
-    font-size: 1.2rem;
   }
 
   .tasting {
