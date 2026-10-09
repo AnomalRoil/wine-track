@@ -46,6 +46,9 @@
     completeError = null
   }
 
+  // Leaving the screen stops a completion before its next billable batch.
+  $effect(() => () => generation++)
+
   async function onFile(e: Event) {
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]
