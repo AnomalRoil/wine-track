@@ -39,14 +39,19 @@
     }
   })
 
+  let mounted = true
+
   async function open(id: string) {
     const photo = await load(id)
-    if (!photo) return
+    if (!photo || !mounted) return
     close()
     fullUrl = URL.createObjectURL(photo.blob)
   }
 
-  $effect(() => close)
+  $effect(() => () => {
+    mounted = false
+    close()
+  })
 
   function close() {
     if (fullUrl) URL.revokeObjectURL(fullUrl)
