@@ -1,4 +1,5 @@
-export type Locale = 'en' | 'fr'
+export const LOCALES = ['en', 'fr', 'de'] as const
+export type Locale = (typeof LOCALES)[number]
 
 export const MODELS = ['claude-opus-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'] as const
 export type Model = (typeof MODELS)[number]
@@ -18,7 +19,8 @@ export interface Settings {
 const STORAGE_KEY = 'wine-track:settings'
 
 function detectLocale(): Locale {
-  return navigator.language.toLowerCase().startsWith('fr') ? 'fr' : 'en'
+  const lang = navigator.language.toLowerCase().slice(0, 2)
+  return LOCALES.find((l) => l === lang) ?? 'en'
 }
 
 function load(): Settings {
@@ -38,7 +40,7 @@ function load(): Settings {
       ...defaults,
       ...stored,
       model: MODELS.includes(stored.model as Model) ? (stored.model as Model) : defaults.model,
-      locale: stored.locale === 'fr' || stored.locale === 'en' ? stored.locale : defaults.locale,
+      locale: LOCALES.includes(stored.locale as Locale) ? (stored.locale as Locale) : defaults.locale,
       currency: CURRENCIES.includes(stored.currency as Currency) ? (stored.currency as Currency) : defaults.currency,
     }
   } catch {

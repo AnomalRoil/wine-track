@@ -5,8 +5,11 @@
   import { t } from '../lib/i18n.svelte'
   import { base64ToBlob, blobToBase64 } from '../lib/photo'
   import { CURRENCIES, MODELS, settings } from '../lib/settings.svelte'
+  import type { ScreenProps } from '../lib/screens'
   import { initStore, store } from '../lib/store.svelte'
   import CellarSettings from './CellarSettings.svelte'
+
+  let {}: Partial<ScreenProps> = $props()
 
   let importMessage = $state<string | null>(null)
   let persisted = $state<boolean | null>(null)
@@ -73,6 +76,7 @@
 <select id="language" bind:value={settings.locale}>
   <option value="en">English</option>
   <option value="fr">Français</option>
+  <option value="de">Deutsch</option>
 </select>
 
 <label for="currency">{t('settings.currency')}</label>
