@@ -1,5 +1,5 @@
 import * as db from './db'
-import { defaultCellar } from './migrate'
+import { defaultCellar, normalizeCellar } from './migrate'
 import { computeStock, emptyCellar } from './stock'
 import { today } from './due'
 import type { Cellar, Movement, Tasting, Wine } from './types'
@@ -31,7 +31,7 @@ export async function initStore(): Promise<void> {
   }
   store.wines = all.wines
   store.tastings = all.tastings
-  store.cellars = all.cellars
+  store.cellars = all.cellars.map(normalizeCellar)
   store.movements = all.movements
   store.loaded = true
 }

@@ -12,7 +12,7 @@ describe('backup', () => {
     const data = {
       wines: [wine],
       tastings: [tasting],
-      cellars: [{ id: 'main', name: '', position: 0 }],
+      cellars: [{ id: 'main', name: '', position: 0, storage: { temperature: 'cool', light: 'bright' } }],
       movements: [makeMovement({ unitPrice: 12.5 })],
     }
     const parsed = parseBackup(serializeBackup(data, [photo], '2026-08-28T10:00:00Z'))
@@ -38,7 +38,7 @@ describe('backup', () => {
     const json = JSON.stringify({ app: 'wine-track', version: 1, exportedAt: '', wines: [v1Wine, { ...v1Wine, id: 'w2', bottlesOwned: 0 }], tastings: [tasting], photos: [] })
     const parsed = parseBackup(json)
     expect(parsed?.version).toBe(2)
-    expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0 }])
+    expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0, storage: {} }])
     expect(parsed?.wines.map((w) => [w.id, w.sizeCl, w.tags, w.wished, w.value])).toEqual([
       ['w1', 75, [], false, null],
       ['w2', 75, [], false, null],
@@ -48,6 +48,11 @@ describe('backup', () => {
       makeMovement({ id: 'w1-v1', wineId: 'w1', date: '2026-08-28', quantity: 3, cellarId: 'main' }),
     ])
     expect(parsed?.tastings).toEqual([tasting])
+  })
+
+  it('gives cellars from older version 2 backups an empty storage checklist', () => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.cellars).toEqual([{ id: 'main', name: '', position: 0, storage: {} }])
   })
 
   const invalid: { name: string; json: string }[] = [

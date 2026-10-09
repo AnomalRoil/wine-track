@@ -21,7 +21,7 @@
     const name = newName.trim()
     if (!name) return
     const position = Math.max(-1, ...cellars.map((c) => c.position)) + 1
-    await saveCellars([{ id: crypto.randomUUID(), name, position }])
+    await saveCellars([{ id: crypto.randomUUID(), name, position, storage: {} }])
     newName = ''
   }
 

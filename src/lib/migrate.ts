@@ -4,7 +4,7 @@ import { STANDARD_SIZE_CL, type Cellar, type Movement, type Wine } from './types
 export const DEFAULT_CELLAR_ID = 'main'
 
 export function defaultCellar(): Cellar {
-  return { id: DEFAULT_CELLAR_ID, name: '', position: 0 }
+  return { id: DEFAULT_CELLAR_ID, name: '', position: 0, storage: {} }
 }
 
 /** A wine as stored before cellars existed: stock was a plain counter. */
@@ -33,4 +33,9 @@ export function migrateWinesV1(old: WineV1[]): { wines: Wine[]; movements: Movem
     }
   }
   return { wines, movements }
+}
+
+/** Fills fields added to cellars after they were first stored. */
+export function normalizeCellar(cellar: Omit<Cellar, 'storage'> & Partial<Cellar>): Cellar {
+  return { ...cellar, storage: cellar.storage ?? {} }
 }
