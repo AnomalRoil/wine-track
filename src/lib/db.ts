@@ -117,6 +117,16 @@ export async function deleteCellar(id: string, emptying: Movement[]): Promise<vo
   await done(tx)
 }
 
+/** Adds the wines, cellars and movements of an import in one transaction. */
+export async function putImport(data: Omit<Data, 'tastings'>): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction(['wines', 'cellars', 'movements'], 'readwrite')
+  for (const w of data.wines) tx.objectStore('wines').put(w)
+  for (const c of data.cellars) tx.objectStore('cellars').put(c)
+  for (const m of data.movements) tx.objectStore('movements').put(m)
+  await done(tx)
+}
+
 export async function putTasting(tasting: Tasting): Promise<void> {
   const d = await openDb()
   const tx = d.transaction('tastings', 'readwrite')

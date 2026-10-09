@@ -100,3 +100,11 @@ export async function removeCellar(id: string, targetId: string | null): Promise
   store.movements.push(...emptying)
   store.cellars = store.cellars.filter((c) => c.id !== id)
 }
+
+/** Commits an import atomically: new wines, new cellars and stock additions. */
+export async function applyImport(data: Omit<db.Data, 'tastings'>): Promise<void> {
+  await db.putImport(data)
+  store.wines.push(...data.wines)
+  store.cellars.push(...data.cellars)
+  store.movements.push(...data.movements)
+}
