@@ -66,6 +66,7 @@ describe('backup', () => {
     { name: 'wrong app', json: '{"app":"other","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[{"id":"a","name":"","position":0}],"movements":[],"photos":[]}' },
     { name: 'unknown version', json: '{"app":"wine-track","version":3,"exportedAt":"","wines":[],"tastings":[],"photos":[]}' },
     { name: 'no cellar', json: '{"app":"wine-track","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[],"movements":[],"photos":[]}' },
+    { name: 'placement id not matching its slot', json: '{"app":"wine-track","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[{"id":"a","name":"","position":0}],"movements":[],"racks":[],"placements":[{"id":"x","rackId":"r","layer":0,"row":0,"column":0,"wineId":"w"}],"photos":[]}' },
     { name: 'rack too wide', json: '{"app":"wine-track","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[{"id":"a","name":"","position":0}],"movements":[],"racks":[{"id":"r","cellarId":"a","name":"","columns":99,"rows":1,"depth":1,"layout":"lying","position":0}],"photos":[]}' },
     { name: 'malformed wine', json: '{"app":"wine-track","version":1,"exportedAt":"","wines":[{"id":1}],"tastings":[],"photos":[]}' },
   ]

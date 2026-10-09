@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
-import { MAX_COLUMNS, MAX_DEPTH, MAX_ROWS } from './racks'
+import { MAX_COLUMNS, MAX_DEPTH, MAX_ROWS, slotId } from './racks'
 import { RACK_LAYOUTS } from './types'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -71,6 +71,8 @@ const PlacementSchema = z.object({
   column: z.number().int().min(0),
   wineId: z.string(),
 })
+  // The grid finds bottles by slot id; any other id would hide the bottle.
+  .refine((p) => p.id === slotId(p))
 
 const PhotoSchema = z.object({ id: z.string(), mediaType: z.string(), data: z.string() })
 
