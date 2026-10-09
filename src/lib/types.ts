@@ -79,6 +79,35 @@ export interface Cellar {
   position: number
 }
 
+export const RACK_LAYOUTS = ['lying', 'standing', 'diamond'] as const
+/** How bottles sit in a rack: lying necks out, standing, or lying in rows shifted by half a slot. */
+export type RackLayout = (typeof RACK_LAYOUTS)[number]
+
+/** A grid of bottle slots in a cellar. */
+export interface Rack {
+  id: string
+  cellarId: string
+  name: string
+  columns: number
+  rows: number
+  /** 1 for a single layer, 2 for front and back. */
+  depth: number
+  layout: RackLayout
+  /** Display order within the cellar, ascending. */
+  position: number
+}
+
+/** One bottle of a wine sitting in a rack slot. Rows and columns count from 0, top left; layer 0 is the front. */
+export interface Placement {
+  /** Derived from the slot, so a slot never holds two bottles. */
+  id: string
+  rackId: string
+  layer: number
+  row: number
+  column: number
+  wineId: string
+}
+
 export type MovementKind = 'add' | 'consume' | 'gift' | 'adjust' | 'transfer'
 
 export const REMOVAL_KINDS = ['consume', 'gift', 'adjust'] as const satisfies MovementKind[]
