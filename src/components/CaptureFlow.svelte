@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import { putPhoto } from '../lib/db'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
@@ -10,15 +11,28 @@
   import type { Wine } from '../lib/types'
   import WineForm from './WineForm.svelte'
 
-  let { onsaved }: { onsaved: (wine: Wine) => void } = $props()
+  let {
+    onsaved,
+    photo = null,
+    intoCellar = null,
+    oncancel,
+  }: {
+    onsaved: (wine: Wine) => void
+    /** A photo already taken: extraction starts right away. */
+    photo?: File | null
+    /** Skips the start screen and adds exactly one bottle to this cellar. */
+    intoCellar?: string | null
+    /** Called on cancel instead of returning to the start screen. */
+    oncancel?: () => void
+  } = $props()
 
-  let step = $state<'idle' | 'extracting' | 'form'>('idle')
+  let step = $state<'idle' | 'extracting' | 'form'>(untrack(() => (intoCellar ? 'form' : 'idle')))
   let draft = $state<WineDraft>(emptyDraft())
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
-  let quantity = $state(0)
-  let cellarId = $state(sortedCellars()[0].id)
+  let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
+  let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
   let unitPrice = $state<number | null>(null)
   let generation = 0
 
@@ -38,11 +52,17 @@
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]
     input.value = ''
-    if (!file) return
+    if (file) await usePhoto(file)
+  }
+
+  async function usePhoto(file: File) {
+    step = 'extracting'
     photoBlob = await processPhoto(file)
     photoUrl = URL.createObjectURL(photoBlob)
     await extract()
   }
+
+  untrack(() => photo && usePhoto(photo))
 
   async function extract() {
     if (!photoBlob) return
@@ -123,6 +143,7 @@
     {#if photoUrl}<img class="preview" src={photoUrl} alt="" />{/if}
     <p class="pulse">{t('capture.extracting')}</p>
     <button class="link" onclick={skipExtraction}>{t('capture.skip')}</button>
+    {#if oncancel}<button class="link" onclick={oncancel}>{t('form.cancel')}</button>{/if}
   </div>
 {:else}
   {#if extractError}
@@ -133,24 +154,29 @@
       {/if}
     </p>
   {/if}
-  <WineForm bind:draft title={t('form.newWine')} {photoUrl} onsave={save} oncancel={reset}>
+  <WineForm bind:draft title={t('form.newWine')} {photoUrl} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet extra()}
-      <h2>{t('capture.addToCellar')}</h2>
-      <div class="row">
-        <div class="grow">
-          <label for="qty">{t('stock.quantity')}</label>
-          <input id="qty" type="number" inputmode="numeric" min="0" bind:value={quantity} />
+      {#if intoCellar}
+        <label for="price">{t('stock.unitPrice')}</label>
+        <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+      {:else}
+        <h2>{t('capture.addToCellar')}</h2>
+        <div class="row">
+          <div class="grow">
+            <label for="qty">{t('stock.quantity')}</label>
+            <input id="qty" type="number" inputmode="numeric" min="0" bind:value={quantity} />
+          </div>
+          <div class="grow">
+            <label for="price">{t('stock.unitPrice')}</label>
+            <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+          </div>
         </div>
-        <div class="grow">
-          <label for="price">{t('stock.unitPrice')}</label>
-          <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
-        </div>
-      </div>
-      {#if quantity > 0 && sortedCellars().length > 1}
-        <label for="cellar">{t('stock.cellar')}</label>
-        <select id="cellar" bind:value={cellarId}>
-          {#each sortedCellars() as c (c.id)}<option value={c.id}>{cellarName(c.id)}</option>{/each}
-        </select>
+        {#if quantity > 0 && sortedCellars().length > 1}
+          <label for="cellar">{t('stock.cellar')}</label>
+          <select id="cellar" bind:value={cellarId}>
+            {#each sortedCellars() as c (c.id)}<option value={c.id}>{cellarName(c.id)}</option>{/each}
+          </select>
+        {/if}
       {/if}
     {/snippet}
   </WineForm>
