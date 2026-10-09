@@ -8,7 +8,7 @@
   import { thisYear, today } from '../lib/due'
   import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
-  import { cellarName, placementLabel, rackName, slotLabel } from '../lib/labels'
+  import { cellarName, placementLabel, rackName, slotLabel, wineLabel } from '../lib/labels'
   import { matchesPerLayer, moveTransfers, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
@@ -125,10 +125,6 @@
   const selectedPlacement = $derived(selected ? placements.get(slotId(selected)) : undefined)
   const selectedWine = $derived(selectedPlacement ? wines.get(selectedPlacement.wineId) : undefined)
 
-  function wineName(w: Wine): string {
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
-  }
-
   function title(slot: Slot): string {
     const rack = store.racks.find((r) => r.id === slot.rackId)
     return rack ? `${rackName(rack)} · ${slotLabel(slot)}` : slotLabel(slot)
@@ -191,7 +187,7 @@
 
   async function drink() {
     const p = selectedPlacement!
-    if (!confirm(t('rack.drinkConfirm', { name: wineName(selectedWine!) }))) return
+    if (!confirm(t('rack.drinkConfirm', { name: wineLabel(selectedWine!) }))) return
     selected = null
     const consume = {
       id: crypto.randomUUID(),
@@ -253,7 +249,7 @@
     <p class="muted status">{waitingTotal > 0 ? t('rack.unplaced', { n: waitingTotal }) : t('rack.allPlaced')}</p>
     {#if focusWineId && wines.get(focusWineId)}
       <button class="chip active" onclick={() => (focusWineId = null)}>
-        {t('rack.showing', { name: wineName(wines.get(focusWineId)!) })} ✕
+        {t('rack.showing', { name: wineLabel(wines.get(focusWineId)!) })} ✕
       </button>
     {:else}
       <FilterBar bind:filter grapes={distinctGrapes(store.wines)} tags={distinctTags(store.wines)} />

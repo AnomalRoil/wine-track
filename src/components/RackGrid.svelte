@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
-  import { rackName, slotLabel } from '../lib/labels'
+  import { rackName, slotLabel, wineLabel } from '../lib/labels'
   import { matchesPerLayer, slotId, type Slot } from '../lib/racks'
   import type { Placement, Rack, Wine } from '../lib/types'
   import BottleGlyph from './BottleGlyph.svelte'
@@ -46,10 +46,6 @@
     const wine = placement ? wines.get(placement.wineId) : undefined
     return { slot, id, wine }
   }
-
-  function wineName(w: Wine): string {
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
-  }
 </script>
 
 <section class="card rack">
@@ -84,7 +80,7 @@
               class:match={highlight !== null && c.wine !== undefined && highlight.has(c.wine.id)}
               class:dim={highlight !== null && !(c.wine && highlight.has(c.wine.id))}
               data-slot={c.id}
-              aria-label={c.wine ? `${slotLabel(c.slot)}: ${wineName(c.wine)}` : t('rack.emptySlot', { slot: slotLabel(c.slot) })}
+              aria-label={c.wine ? `${slotLabel(c.slot)}: ${wineLabel(c.wine)}` : t('rack.emptySlot', { slot: slotLabel(c.slot) })}
               onclick={() => onslot(c.slot)}
             >
               <BottleGlyph color={c.wine?.color ?? null} layout={rack.layout} />
