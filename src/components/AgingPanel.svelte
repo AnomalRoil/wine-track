@@ -17,6 +17,7 @@
 
   let editing = $state(false)
   let draft = $state<Aging>({ ...NO_AGING })
+  let saving = $state(false)
 
   function startEdit() {
     // A snapshot, so sliders never mutate the stored wine before saving.
@@ -26,7 +27,13 @@
 
   async function save(e: SubmitEvent) {
     e.preventDefault()
-    await saveWine({ ...wine, ...cleanAging($state.snapshot(draft)) })
+    if (saving) return
+    saving = true
+    try {
+      await saveWine({ ...wine, ...cleanAging($state.snapshot(draft)) })
+    } finally {
+      saving = false
+    }
     editing = false
   }
 </script>
@@ -41,8 +48,8 @@
     <AgingFields bind:aging={draft} {wine} />
 
     <div class="row actions">
-      <button type="button" onclick={() => (editing = false)}>{t('form.cancel')}</button>
-      <button type="submit" class="primary grow">{t('form.save')}</button>
+      <button type="button" disabled={saving} onclick={() => (editing = false)}>{t('form.cancel')}</button>
+      <button type="submit" class="primary grow" disabled={saving}>{t('form.save')}</button>
     </div>
   </form>
 {:else}

@@ -65,7 +65,7 @@
   {/if}
 
   <div class="row">
-    <button type="button" onclick={ondone}>{t('form.cancel')}</button>
+    <button type="button" disabled={saving} onclick={ondone}>{t('form.cancel')}</button>
     <button type="submit" class="primary grow" disabled={processing > 0 || saving}>{t('tasting.save')}</button>
   </div>
 </form>
