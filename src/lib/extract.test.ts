@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { alignCompletions, emptyDraft, toWineDraft, wineQuery } from './extract'
+import { alignCompletions, emptyDraft, lookupKey, toWineDraft, wineQuery } from './extract'
+import { makeWine } from './testing'
 
 describe('toWineDraft', () => {
   it('maps a full extraction', () => {
@@ -66,4 +67,19 @@ describe('alignCompletions', () => {
     const empty = { grapes: [], region: null, country: null }
     expect(alignCompletions(3, [{ index: 3, ...syrah }, { index: 9, ...syrah }])).toEqual([empty, empty, syrah])
   })
+})
+
+describe('lookupKey', () => {
+  const wine = makeWine({ id: 'w1' })
+  const cases = [
+    { name: 'replaced object with other fields changed', other: { ...wine, wished: true, value: 30, drinkBy: '2030-01-01' }, same: true },
+    { name: 'other color', other: { ...wine, color: 'white' as const }, same: false },
+    { name: 'other vintage', other: { ...wine, vintage: 2021 }, same: false },
+    { name: 'other saved wine', other: { ...wine, id: 'w2' }, same: false },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(lookupKey(c.other) === lookupKey(wine)).toBe(c.same)
+    })
+  }
 })
