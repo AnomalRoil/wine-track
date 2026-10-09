@@ -67,16 +67,19 @@ export function agingPenalty(score: number | null): number {
   return { good: 0, fair: 0.15, poor: 0.3 }[scoreGrade(score)]
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
 /**
  * The "YYYY-MM-DD" date to drink by once the penalty is applied to the time
  * left until `until`, or null when nothing changes. Display only: stored
- * dates stay as the user entered them.
+ * dates stay as the user entered them. Imported dates need not be ISO; those
+ * are left alone.
  */
 export function shortenedUntil(until: string, today: string, score: number | null): string | null {
   const penalty = agingPenalty(score)
   const start = Date.parse(`${today}T00:00:00Z`)
   const end = Date.parse(`${until}T00:00:00Z`)
-  if (penalty === 0 || end <= start) return null
+  if (penalty === 0 || !ISO_DATE.test(until) || Number.isNaN(end) || end <= start) return null
   const days = Math.floor(((end - start) / 86_400_000) * (1 - penalty))
   return new Date(start + days * 86_400_000).toISOString().slice(0, 10)
 }

@@ -77,6 +77,8 @@ describe('shortenedUntil', () => {
     { name: 'fair storage takes 15% off the time left', until: '2026-04-11', score: 60, want: '2026-03-27' },
     { name: 'poor storage takes 30% off the time left', until: '2026-04-11', score: 10, want: '2026-03-12' },
     { name: 'past dates stay as they are', until: '2025-12-31', score: 10, want: null },
+    { name: 'year-only date is ignored', until: '2030', score: 10, want: null },
+    { name: 'non-ISO date is ignored', until: '31/12/2030', score: 10, want: null },
   ]
   for (const c of cases) {
     it(c.name, () => {
