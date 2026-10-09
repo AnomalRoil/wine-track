@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
+import { MAX_COLUMNS, MAX_DEPTH, MAX_ROWS } from './racks'
+import { RACK_LAYOUTS } from './types'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
@@ -50,6 +52,26 @@ const MovementSchema = z.object({
   note: z.string(),
 })
 
+const RackSchema = z.object({
+  id: z.string(),
+  cellarId: z.string(),
+  name: z.string(),
+  columns: z.number().int().min(1).max(MAX_COLUMNS),
+  rows: z.number().int().min(1).max(MAX_ROWS),
+  depth: z.number().int().min(1).max(MAX_DEPTH),
+  layout: z.enum(RACK_LAYOUTS),
+  position: z.number(),
+})
+
+const PlacementSchema = z.object({
+  id: z.string(),
+  rackId: z.string(),
+  layer: z.number().int().min(0),
+  row: z.number().int().min(0),
+  column: z.number().int().min(0),
+  wineId: z.string(),
+})
+
 const PhotoSchema = z.object({ id: z.string(), mediaType: z.string(), data: z.string() })
 
 const BackupV1Schema = z.object({
@@ -69,6 +91,8 @@ const BackupSchema = z.object({
   tastings: z.array(TastingSchema),
   cellars: z.array(CellarSchema).min(1),
   movements: z.array(MovementSchema),
+  racks: z.array(RackSchema).default([]),
+  placements: z.array(PlacementSchema).default([]),
   photos: z.array(PhotoSchema),
 })
 
@@ -93,5 +117,5 @@ export function parseBackup(json: string): Backup | null {
   const v1 = BackupV1Schema.safeParse(raw)
   if (!v1.success) return null
   const { wines, movements } = migrateWinesV1(v1.data.wines)
-  return { ...v1.data, version: 2, wines, movements, cellars: [defaultCellar()] }
+  return { ...v1.data, version: 2, wines, movements, cellars: [defaultCellar()], racks: [], placements: [] }
 }

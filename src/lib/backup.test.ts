@@ -14,9 +14,18 @@ describe('backup', () => {
       tastings: [tasting],
       cellars: [{ id: 'main', name: '', position: 0 }],
       movements: [makeMovement({ unitPrice: 12.5 })],
+      racks: [{ id: 'r1', cellarId: 'main', name: 'Left wall', columns: 6, rows: 4, depth: 2, layout: 'diamond' as const, position: 0 }],
+      placements: [{ id: 'r1/1/0/2', rackId: 'r1', layer: 1, row: 0, column: 2, wineId: 'w1' }],
     }
     const parsed = parseBackup(serializeBackup(data, [photo], '2026-08-28T10:00:00Z'))
     expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo] })
+  })
+
+  it('reads a version 2 backup made before racks existed', () => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [wine], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    const parsed = parseBackup(json)
+    expect(parsed?.racks).toEqual([])
+    expect(parsed?.placements).toEqual([])
   })
 
   it('upgrades a version 1 backup, turning stock counters into additions', () => {
@@ -48,6 +57,7 @@ describe('backup', () => {
       makeMovement({ id: 'w1-v1', wineId: 'w1', date: '2026-08-28', quantity: 3, cellarId: 'main' }),
     ])
     expect(parsed?.tastings).toEqual([tasting])
+    expect([parsed?.racks, parsed?.placements]).toEqual([[], []])
   })
 
   const invalid: { name: string; json: string }[] = [
@@ -56,6 +66,7 @@ describe('backup', () => {
     { name: 'wrong app', json: '{"app":"other","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[{"id":"a","name":"","position":0}],"movements":[],"photos":[]}' },
     { name: 'unknown version', json: '{"app":"wine-track","version":3,"exportedAt":"","wines":[],"tastings":[],"photos":[]}' },
     { name: 'no cellar', json: '{"app":"wine-track","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[],"movements":[],"photos":[]}' },
+    { name: 'rack too wide', json: '{"app":"wine-track","version":2,"exportedAt":"","wines":[],"tastings":[],"cellars":[{"id":"a","name":"","position":0}],"movements":[],"racks":[{"id":"r","cellarId":"a","name":"","columns":99,"rows":1,"depth":1,"layout":"lying","position":0}],"photos":[]}' },
     { name: 'malformed wine', json: '{"app":"wine-track","version":1,"exportedAt":"","wines":[{"id":1}],"tastings":[],"photos":[]}' },
   ]
   for (const c of invalid) {

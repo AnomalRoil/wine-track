@@ -29,8 +29,8 @@
         data: await blobToBase64(p.blob),
       })),
     )
-    const { wines, tastings, cellars, movements } = $state.snapshot(store)
-    const json = serializeBackup({ wines, tastings, cellars, movements }, photos, new Date().toISOString())
+    const { wines, tastings, cellars, movements, racks, placements } = $state.snapshot(store)
+    const json = serializeBackup({ wines, tastings, cellars, movements, racks, placements }, photos, new Date().toISOString())
     const date = new Date().toISOString().slice(0, 10)
     downloadFile(`wine-track-backup-${date}.json`, new Blob([json], { type: 'application/json' }))
     settings.lastBackupAt = Date.now()
