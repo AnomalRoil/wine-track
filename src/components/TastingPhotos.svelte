@@ -41,8 +41,12 @@
 
   async function open(id: string) {
     const photo = await load(id)
-    if (photo) fullUrl = URL.createObjectURL(photo.blob)
+    if (!photo) return
+    close()
+    fullUrl = URL.createObjectURL(photo.blob)
   }
+
+  $effect(() => close)
 
   function close() {
     if (fullUrl) URL.revokeObjectURL(fullUrl)
