@@ -63,16 +63,26 @@
   // An open sheet, rack form or capture owns a history entry, so the back button closes it
   // instead of leaving the app. Entries left behind by an unmounted view are popped on return.
   const overlay = $derived(selected !== null || capture !== null || editing !== null)
+  /** Depth of the entry shown, to tell back from forward on popstate. */
+  let depth = (history.state as { depth?: number } | null)?.depth ?? 0
   $effect(() => {
     const state = history.state as { depth?: number; overlay?: boolean } | null
-    if (overlay && !state?.overlay) history.pushState({ ...state, depth: (state?.depth ?? 0) + 1, overlay: true }, '')
-    else if (!overlay && state?.overlay) history.back()
+    if (overlay && !state?.overlay) {
+      depth = (state?.depth ?? 0) + 1
+      history.pushState({ ...state, depth, overlay: true }, '')
+    } else if (!overlay && state?.overlay) history.back()
   })
   $effect(() => {
     const onpop = () => {
+      const landed = (history.state as { depth?: number } | null)?.depth ?? 0
+      const forward = landed > depth
+      depth = landed
       if (history.state?.overlay) {
-        // Landed back on an entry whose overlay closed while another view was on top.
-        if (!overlay) history.back()
+        // Landed on an entry whose overlay closed while another view was on top: step over it.
+        if (!overlay) {
+          if (forward) history.forward()
+          else history.back()
+        }
         return
       }
       selected = null
