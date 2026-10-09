@@ -10,7 +10,7 @@
     sort = $bindable(),
     grapes,
     tags,
-  }: { filter: WineFilter; sort: SortKey; grapes: string[]; tags: string[] } = $props()
+  }: { filter: WineFilter; sort?: SortKey; grapes: string[]; tags: string[] } = $props()
 
   let expanded = $state(false)
 
@@ -45,11 +45,13 @@
   <button class="link" onclick={() => (expanded = !expanded)}>
     {t('list.filters')} {expanded ? '▴' : '▾'}
   </button>
-  <select bind:value={sort} aria-label="sort">
-    {#each SORT_KEYS as key (key)}
-      <option value={key}>{t(`sort.${key}`)}</option>
-    {/each}
-  </select>
+  {#if sort !== undefined}
+    <select bind:value={sort} aria-label="sort">
+      {#each SORT_KEYS as key (key)}
+        <option value={key}>{t(`sort.${key}`)}</option>
+      {/each}
+    </select>
+  {/if}
 </div>
 
 {#if expanded}

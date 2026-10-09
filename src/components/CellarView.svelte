@@ -6,7 +6,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import { today } from '../lib/due'
-  import { emptyFilter, filterWines } from '../lib/filters'
+  import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel } from '../lib/labels'
   import { matchesPerLayer, place, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
@@ -22,6 +22,7 @@
   import type { Placement, Rack, Wine } from '../lib/types'
   import BottleSheet from './BottleSheet.svelte'
   import CaptureFlow from './CaptureFlow.svelte'
+  import FilterBar from './FilterBar.svelte'
   import RackForm from './RackForm.svelte'
   import RackGrid from './RackGrid.svelte'
   import SlotSheet from './SlotSheet.svelte'
@@ -30,7 +31,7 @@
   let { onopen, focus = null }: { onopen: (wine: Wine) => void; focus?: string | null } = $props()
 
   let cellarId = $state(untrack(initialCellar))
-  let search = $state('')
+  let filter = $state(emptyFilter())
   let focusWineId = $state(untrack(() => focus))
   let selected = $state<Slot | null>(null)
   let moving = $state<Placement | null>(null)
@@ -93,10 +94,9 @@
 
   const highlight = $derived.by(() => {
     if (focusWineId) return new Set([focusWineId])
-    const q = search.trim()
-    if (!q) return null
+    if (!isFilterActive(filter)) return null
     const ctx = { tastings: store.tastings, stock: currentStock(), buyPrices: averageBuyPrices(store.movements) }
-    return new Set(filterWines(store.wines, ctx, { ...emptyFilter(), search: q }).map((w) => w.id))
+    return new Set(filterWines(store.wines, ctx, filter).map((w) => w.id))
   })
   const matches = $derived.by(() => {
     if (!highlight) return 0
@@ -245,7 +245,7 @@
         {t('rack.showing', { name: wineName(wines.get(focusWineId)!) })} ✕
       </button>
     {:else}
-      <input type="search" placeholder={t('rack.search')} bind:value={search} />
+      <FilterBar bind:filter grapes={distinctGrapes(store.wines)} tags={distinctTags(store.wines)} />
     {/if}
     {#if highlight}<p class="muted status">{t('rack.matches', { n: matches })}</p>{/if}
   {/if}
