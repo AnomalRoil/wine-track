@@ -23,11 +23,13 @@
     type DrinkStatus,
     type Flow,
   } from '../lib/stats'
-  import { currentStock, store } from '../lib/store.svelte'
+  import { assessStorage } from '../lib/storage'
+  import { currentStock, sortedCellars, store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
   import ColumnChart from './ColumnChart.svelte'
   import LineChart from './LineChart.svelte'
   import ShareList from './ShareList.svelte'
+  import StorageBadge from './StorageBadge.svelte'
 
   let { onopen }: ScreenProps = $props()
 
@@ -36,6 +38,11 @@
   let status = $state<DrinkStatus | null>(null)
 
   const now = today()
+  const storage = $derived(
+    sortedCellars()
+      .map((c) => ({ id: c.id, score: assessStorage(c.storage).score }))
+      .filter((c) => c.score !== null),
+  )
 
   function until(w: Wine): string {
     const end = lastYear(w)
@@ -126,6 +133,16 @@
     {/each}
   {/if}
   <p class="muted note">{t('dashboard.drinkNote')}</p>
+
+  {#if storage.length > 0}
+    <h2>{t('storage.title')}</h2>
+    {#each storage as c (c.id)}
+      <div class="card wine">
+        <span class="name">{cellarName(c.id)}</span>
+        <StorageBadge score={c.score} />
+      </div>
+    {/each}
+  {/if}
 
   <h2>{t('dashboard.composition')}</h2>
   <div class="chips">
