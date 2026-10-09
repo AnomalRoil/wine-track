@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { AROMA_GROUPS, answered, emptySheet, isEmptySheet, keyAromas, normalizeTasting, shadesFor, SHADES } from './tasting'
+import { en } from './messages/tasting'
+import { AROMA_FAMILIES, AROMA_GROUPS, answered, emptySheet, isEmptySheet, keyAromas, normalizeTasting, SCALES, shadesFor, SHADES } from './tasting'
 import { makeTasting } from './testing'
 import { WINE_COLORS, type TastingSheet } from './types'
 
@@ -93,4 +94,19 @@ describe('answered', () => {
       { name: 'body', value: 'full' },
     ])
   })
+})
+
+describe('tasting messages', () => {
+  const keys = [
+    ...Object.entries(SCALES).flatMap(([name, values]) => [`tasting.${name}`, ...values.map((v) => `tasting.${name}.${v}`)]),
+    ...Object.keys(SHADES).map((s) => `tasting.shade.${s}`),
+    ...AROMA_FAMILIES.map((f) => `tasting.family.${f}`),
+    ...AROMA_GROUPS.filter((g) => g.id !== g.family).map((g) => `tasting.group.${g.id}`),
+    ...AROMA_GROUPS.flatMap((g) => g.aromas).map((a) => `tasting.aroma.${a}`),
+  ]
+  for (const key of keys) {
+    it(`defines ${key}`, () => {
+      expect(en).toHaveProperty([key])
+    })
+  }
 })

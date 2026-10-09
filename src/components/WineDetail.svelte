@@ -7,10 +7,11 @@
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
   import { removeTasting, removeWine, saveWine, store, tastingsFor } from '../lib/store.svelte'
-  import type { Wine } from '../lib/types'
+  import type { Tasting, Wine } from '../lib/types'
   import Stars from './Stars.svelte'
   import StockPanel from './StockPanel.svelte'
   import TastingForm from './TastingForm.svelte'
+  import TastingSummary from './TastingSummary.svelte'
   import ValuePanel from './ValuePanel.svelte'
   import WineForm from './WineForm.svelte'
 
@@ -21,6 +22,7 @@
 
   let editing = $state(false)
   let addingTasting = $state(false)
+  let editingTastingId = $state<string | null>(null)
   let fullscreen = $state(false)
   let draft = $state<WineDraft>(emptyDraft())
   let photoUrl = $state<string | null>(null)
@@ -70,9 +72,9 @@
     onclose()
   }
 
-  async function delTasting(id: string) {
+  async function delTasting(tasting: Tasting) {
     if (!confirm(t('tasting.deleteConfirm'))) return
-    await removeTasting(id)
+    await removeTasting(tasting)
   }
 
   function calendarItems(w: Wine): CalendarItem[] {
@@ -160,7 +162,7 @@
 
   <h2>{t('detail.tastings')}</h2>
   {#if addingTasting}
-    <TastingForm wineId={wine.id} ondone={() => (addingTasting = false)} />
+    <TastingForm wineId={wine.id} color={wine.color} ondone={() => (addingTasting = false)} />
   {:else}
     <button class="primary" onclick={() => (addingTasting = true)}>{t('detail.addTasting')}</button>
   {/if}
@@ -168,16 +170,24 @@
     <p class="muted">{t('detail.noTastings')}</p>
   {/if}
   {#each tastings as tasting (tasting.id)}
-    <div class="card tasting">
-      <div class="row">
-        <span class="muted">{tasting.date}</span>
-        <Stars value={tasting.rating} />
-        <span class="muted">{tasting.rating.toFixed(1)}</span>
-        <div class="spacer"></div>
-        <button class="link danger" onclick={() => delTasting(tasting.id)}>✕</button>
+    {#if editingTastingId === tasting.id}
+      <div class="tasting">
+        <TastingForm wineId={wine.id} color={wine.color} {tasting} ondone={() => (editingTastingId = null)} />
       </div>
-      {#if tasting.notes}<p class="notes">{tasting.notes}</p>{/if}
-    </div>
+    {:else}
+      <div class="card tasting">
+        <div class="row">
+          <span class="muted">{tasting.date}</span>
+          <Stars value={tasting.rating} />
+          <span class="muted">{tasting.rating.toFixed(1)}</span>
+          <div class="spacer"></div>
+          <button class="link" aria-label={t('tasting.edit')} onclick={() => (editingTastingId = tasting.id)}>✎</button>
+          <button class="link danger" onclick={() => delTasting(tasting)}>✕</button>
+        </div>
+        {#if tasting.notes}<p class="notes">{tasting.notes}</p>{/if}
+        {#if tasting.sheet}<TastingSummary sheet={tasting.sheet} />{/if}
+      </div>
+    {/if}
   {/each}
 {/if}
 

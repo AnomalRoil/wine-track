@@ -1,5 +1,6 @@
-import { t } from './i18n.svelte'
+import { t, type MessageKey } from './i18n.svelte'
 import { store } from './store.svelte'
+import { aromaFamily, type ScaleName } from './tasting'
 import { BOTTLE_SIZES } from './types'
 
 export function cellarName(id: string): string {
@@ -12,4 +13,13 @@ export function cellarName(id: string): string {
 export function sizeLabel(cl: number): string {
   const size = BOTTLE_SIZES.find((s) => s.cl === cl)
   return size ? `${t(`size.${size.name}`)} · ${cl} cl` : `${cl} cl`
+}
+
+export function answerLabel(name: ScaleName, value: string): string {
+  return t(`tasting.${name}.${value}` as MessageKey)
+}
+
+/** Localized aroma name; aromas outside the picker are shown as stored. */
+export function aromaLabel(id: string): string {
+  return aromaFamily(id) ? t(`tasting.aroma.${id}` as MessageKey) : id
 }
