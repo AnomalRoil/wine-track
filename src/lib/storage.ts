@@ -9,22 +9,20 @@ export interface StorageQuestion {
   options: readonly { id: string; grade: StorageGrade }[]
 }
 
-const opts = (good: string[], fair: string[], poor: string[]) => [
-  ...good.map((id) => ({ id, grade: 'good' as const })),
-  ...fair.map((id) => ({ id, grade: 'fair' as const })),
-  ...poor.map((id) => ({ id, grade: 'poor' as const })),
-]
+const good = (id: string) => ({ id, grade: 'good' as const })
+const fair = (id: string) => ({ id, grade: 'fair' as const })
+const poor = (id: string) => ({ id, grade: 'poor' as const })
 
 /** The checklist, in display order. Temperature and its stability weigh most on how a wine ages. */
 export const STORAGE_QUESTIONS: readonly StorageQuestion[] = [
-  { factor: 'temperature', weight: 3, options: opts(['cool'], ['cold', 'mild'], ['warm']) },
-  { factor: 'stability', weight: 2, options: opts(['steady'], ['seasonal'], ['daily']) },
-  { factor: 'humidity', weight: 2, options: opts(['ideal'], ['damp', 'unknown'], ['dry']) },
-  { factor: 'airflow', weight: 1, options: opts(['fresh'], ['still'], ['stuffy']) },
-  { factor: 'light', weight: 1, options: opts(['dark'], ['dim'], ['bright']) },
-  { factor: 'position', weight: 1, options: opts(['lying'], ['mixed'], ['standing']) },
-  { factor: 'vibration', weight: 1, options: opts(['none'], ['occasional'], ['constant']) },
-  { factor: 'odors', weight: 1, options: opts(['none'], ['faint'], ['strong']) },
+  { factor: 'temperature', weight: 3, options: [fair('cold'), good('cool'), fair('mild'), poor('warm')] },
+  { factor: 'stability', weight: 2, options: [good('steady'), fair('seasonal'), poor('daily')] },
+  { factor: 'humidity', weight: 2, options: [poor('dry'), good('ideal'), fair('damp'), fair('unknown')] },
+  { factor: 'airflow', weight: 1, options: [good('fresh'), fair('still'), poor('stuffy')] },
+  { factor: 'light', weight: 1, options: [good('dark'), fair('dim'), poor('bright')] },
+  { factor: 'position', weight: 1, options: [good('lying'), fair('mixed'), poor('standing')] },
+  { factor: 'vibration', weight: 1, options: [good('none'), fair('occasional'), poor('constant')] },
+  { factor: 'odors', weight: 1, options: [good('none'), fair('faint'), poor('strong')] },
 ]
 
 const POINTS: Record<StorageGrade, number> = { good: 1, fair: 0.5, poor: 0 }
