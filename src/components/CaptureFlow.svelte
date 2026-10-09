@@ -37,9 +37,11 @@
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
   let unitPrice = $state<number | null>(null)
-  // generation drops a pending extraction; session also drops a photo still being processed.
+  // generation drops a pending extraction; session also drops a photo still being processed
+  // and the navigation after a save.
   let generation = 0
   let session = 0
+  let saving = false
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -109,9 +111,21 @@
   }
 
   async function save() {
-    const photoId = photoBlob ? crypto.randomUUID() : null
-    if (photoBlob && photoId) {
-      await putPhoto({ id: photoId, blob: photoBlob, thumb: await makeThumb(photoBlob) })
+    if (saving) return
+    saving = true
+    try {
+      await write()
+    } finally {
+      saving = false
+    }
+  }
+
+  async function write() {
+    const current = session
+    const blob = photoBlob
+    const photoId = blob ? crypto.randomUUID() : null
+    if (blob && photoId) {
+      await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
     }
     const wine: Wine = {
       id: crypto.randomUUID(),
@@ -141,6 +155,8 @@
         },
       ])
     }
+    // Cancelled or left while writing: the wine is kept, the caller no longer expects it.
+    if (current !== session) return
     reset()
     onsaved(wine)
   }
