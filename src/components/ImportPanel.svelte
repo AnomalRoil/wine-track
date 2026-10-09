@@ -7,6 +7,8 @@
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
+  import { completeFromLwin, CONFIDENT, displayName, type LwinWine } from '../lib/lwin'
+  import { matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
 
@@ -17,6 +19,10 @@
   let progress = $state<{ done: number; total: number } | null>(null)
   let completeError = $state<{ kind: FailureKind; detail?: string } | null>(null)
   let committing = $state(false)
+  /** Database wines that rows lacking a region or country look like, by line. */
+  let lwinMatches = $state.raw(new Map<number, LwinWine>())
+  /** Drafts as read from the file, for the rows filled in from the database. */
+  let unfilled = $state.raw(new Map<number, ImportRow['draft']>())
   let generation = 0
 
   const plan = $derived(
@@ -42,6 +48,8 @@
     rows = null
     ignored = []
     completed = new Set()
+    lwinMatches = new Map()
+    unfilled = new Map()
     progress = null
     completeError = null
   }
@@ -73,6 +81,32 @@
     }
     rows = parsed.rows
     ignored = parsed.ignored
+    await suggestMatches(gen)
+  }
+
+  async function suggestMatches(gen: number) {
+    const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
+    if (todo.length === 0) return
+    const results = await matchLwin(todo.map((r) => r.draft))
+    if (gen !== generation) return
+    lwinMatches = new Map(
+      todo.flatMap((r, i) => {
+        const best = results[i][0]
+        return best && best.score >= CONFIDENT ? [[r.line, best.wine] as const] : []
+      }),
+    )
+  }
+
+  function toggleMatch(line: number, on: boolean) {
+    const original = unfilled.get(line)
+    const next = new Map(unfilled)
+    if (on) next.set(line, rows!.find((r) => r.line === line)!.draft)
+    else next.delete(line)
+    unfilled = next
+    rows = rows!.map((r) => {
+      if (r.line !== line) return r
+      return { ...r, draft: on ? completeFromLwin(r.draft, lwinMatches.get(line)!) : original! }
+    })
   }
 
   async function complete() {
@@ -200,6 +234,16 @@
           {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
           {#if completed.has(row.line)}<span class="badge">✨ {t('io.completed')}</span>{/if}
         </div>
+        {#if lwinMatches.has(row.line) && match.kind === 'new'}
+          <label class="lwin">
+            <input
+              type="checkbox"
+              checked={unfilled.has(row.line)}
+              onchange={(e) => toggleMatch(row.line, e.currentTarget.checked)}
+            />
+            {t('lwin.importMatch', { name: displayName(lwinMatches.get(row.line)!) })}
+          </label>
+        {/if}
         {#if row.quantity > 0}
           <div class="muted">{t('io.bottlesTo', { n: row.quantity, cellar: destination(row) })}</div>
         {:else if row.notes}
@@ -283,6 +327,13 @@
 
   .badge {
     white-space: nowrap;
+  }
+
+  .lwin {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin: 0.35rem 0 0;
   }
 
   .pulse {
