@@ -8,6 +8,9 @@
   --accent-text: #ffffff;
   --danger: #b3261e;
   --star: #c9972a;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
   color-scheme: light dark;
 }
 
@@ -21,6 +24,9 @@
     --accent: #b05561;
     --accent-text: #ffffff;
     --danger: #ff6b5e;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
   }
 }
 
