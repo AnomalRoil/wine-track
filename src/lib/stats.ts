@@ -1,3 +1,4 @@
+import { lastYear, phaseOf, type Phase } from './aging'
 import { addDays, DRINK_HORIZON_DAYS } from './due'
 import { averageBuyPrices, bottlesOf, computeStock, type Stock } from './stock'
 import type { Movement, Tasting, Wine } from './types'
@@ -235,25 +236,31 @@ export function ratingHistogram(tastings: Tasting[]): RatingBucket[] {
 
 export type DrinkStatus = 'ready' | 'peak' | 'decline'
 
+const PHASE_STATUS: Partial<Record<Phase, DrinkStatus>> = { maturity: 'ready', peak: 'peak', decline: 'decline' }
+
 /**
- * Where a wine stands against its drink-before date: past it (decline), due
- * within the drink-soon horizon (peak), or later (ready). Null without a date.
- * Stand-in until the drinking-window phases land; switch to them then.
+ * Where a wine stands in its drinking window; young wines are null. A wine
+ * without a window falls back to its drink-before date: past it (decline),
+ * due within the drink-soon horizon (peak), or later (ready).
  */
 export function drinkStatus(wine: Wine, today: string): DrinkStatus | null {
+  const phase = phaseOf(wine, Number(today.slice(0, 4)))
+  if (phase) return PHASE_STATUS[phase] ?? null
   if (!wine.drinkBy) return null
   if (wine.drinkBy < today) return 'decline'
   if (wine.drinkBy <= addDays(today, DRINK_HORIZON_DAYS)) return 'peak'
   return 'ready'
 }
 
-/** In-stock wines by drink status, soonest drink-before date first. */
+/** In-stock wines by drink status, the window closing soonest first, then by drink-before date. */
 export function drinkShortcuts(wines: Wine[], stock: Stock, today: string): Record<DrinkStatus, Wine[]> {
   const out: Record<DrinkStatus, Wine[]> = { ready: [], peak: [], decline: [] }
   for (const { wine } of inStock(wines, stock)) {
     const status = drinkStatus(wine, today)
     if (status) out[status].push(wine)
   }
-  for (const list of Object.values(out)) list.sort((a, b) => a.drinkBy!.localeCompare(b.drinkBy!))
+  for (const list of Object.values(out)) {
+    list.sort((a, b) => lastYear(a) - lastYear(b) || (a.drinkBy ?? '').localeCompare(b.drinkBy ?? ''))
+  }
   return out
 }

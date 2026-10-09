@@ -14,7 +14,7 @@ export const en = {
   'dashboard.ready': 'Ready to drink',
   'dashboard.peak': 'At peak',
   'dashboard.decline': 'In decline',
-  'dashboard.drinkNote': 'Based on drink-before dates: at peak means due within six months.',
+  'dashboard.drinkNote': 'Based on drinking windows. Wines without one use their drink-before date: at peak means due within six months.',
   'dashboard.noWine': 'No wine in this group.',
 
   'dashboard.composition': 'Composition',
@@ -66,7 +66,7 @@ export const fr: Messages<typeof en> = {
   'dashboard.ready': 'Prêts à boire',
   'dashboard.peak': 'À leur apogée',
   'dashboard.decline': 'En déclin',
-  'dashboard.drinkNote': 'D’après les dates « à boire avant » : apogée signifie à boire dans les six mois.',
+  'dashboard.drinkNote': 'D’après les fenêtres de dégustation. Sans fenêtre, la date « à boire avant » compte : apogée signifie à boire dans les six mois.',
   'dashboard.noWine': 'Aucun vin dans ce groupe.',
 
   'dashboard.composition': 'Composition',
@@ -119,7 +119,7 @@ export const de: Messages<typeof en> = {
   'dashboard.ready': 'Trinkreif',
   'dashboard.peak': 'Auf dem Höhepunkt',
   'dashboard.decline': 'Im Abbau',
-  'dashboard.drinkNote': 'Nach den Trinken-bis-Daten: Höhepunkt heißt fällig innerhalb von sechs Monaten.',
+  'dashboard.drinkNote': 'Nach den Trinkfenstern. Weine ohne Fenster nach ihrem Trinken-bis-Datum: Höhepunkt heißt fällig innerhalb von sechs Monaten.',
   'dashboard.noWine': 'Kein Wein in dieser Gruppe.',
 
   'dashboard.composition': 'Zusammensetzung',

@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { lastYear, phaseOf } from '../lib/aging'
   import type { Series } from '../lib/chart'
-  import { today } from '../lib/due'
+  import { thisYear, today } from '../lib/due'
   import { t, type MessageKey } from '../lib/i18n.svelte'
   import { cellarName, sizeLabel, wineLabel } from '../lib/labels'
   import { money } from '../lib/money'
@@ -23,6 +24,7 @@
     type Flow,
   } from '../lib/stats'
   import { currentStock, store } from '../lib/store.svelte'
+  import type { Wine } from '../lib/types'
   import ColumnChart from './ColumnChart.svelte'
   import LineChart from './LineChart.svelte'
   import ShareList from './ShareList.svelte'
@@ -34,6 +36,11 @@
   let status = $state<DrinkStatus | null>(null)
 
   const now = today()
+
+  function until(w: Wine): string {
+    const end = lastYear(w)
+    return phaseOf(w, thisYear()) && Number.isFinite(end) ? String(end) : (w.drinkBy ?? '')
+  }
   const sum = $derived(totals(store.wines, store.movements, currentStock()))
   const shares = $derived(composition(store.wines, currentStock(), dimension))
   const shortcuts = $derived(drinkShortcuts(store.wines, currentStock(), now))
@@ -112,7 +119,7 @@
     {#each shortcuts[status] as w (w.id)}
       <button class="card wine" onclick={() => onopen(w)}>
         <span class="name">{wineLabel(w)}</span>
-        <span class="muted">{w.drinkBy}</span>
+        <span class="muted">{until(w)}</span>
       </button>
     {:else}
       <p class="muted">{t('dashboard.noWine')}</p>

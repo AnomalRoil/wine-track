@@ -16,7 +16,7 @@ import {
 } from './stats'
 import { computeStock } from './stock'
 import { makeMovement, makeWine } from './testing'
-import type { Tasting } from './types'
+import type { Tasting, Wine } from './types'
 
 const wines = [
   makeWine({ id: 'a', color: 'red', country: 'France', region: 'Bordeaux', grapes: ['Merlot', 'Cabernet Franc'], vintage: 2015, value: 40 }),
@@ -220,6 +220,19 @@ describe('drinkStatus', () => {
     })
   }
 
+  const windows: { name: string; wine: Partial<Wine>; want: ReturnType<typeof drinkStatus> }[] = [
+    { name: 'young', wine: { drinkFrom: 2028 }, want: null },
+    { name: 'maturing', wine: { drinkFrom: 2024, peakFrom: 2028 }, want: 'ready' },
+    { name: 'at peak', wine: { peakFrom: 2025, peakUntil: 2027 }, want: 'peak' },
+    { name: 'past its window', wine: { drinkUntil: 2025 }, want: 'decline' },
+    { name: 'window wins over drink-before date', wine: { drinkFrom: 2028, drinkBy: '2020-01-01' }, want: null },
+  ]
+  for (const c of windows) {
+    it(`uses the drinking window: ${c.name}`, () => {
+      expect(drinkStatus(makeWine(c.wine), '2026-04-01')).toBe(c.want)
+    })
+  }
+
   it('lists only wines in stock, soonest first', () => {
     const ws = [
       makeWine({ id: 'x', drinkBy: '2026-08-01' }),
@@ -231,5 +244,15 @@ describe('drinkStatus', () => {
     expect(got.peak.map((w) => w.id)).toEqual(['y', 'x'])
     expect(got.decline).toEqual([])
     expect(got.ready).toEqual([])
+  })
+
+  it('lists windowed wines before drink-before dates, closing soonest first', () => {
+    const ws = [
+      makeWine({ id: 'date', drinkBy: '2026-05-01' }),
+      makeWine({ id: 'late', peakFrom: 2025, peakUntil: 2030 }),
+      makeWine({ id: 'soon', peakFrom: 2025, peakUntil: 2027 }),
+    ]
+    const s = computeStock(ws.map((w) => makeMovement({ id: w.id, wineId: w.id })))
+    expect(drinkShortcuts(ws, s, '2026-04-01').peak.map((w) => w.id)).toEqual(['soon', 'late', 'date'])
   })
 })
