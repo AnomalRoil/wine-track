@@ -78,8 +78,16 @@
         break
       }
       const byLine = new Map(batch.map((r, j) => [r.line, result.data[j]]))
-      rows = rows!.map((r) => (byLine.has(r.line) ? { ...r, draft: applyCompletion(r.draft, byLine.get(r.line)!) } : r))
-      completed = new Set([...completed, ...byLine.keys()])
+      const filled: number[] = []
+      rows = rows!.map((r) => {
+        const completion = byLine.get(r.line)
+        if (!completion) return r
+        const draft = applyCompletion(r.draft, completion)
+        if (draft === r.draft) return r
+        filled.push(r.line)
+        return { ...r, draft }
+      })
+      completed = new Set([...completed, ...filled])
       progress = { done: i + batch.length, total: todo.length }
     }
     progress = null

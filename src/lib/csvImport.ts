@@ -331,12 +331,14 @@ export interface Completion {
   country: string | null
 }
 
-/** Fills only the fields the row left empty; what the user wrote always wins. */
+/** Fills only the fields the row left empty; what the user wrote always wins. Returns `draft` itself when nothing was filled. */
 export function applyCompletion(draft: WineDraft, c: Completion): WineDraft {
-  return {
+  const next = {
     ...draft,
     grapes: draft.grapes.length > 0 ? draft.grapes : c.grapes.map((g) => g.trim()).filter(Boolean),
     region: draft.region || c.region?.trim() || '',
     country: draft.country || c.country?.trim() || '',
   }
+  const filled = next.grapes.length > draft.grapes.length || next.region !== draft.region || next.country !== draft.country
+  return filled ? next : draft
 }

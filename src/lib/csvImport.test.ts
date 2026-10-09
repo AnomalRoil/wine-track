@@ -230,6 +230,10 @@ describe('applyCompletion', () => {
       expect([d.grapes, d.region, d.country]).toEqual(c.want)
     })
   }
+  it('returns the same draft when nothing is filled', () => {
+    const draft = emptyDraft()
+    expect(applyCompletion(draft, { grapes: [' '], region: null, country: '' })).toBe(draft)
+  })
   it('accepts unknown answers', () => {
     expect(applyCompletion(emptyDraft(), { grapes: [], region: null, country: null }).region).toBe('')
   })
