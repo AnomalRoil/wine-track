@@ -109,7 +109,7 @@ describe('parseImport', () => {
     { name: 'bad size', fields: 'A,,,1,big,,', want: { errors: ['size'] } },
     { name: 'unknown color', fields: 'A,,,1,,blue,', want: { errors: ['color'] } },
     { name: 'bad price', fields: 'A,,,1,,,cheap', want: { errors: ['price'], price: null } },
-    { name: 'liters without unit', fields: 'A,,,1,"0,75",,', want: { sizeCl: 75, errors: [] } },
+    { name: 'centiliters below 10 under a cl header', fields: 'A,,,1,5,,', want: { sizeCl: 5, errors: [] } },
     { name: 'known cl format under a cl header', fields: 'A,,,1,1500,,', want: { sizeCl: 1500, errors: [] } },
   ]
   for (const c of cells) {

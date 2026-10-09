@@ -49,11 +49,11 @@ describe('exportCsv', () => {
   })
 })
 
-it('reimports a nonstandard size in centiliters', () => {
-  const odd = [makeWine({ id: 'w', name: 'Big', sizeCl: 500 })]
+it('reimports nonstandard sizes in centiliters', () => {
+  const odd = [makeWine({ id: 'w', name: 'Big', sizeCl: 500 }), makeWine({ id: 'm', name: 'Mini', sizeCl: 5 })]
   const parsed = parseImport(exportCsv(odd, [], cellars, name), 2026)
   if (!parsed.ok) throw new Error(parsed.error)
-  expect(parsed.rows[0].draft.sizeCl).toBe(500)
+  expect(parsed.rows.map((r) => r.draft.sizeCl)).toEqual([500, 5])
 })
 
 describe('templateCsv', () => {

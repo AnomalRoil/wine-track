@@ -165,13 +165,13 @@ function parseVintage(raw: string, maxYear: number): number | null | undefined {
 const KNOWN_CL = new Set<number>(BOTTLE_SIZES.map((s) => s.cl))
 
 /**
- * Unit of a number written without one: liters below 10 (0,75), centiliters
- * under a header that says "cl", milliliters when that gives a known format
+ * Unit of a number written without one: centiliters under a header that says
+ * "cl", liters below 10 (0,75), milliliters when that gives a known format
  * (750, 1500), else centiliters.
  */
 function bareUnit(n: number, clHeader: boolean): 'l' | 'ml' | 'cl' {
-  if (n < 10) return 'l'
   if (clHeader) return 'cl'
+  if (n < 10) return 'l'
   return n >= 200 && KNOWN_CL.has(n / 10) ? 'ml' : 'cl'
 }
 
