@@ -105,6 +105,8 @@ describe('parseImport', () => {
     { name: 'bad size', fields: 'A,,,1,big,,', want: { errors: ['size'] } },
     { name: 'unknown color', fields: 'A,,,1,,blue,', want: { errors: ['color'] } },
     { name: 'bad price', fields: 'A,,,1,,,cheap', want: { errors: ['price'], price: null } },
+    { name: 'liters without unit', fields: 'A,,,1,"0,75",,', want: { sizeCl: 75, errors: [] } },
+    { name: 'known cl format under a cl header', fields: 'A,,,1,1500,,', want: { sizeCl: 1500, errors: [] } },
   ]
   for (const c of cells) {
     it(c.name, () => {
@@ -116,6 +118,31 @@ describe('parseImport', () => {
       if (color !== undefined) expect(r.draft.color).toBe(color)
     })
   }
+})
+
+describe('parseImport sizes without unit', () => {
+  const cases: [string, number][] = [
+    ['75', 75],
+    ['750', 75],
+    ['375', 37.5],
+    ['1500', 150],
+    ['"1,5"', 150],
+    ['50', 50],
+    ['600', 600],
+  ]
+  for (const [raw, want] of cases) {
+    it(raw, () => {
+      expect(row(`A,${raw}`, 'name,volume').draft.sizeCl).toBe(want)
+    })
+  }
+})
+
+it('reports spreadsheet line numbers across blank lines', () => {
+  const parsed = parseImport('name,vintage\nA,2019\n\n\nB,1700', 2026)
+  expect(parsed.ok && parsed.rows.map((r) => [r.line, r.errors])).toEqual([
+    [2, []],
+    [5, ['vintage']],
+  ])
 })
 
 describe('planImport', () => {

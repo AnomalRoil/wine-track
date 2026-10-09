@@ -1,5 +1,5 @@
 import { toCsv } from './csv'
-import { COLUMNS } from './csvImport'
+import { COLUMNS, HEADERS } from './csvImport'
 import { averageBuyPrices, computeStock } from './stock'
 import type { Cellar, Movement, Wine } from './types'
 
@@ -16,7 +16,7 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
   const stock = computeStock(movements)
   const prices = averageBuyPrices(movements)
   const order = [...cellars].sort((a, b) => a.position - b.position).map((c) => c.id)
-  const rows: (string | number | null)[][] = [[...COLUMNS]]
+  const rows: (string | number | null)[][] = [COLUMNS.map((c) => HEADERS[c])]
 
   const line = (wine: Wine, cellarId: string | null, quantity: number) => {
     const notes = movements
@@ -56,5 +56,5 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
 
 /** Header-only CSV to fill in a spreadsheet. */
 export function templateCsv(): string {
-  return toCsv([[...COLUMNS]])
+  return toCsv([COLUMNS.map((c) => HEADERS[c])])
 }

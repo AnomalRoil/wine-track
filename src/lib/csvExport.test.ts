@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { parseCsv } from './csv'
 import { exportCsv, templateCsv } from './csvExport'
-import { COLUMNS, parseImport, planImport } from './csvImport'
+import { parseImport, planImport } from './csvImport'
 import { makeMovement as mv, makeWine } from './testing'
+
+const HEADER = ['cellar', 'name', 'producer', 'vintage', 'quantity', 'size (cl)', 'color', 'region', 'country', 'grapes', 'purchase price', 'notes', 'tags']
+const cellsOf = (text: string) => parseCsv(text).map((r) => r.cells)
 
 const cellars = [
   { id: 'b', name: 'Garage', position: 1 },
@@ -12,7 +15,7 @@ const name = (id: string) => cellars.find((c) => c.id === id)!.name || 'My cella
 const wines = [
   makeWine({ id: 'w1', name: 'Clos', producer: 'Zed', grapes: ['Syrah', 'Grenache'], tags: ['party'], sizeCl: 150 }),
   makeWine({ id: 'w2', name: '=Formula', producer: 'Abel', vintage: null, color: 'white' }),
-  makeWine({ id: 'w3', name: 'Gone', producer: 'Abel' }),
+  makeWine({ id: 'w3', name: 'Gone', producer: 'Abel', sizeCl: 1500 }),
 ]
 const movements = [
   mv({ id: '1', wineId: 'w1', quantity: 4, cellarId: 'main', unitPrice: 10, note: 'fair' }),
@@ -26,12 +29,12 @@ describe('exportCsv', () => {
   const csv = exportCsv(wines, movements, cellars, name)
 
   it('writes one row per wine and cellar, then wines out of stock', () => {
-    expect(parseCsv(csv)).toEqual([
-      [...COLUMNS],
+    expect(cellsOf(csv)).toEqual([
+      HEADER,
       ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', '', '', 'Syrah, Grenache', '11.67', 'fair', 'party'],
       ['Garage', "'=Formula", 'Abel', '', '1', '75', 'white', '', '', '', '', '', ''],
       ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', '', '', 'Syrah, Grenache', '11.67', '', 'party'],
-      ['', 'Gone', 'Abel', '2020', '0', '75', 'red', '', '', '', '', '', ''],
+      ['', 'Gone', 'Abel', '2020', '0', '1500', 'red', '', '', '', '', '', ''],
     ])
   })
 
@@ -47,6 +50,6 @@ describe('exportCsv', () => {
 
 describe('templateCsv', () => {
   it('holds the header only', () => {
-    expect(parseCsv(templateCsv())).toEqual([[...COLUMNS]])
+    expect(cellsOf(templateCsv())).toEqual([HEADER])
   })
 })

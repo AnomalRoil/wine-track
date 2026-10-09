@@ -12,22 +12,33 @@ function detectDelimiter(text: string): string {
   return [...counts].reduce((best, c) => (c[1] > best[1] ? c : best))[0]
 }
 
+export interface CsvRow {
+  /** 1-based line of the file where the row starts. */
+  line: number
+  cells: string[]
+}
+
 /** Parses RFC 4180 CSV with a detected delimiter. Blank lines are dropped. */
-export function parseCsv(text: string): string[][] {
-  text = text.replace(/^﻿/, '')
+export function parseCsv(text: string): CsvRow[] {
+  text = text.replace(/^\uFEFF/, '')
   const delimiter = detectDelimiter(text)
-  const rows: string[][] = []
+  const rows: CsvRow[] = []
   let row: string[] = []
   let cell = ''
   let quoted = false
+  let line = 1
+  let start = 1
   const endRow = () => {
     row.push(cell)
-    if (row.some((c) => c.trim() !== '')) rows.push(row)
+    if (row.some((c) => c.trim() !== '')) rows.push({ line: start, cells: row })
     row = []
     cell = ''
+    start = line
   }
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
+    const crlf = ch === '\r' && text[i + 1] === '\n'
+    if ((ch === '\n' || ch === '\r') && !crlf) line++
     if (quoted) {
       if (ch !== '"') cell += ch
       else if (text[i + 1] === '"') cell += text[++i]
@@ -38,14 +49,22 @@ export function parseCsv(text: string): string[][] {
       row.push(cell)
       cell = ''
     } else if (ch === '\n' || ch === '\r') {
-      if (ch === '\r' && text[i + 1] === '\n') i++
-      endRow()
+      if (!crlf) endRow()
     } else {
       cell += ch
     }
   }
   endRow()
   return rows
+}
+
+/** Decodes a file as UTF-8, or as Windows-1252 when it is not valid UTF-8 (plain CSV saved by Excel on Windows). */
+export function decodeText(bytes: ArrayBuffer | Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes)
+  }
 }
 
 // Spreadsheets run cells starting with these as formulas.

@@ -21,6 +21,23 @@ export const COLUMNS = [
 ] as const
 export type Column = (typeof COLUMNS)[number]
 
+/** Header line written in the template and the CSV export. */
+export const HEADERS: Record<Column, string> = {
+  cellar: 'cellar',
+  name: 'name',
+  producer: 'producer',
+  vintage: 'vintage',
+  quantity: 'quantity',
+  size_cl: 'size (cl)',
+  color: 'color',
+  region: 'region',
+  country: 'country',
+  grapes: 'grapes',
+  purchase_price: 'purchase price',
+  notes: 'notes',
+  tags: 'tags',
+}
+
 /** Lowercase, without accents, spaces or punctuation: "Größe (cl)" → "grossecl". */
 export function fold(s: string): string {
   return s
@@ -114,12 +131,25 @@ function parseVintage(raw: string, maxYear: number): number | null | undefined {
   return Number.isInteger(n) && n >= 1800 && n <= maxYear ? n : undefined
 }
 
-function parseSize(raw: string): number | undefined {
+const KNOWN_CL = new Set<number>(BOTTLE_SIZES.map((s) => s.cl))
+
+/**
+ * Unit of a number written without one: liters below 10 (0,75), milliliters
+ * when that gives a known format (750, 1500), else centiliters. A header that
+ * says "cl" keeps known centiliter formats (1500 is a nebuchadnezzar).
+ */
+function bareUnit(n: number, clHeader: boolean): 'l' | 'ml' | 'cl' {
+  if (n < 10) return 'l'
+  if (clHeader && KNOWN_CL.has(n)) return 'cl'
+  return n >= 200 && KNOWN_CL.has(n / 10) ? 'ml' : 'cl'
+}
+
+function parseSize(raw: string, clHeader: boolean): number | undefined {
   if (raw === '') return STANDARD_SIZE_CL
   const named = SIZE_ALIASES.get(fold(raw))
   if (named) return named
-  const unit = /(ml|cl|l)\s*$/i.exec(raw)?.[1].toLowerCase() ?? 'cl'
   const n = parseNumber(raw)
+  const unit = /(ml|cl|l)\s*$/i.exec(raw)?.[1].toLowerCase() ?? bareUnit(n, clHeader)
   const cl = unit === 'l' ? n * 100 : unit === 'ml' ? n / 10 : n
   return cl > 0 && cl <= 3000 ? Math.round(cl * 10) / 10 : undefined
 }
@@ -133,19 +163,20 @@ function parseList(raw: string): string[] {
  * French or German names); unknown columns are reported and skipped.
  */
 export function parseImport(text: string, currentYear: number): ParsedImport {
-  const [header, ...lines] = parseCsv(text)
-  if (!header) return { ok: false, error: 'empty' }
+  const [first, ...lines] = parseCsv(text)
+  if (!first) return { ok: false, error: 'empty' }
   const index = new Map<Column, number>()
   const ignored: string[] = []
-  header.forEach((h, i) => {
+  first.cells.forEach((h, i) => {
     const key = fold(h)
     const column = COLUMNS.find((c) => HEADER_ALIASES[c].includes(key))
     if (column && !index.has(column)) index.set(column, i)
     else if (h.trim()) ignored.push(h.trim())
   })
   if (!index.has('name') && !index.has('producer')) return { ok: false, error: 'no-name-column' }
+  const clHeader = index.has('size_cl') && fold(first.cells[index.get('size_cl')!]).endsWith('cl')
 
-  const rows = lines.map((cells, i): ImportRow => {
+  const rows = lines.map(({ line, cells }): ImportRow => {
     // Undoes the formula guard of toCsv.
     const get = (c: Column) => (index.has(c) ? (cells[index.get(c)!] ?? '').trim().replace(/^'(?=[=+\-@])/, '') : '')
     const errors: RowError[] = []
@@ -157,7 +188,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
     const quantity = rawQuantity === '' ? 1 : Number(rawQuantity)
     if (!Number.isInteger(quantity) || quantity < 0 || quantity > 10000) errors.push('quantity')
 
-    const sizeCl = parseSize(get('size_cl'))
+    const sizeCl = parseSize(get('size_cl'), clHeader)
     if (sizeCl === undefined) errors.push('size')
 
     const rawColor = get('color')
@@ -173,7 +204,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
     if (!name && !producer) errors.push('missing-name')
 
     return {
-      line: i + 2,
+      line,
       cellar: get('cellar'),
       draft: {
         name,
