@@ -6,6 +6,7 @@
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
   import { MORE_SCREENS, type Screen } from './lib/screens'
+  import { t } from './lib/i18n.svelte'
   import { initStore, store } from './lib/store.svelte'
   import type { Wine } from './lib/types'
 
@@ -81,7 +82,7 @@
 
 <main>
   {#if !store.loaded}
-    <p class="muted">…</p>
+    <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
   {:else if selectedWineId}
     <WineDetail wineId={selectedWineId} onclose={closeWine} onlocate={locate} />
   {:else if tab === 'wines'}

@@ -13,6 +13,8 @@ export const store = $state({
   racks: [] as Rack[],
   placements: [] as Placement[],
   loaded: false,
+  /** Another tab holds an older database version and keeps it from upgrading. */
+  blocked: false,
 })
 
 const stock = $derived(computeStock(store.movements))
@@ -27,7 +29,7 @@ export function sortedCellars(): Cellar[] {
 }
 
 export async function initStore(): Promise<void> {
-  const all = await db.loadAll()
+  const all = await db.loadAll(() => (store.blocked = true))
   if (all.cellars.length === 0) {
     all.cellars = [defaultCellar()]
     await db.putCellars(all.cellars)

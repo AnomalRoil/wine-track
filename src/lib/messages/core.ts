@@ -2,6 +2,7 @@ import type { Messages } from './types'
 
 export const en = {
   'app.name': 'Wine Track',
+  'app.blocked': 'Wine Track is updating. Close its other tabs or windows to continue.',
 
   'tab.wines': 'Wines',
   'tab.add': 'Add',
@@ -203,6 +204,7 @@ export const en = {
 
 export const fr: Messages<typeof en> = {
   'app.name': 'Wine Track',
+  'app.blocked': 'Wine Track se met à jour. Fermez ses autres onglets ou fenêtres pour continuer.',
 
   'tab.wines': 'Vins',
   'tab.add': 'Ajouter',
@@ -404,6 +406,7 @@ export const fr: Messages<typeof en> = {
 
 export const de: Messages<typeof en> = {
   'app.name': 'Wine Track',
+  'app.blocked': 'Wine Track wird aktualisiert. Die anderen Tabs oder Fenster schließen, um fortzufahren.',
 
   'tab.wines': 'Weine',
   'tab.add': 'Hinzufügen',

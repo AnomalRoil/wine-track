@@ -21,37 +21,50 @@ function done(tx: IDBTransaction): Promise<void> {
   })
 }
 
-export async function openDb(): Promise<IDBDatabase> {
+/**
+ * Opens the database. `onblocked` runs while a tab still holding an older
+ * version keeps the upgrade from starting.
+ */
+export async function openDb(onblocked?: () => void): Promise<IDBDatabase> {
   if (db) return db
   const r = indexedDB.open(DB_NAME, DB_VERSION)
-  r.onupgradeneeded = (e) => {
-    const d = r.result
-    const tx = r.transaction!
-    if (e.oldVersion < 1) {
-      d.createObjectStore('wines', { keyPath: 'id' })
-      d.createObjectStore('tastings', { keyPath: 'id' }).createIndex('wineId', 'wineId')
-      d.createObjectStore('photos', { keyPath: 'id' })
-    }
-    if (e.oldVersion < 2) {
-      d.createObjectStore('cellars', { keyPath: 'id' }).put(defaultCellar())
-      d.createObjectStore('movements', { keyPath: 'id' }).createIndex('wineId', 'wineId')
-      const wines = tx.objectStore('wines')
-      wines.getAll().onsuccess = (ev) => {
-        const old = (ev.target as IDBRequest<WineV1[]>).result
-        const migrated = migrateWinesV1(old)
-        for (const w of migrated.wines) wines.put(w)
-        for (const m of migrated.movements) tx.objectStore('movements').put(m)
-      }
-    }
-    if (e.oldVersion < 3) {
-      d.createObjectStore('racks', { keyPath: 'id' }).createIndex('cellarId', 'cellarId')
-      const placements = d.createObjectStore('placements', { keyPath: 'id' })
-      placements.createIndex('rackId', 'rackId')
-      placements.createIndex('wineId', 'wineId')
+  r.onupgradeneeded = (e) => upgrade(r.result, r.transaction!, e.oldVersion)
+  r.onblocked = () => onblocked?.()
+  const opened = await req(r)
+  // A newer version opened in another tab: this code no longer matches the schema.
+  opened.onversionchange = () => {
+    opened.close()
+    db = null
+    location.reload()
+  }
+  db = opened
+  return db
+}
+
+/** Creates and migrates the stores of a database at `oldVersion` up to DB_VERSION. */
+export function upgrade(d: IDBDatabase, tx: IDBTransaction, oldVersion: number): void {
+  if (oldVersion < 1) {
+    d.createObjectStore('wines', { keyPath: 'id' })
+    d.createObjectStore('tastings', { keyPath: 'id' }).createIndex('wineId', 'wineId')
+    d.createObjectStore('photos', { keyPath: 'id' })
+  }
+  if (oldVersion < 2) {
+    d.createObjectStore('cellars', { keyPath: 'id' }).put(defaultCellar())
+    d.createObjectStore('movements', { keyPath: 'id' }).createIndex('wineId', 'wineId')
+    const wines = tx.objectStore('wines')
+    wines.getAll().onsuccess = (ev) => {
+      const old = (ev.target as IDBRequest<WineV1[]>).result
+      const migrated = migrateWinesV1(old)
+      for (const w of migrated.wines) wines.put(w)
+      for (const m of migrated.movements) tx.objectStore('movements').put(m)
     }
   }
-  db = await req(r)
-  return db
+  if (oldVersion < 3) {
+    d.createObjectStore('racks', { keyPath: 'id' }).createIndex('cellarId', 'cellarId')
+    const placements = d.createObjectStore('placements', { keyPath: 'id' })
+    placements.createIndex('rackId', 'rackId')
+    placements.createIndex('wineId', 'wineId')
+  }
 }
 
 export interface Data {
@@ -63,8 +76,8 @@ export interface Data {
   placements: Placement[]
 }
 
-export async function loadAll(): Promise<Data> {
-  const d = await openDb()
+export async function loadAll(onblocked?: () => void): Promise<Data> {
+  const d = await openDb(onblocked)
   const tx = d.transaction(['wines', 'tastings', 'cellars', 'movements', 'racks', 'placements'])
   const [wines, tastings, cellars, movements, racks, placements] = await Promise.all([
     req(tx.objectStore('wines').getAll() as IDBRequest<Wine[]>),
