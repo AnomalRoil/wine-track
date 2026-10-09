@@ -1,9 +1,10 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel } from '../lib/labels'
+  import { cellarLosing, placementsOf, slotsFreed } from '../lib/racks'
   import { bottlesOf } from '../lib/stock'
   import { currentStock, movementsFor, removeMovement, sortedCellars, store } from '../lib/store.svelte'
-  import type { Movement } from '../lib/types'
+  import type { Movement, Placement } from '../lib/types'
   import MovementForm from './MovementForm.svelte'
 
   let { wineId, onlocate }: { wineId: string; onlocate?: (wineId: string) => void } = $props()
@@ -28,9 +29,33 @@
     return `${t(`movement.${m.kind}`)} ${sign}${m.quantity} · ${where}`
   }
 
-  async function del(id: string) {
+  /** A deletion that empties some of the wine's slots, waiting for the user to pick which. */
+  let deleting = $state<{ id: string; placed: Placement[]; n: number } | null>(null)
+  let chosen = $state<string[]>([])
+
+  async function del(m: Movement) {
+    const cellar = cellarLosing(m)
+    if (cellar) {
+      const placed = placementsOf(store.racks, store.placements, wineId, cellar)
+      const n = slotsFreed(bottlesOf(currentStock(), wineId, cellar), m.quantity, placed.length)
+      if (n > 0 && n < placed.length) {
+        deleting = { id: m.id, placed, n }
+        chosen = []
+        return
+      }
+    }
     if (!confirm(t('journal.deleteMovement'))) return
-    await removeMovement(id)
+    await removeMovement(m.id)
+  }
+
+  function toggle(id: string) {
+    chosen = chosen.includes(id) ? chosen.filter((c) => c !== id) : [...chosen, id]
+  }
+
+  async function confirmDelete() {
+    const { id } = deleting!
+    deleting = null
+    await removeMovement(id, chosen)
   }
 </script>
 
@@ -71,8 +96,27 @@
       <div class="row entry">
         <span class="muted">{m.date}</span>
         <span class="grow">{describe(m)}{m.note ? ` — ${m.note}` : ''}</span>
-        <button class="link danger" onclick={() => del(m.id)}>✕</button>
+        <button class="link danger" onclick={() => del(m)}>✕</button>
       </div>
+      {#if deleting?.id === m.id}
+        <div class="card">
+          <p>{t('journal.deleteMovement')}</p>
+          <span class="muted">{t('rack.whichSlots', { n: deleting.n })}</span>
+          <div class="chips wrap">
+            {#each deleting.placed as p (p.id)}
+              <button class="chip" class:active={chosen.includes(p.id)} onclick={() => toggle(p.id)}>
+                {placementLabel(p)}
+              </button>
+            {/each}
+          </div>
+          <div class="row">
+            <button onclick={() => (deleting = null)}>{t('form.cancel')}</button>
+            <button class="danger grow" disabled={chosen.length !== deleting.n} onclick={confirmDelete}>
+              {t('detail.delete')}
+            </button>
+          </div>
+        </div>
+      {/if}
     {/each}
   </details>
 {/if}

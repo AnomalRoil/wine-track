@@ -102,9 +102,11 @@ export async function addMovements(movements: Movement[], freed: string[] = []):
   if (freed.length > 0) store.placements = store.placements.filter((p) => !freed.includes(p.id))
 }
 
-export async function removeMovement(id: string): Promise<void> {
-  await db.deleteMovement(id)
+/** Deletes a movement; `freed` lists the slots to empty first when its bottles disappear. */
+export async function removeMovement(id: string, freed: string[] = []): Promise<void> {
+  await db.deleteMovement(id, freed)
   store.movements = store.movements.filter((m) => m.id !== id)
+  if (freed.length > 0) store.placements = store.placements.filter((p) => !freed.includes(p.id))
   await freeStalePlacements()
 }
 

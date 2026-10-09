@@ -119,10 +119,12 @@ export async function putMovements(movements: Movement[], freed: string[] = []):
   await done(tx)
 }
 
-export async function deleteMovement(id: string): Promise<void> {
+/** Deletes a movement and empties the slots of the bottles it no longer accounts for, atomically. */
+export async function deleteMovement(id: string, freed: string[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('movements', 'readwrite')
+  const tx = d.transaction(['movements', 'placements'], 'readwrite')
   tx.objectStore('movements').delete(id)
+  for (const p of freed) tx.objectStore('placements').delete(p)
   await done(tx)
 }
 
