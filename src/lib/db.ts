@@ -81,11 +81,12 @@ export async function deleteWine(wine: Wine): Promise<void> {
   tx.objectStore('wines').delete(wine.id)
   if (wine.photoId) tx.objectStore('photos').delete(wine.photoId)
   const tastings = await req(tx.objectStore('tastings').index('wineId').getAll(wine.id) as IDBRequest<Tasting[]>)
-  for (const id of tastings.flatMap((t) => t.sheet?.photoIds ?? [])) tx.objectStore('photos').delete(id)
-  for (const name of ['tastings', 'movements'] as const) {
-    const keys = await req(tx.objectStore(name).index('wineId').getAllKeys(wine.id))
-    for (const key of keys) tx.objectStore(name).delete(key)
+  for (const tasting of tastings) {
+    tx.objectStore('tastings').delete(tasting.id)
+    for (const id of tasting.sheet?.photoIds ?? []) tx.objectStore('photos').delete(id)
   }
+  const movements = await req(tx.objectStore('movements').index('wineId').getAllKeys(wine.id))
+  for (const key of movements) tx.objectStore('movements').delete(key)
   await done(tx)
 }
 
