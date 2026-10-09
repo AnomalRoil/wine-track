@@ -80,9 +80,9 @@ const escape = (s: string) =>
 export function renderInventory(inv: Inventory, o: RenderOptions): string {
   const t = (key: InventoryKey) => escape(o.t(key))
   const amount = (n: number | null) => (n === null ? '—' : escape(o.money(n)))
+  const wineName = (w: Wine) => `<strong>${escape(w.producer)}</strong>${w.producer && w.name ? ' · ' : ''}${escape(w.name)}`
   const wineCell = (w: Wine) =>
-    `<strong>${escape(w.producer)}</strong>${w.producer && w.name ? ' · ' : ''}${escape(w.name)}` +
-    (w.region || w.country ? `<br><small>${escape([w.region, w.country].filter(Boolean).join(', '))}</small>` : '')
+    wineName(w) + (w.region || w.country ? `<br><small>${escape([w.region, w.country].filter(Boolean).join(', '))}</small>` : '')
   const head = `<tr><th>${t('io.doc.wine')}</th><th>${t('io.doc.vintage')}</th><th>${t('io.doc.size')}</th><th class="n">${t('io.doc.quantity')}</th><th class="n">${t('io.doc.purchase')}</th><th class="n">${t('io.doc.value')}</th><th class="n">${t('io.doc.lineValue')}</th></tr>`
   const row = (l: InventoryLine) =>
     `<tr><td>${wineCell(l.wine)}</td><td>${l.wine.vintage ?? t('io.doc.nv')}</td><td>${l.wine.sizeCl} cl</td><td class="n">${l.quantity}</td><td class="n">${amount(l.purchase)}</td><td class="n">${amount(l.value)}</td><td class="n">${amount(l.value === null ? null : l.value * l.quantity)}</td></tr>`
@@ -95,7 +95,7 @@ export function renderInventory(inv: Inventory, o: RenderOptions): string {
   const unpriced =
     inv.unpriced.length === 0
       ? `<p>${t('io.doc.unpricedNone')}</p>`
-      : `<ul>${inv.unpriced.map((l) => `<li>${l.quantity} × ${wineCell(l.wine).replace('<br>', ' ')} ${l.wine.vintage ?? t('io.doc.nv')} — ${escape(o.cellarName(l.cellarId))}</li>`).join('')}</ul>`
+      : `<ul>${inv.unpriced.map((l) => `<li>${l.quantity} × ${wineName(l.wine)} ${l.wine.vintage ?? t('io.doc.nv')} — ${escape(o.cellarName(l.cellarId))}</li>`).join('')}</ul>`
   const unpricedBottles = inv.unpriced.reduce((n, l) => n + l.quantity, 0)
 
   return `<!doctype html>
@@ -115,7 +115,9 @@ table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
 th, td { border-bottom: 1px solid #bbb; padding: 0.25rem 0.35rem; text-align: left; vertical-align: top; }
 th { background: #eee; }
 tfoot td { font-weight: 700; border-top: 2px solid #000; }
-.n { text-align: right; white-space: nowrap; }
+.n { text-align: right; }
+td.n, td:nth-child(3) { white-space: nowrap; }
+th:first-child { width: 35%; }
 small { color: #444; }
 .disclaimer { margin-top: 2rem; font-size: 9pt; color: #333; border-top: 1px solid #bbb; padding-top: 0.5rem; }
 .print { position: fixed; top: 1rem; right: 1rem; padding: 0.5rem 1rem; font: inherit; }

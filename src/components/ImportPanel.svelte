@@ -1,6 +1,6 @@
 <script lang="ts">
   import { templateCsv } from '../lib/csvExport'
-  import { applyCompletion, COLUMNS, incompleteRows, parseImport, planImport, type ImportRow } from '../lib/csvImport'
+  import { applyCompletion, COLUMNS, incompleteRows, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
@@ -96,8 +96,9 @@
     downloadFile('wine-track-template.csv', new Blob([templateCsv()], { type: 'text/csv' }))
   }
 
-  function label(row: ImportRow): string {
-    const d = row.draft
+  /** The stored wine's label when the row adds to it, so the user sees what it matched. */
+  function label(row: ImportRow, match: RowMatch): string {
+    const d = (match.kind === 'existing' && store.wines.find((w) => w.id === match.wineId)) || row.draft
     return [d.producer, d.name, d.vintage].filter(Boolean).join(' · ')
   }
 
@@ -161,7 +162,7 @@
           {#if match.kind === 'repeat'}{t('io.status.repeat', { n: match.line })}{:else}{t(`io.status.${match.kind}`)}{/if}
         </span>
       </div>
-      <div class="name">{label(row) || '—'}</div>
+      <div class="name">{label(row, match) || '—'}</div>
       {#if match.kind === 'invalid'}
         <ul>
           {#each row.errors as error (error)}<li>{t(`io.error.${error}`)}</li>{/each}
