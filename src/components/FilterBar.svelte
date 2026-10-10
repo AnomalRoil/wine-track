@@ -160,7 +160,7 @@
     font-size: 1rem;
   }
 
-  .search:focus-within {
+  .search:has(input:focus-visible) {
     outline: 2px solid var(--primary);
   }
 

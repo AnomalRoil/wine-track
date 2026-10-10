@@ -336,7 +336,7 @@
     color: var(--on-tertiary-container);
   }
 
-  .match .row {
+  .match p.row {
     align-items: flex-start;
   }
 

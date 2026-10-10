@@ -46,6 +46,7 @@
     locatedWineId = null
     selectedWineId = wine.id
     push({ wine: wine.id, screen: screen?.id ?? null })
+    window.scrollTo(0, 0)
   }
 
   function closeWine() {
@@ -64,7 +65,8 @@
       if (unwindingTo) {
         tab = unwindingTo
         unwindingTo = null
-        window.scrollTo(0, 0)
+        // After the browser restores the scroll position of the entry it went back to.
+        requestAnimationFrame(() => window.scrollTo(0, 0))
         history.replaceState({ tab, wine: null, screen: null, depth: 0 } satisfies ViewState, '')
       } else if (view?.tab) {
         tab = view.tab
