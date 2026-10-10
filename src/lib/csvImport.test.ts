@@ -155,7 +155,7 @@ describe('parseImport drinking window', () => {
     { name: 'full window', fields: 'A,2024,2026,2030,2035', window: { drinkFrom: 2024, peakFrom: 2026, peakUntil: 2030, drinkUntil: 2035 }, errors: [] },
     { name: 'partial window', fields: 'A,,,2030,', window: { ...none, peakUntil: 2030 }, errors: [] },
     { name: 'not a year', fields: 'A,soon,,,', window: none, errors: ['window'] },
-    { name: 'years out of order', fields: 'A,2030,,,2025', window: none, errors: ['window'] },
+    { name: 'years out of order, as the editor allows', fields: 'A,2030,,,2025', window: { ...none, drinkFrom: 2030, drinkUntil: 2025 }, errors: [] },
   ]
   for (const c of cases) {
     it(c.name, () => {

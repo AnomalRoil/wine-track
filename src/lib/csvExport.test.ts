@@ -79,6 +79,13 @@ it('reimports drinking windows up to the last year the editor accepts', () => {
   expect(parsed.rows.map((r) => [r.window, r.errors])).toEqual([[{ drinkFrom: 2150, peakFrom: null, peakUntil: null, drinkUntil: MAX_YEAR }, []]])
 })
 
+it('reimports drinking windows whose years are out of order', () => {
+  const unordered = [makeWine({ id: 'u', drinkFrom: 2030, drinkUntil: 2025 })]
+  const parsed = parseImport(exportCsv(unordered, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  expect(parsed.rows.map((r) => [r.window, r.errors])).toEqual([[{ drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: 2025 }, []]])
+})
+
 describe('templateCsv', () => {
   it('holds the header only', () => {
     expect(cellsOf(templateCsv())).toEqual([HEADER])
