@@ -32,7 +32,8 @@
       editing = true
       await tick()
     }
-    section.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+    section.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' })
   }
 
   async function save(e: SubmitEvent) {
