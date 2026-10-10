@@ -75,13 +75,14 @@ export function decodeText(bytes: ArrayBuffer | Uint8Array): string {
   }
 }
 
-// Spreadsheets run cells starting with these as formulas.
-const FORMULA_START = /^[=+\-@\t\r]/
+// Spreadsheets run cells starting with these as formulas. A leading apostrophe is
+// escaped too, so the import can strip exactly one.
+const ESCAPED_START = /^[=+\-@\t\r']/
 
 function quote(cell: string | number | null): string {
   if (cell === null) return ''
   if (typeof cell === 'number') return String(cell)
-  if (FORMULA_START.test(cell)) cell = `'${cell}`
+  if (ESCAPED_START.test(cell)) cell = `'${cell}`
   return /[",;\n\r]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell
 }
 

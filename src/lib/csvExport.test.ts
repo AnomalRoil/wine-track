@@ -49,6 +49,21 @@ describe('exportCsv', () => {
   })
 })
 
+it('reimports names that start with a formula sign or an apostrophe unchanged', () => {
+  const names = [makeWine({ id: 'f', name: '=Clos' }), makeWine({ id: 'q', name: "'=Clos" }), makeWine({ id: 'a', name: "'Twas" })]
+  const parsed = parseImport(exportCsv(names, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  const plan = planImport(parsed.rows, names, { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => 'new' })
+  const matched = parsed.rows.map((r, i) => [r.draft.name, plan.matches[i]])
+  expect(matched).toEqual(
+    expect.arrayContaining([
+      ['=Clos', { kind: 'existing', wineId: 'f' }],
+      ["'=Clos", { kind: 'existing', wineId: 'q' }],
+      ["'Twas", { kind: 'existing', wineId: 'a' }],
+    ]),
+  )
+})
+
 it('reimports nonstandard sizes in centiliters', () => {
   const odd = [makeWine({ id: 'w', name: 'Big', sizeCl: 500 }), makeWine({ id: 'm', name: 'Mini', sizeCl: 5 })]
   const parsed = parseImport(exportCsv(odd, [], cellars, name), 2026)

@@ -222,8 +222,8 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
   const clHeader = index.has('size_cl') && fold(first.cells[index.get('size_cl')!]).endsWith('cl')
 
   const rows = lines.map(({ line, cells }): ImportRow => {
-    // Undoes the formula guard of toCsv.
-    const get = (c: Column) => (index.has(c) ? (cells[index.get(c)!] ?? '').trim().replace(/^'(?=[=+\-@])/, '') : '')
+    // Undoes the escape toCsv adds before a formula sign or an apostrophe.
+    const get = (c: Column) => (index.has(c) ? (cells[index.get(c)!] ?? '').trim().replace(/^'(?=[=+\-@\t\r'])/, '') : '')
     const errors: RowError[] = []
 
     const vintage = parseVintage(get('vintage'), currentYear + 1)
