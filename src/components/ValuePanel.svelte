@@ -58,6 +58,10 @@
 {/if}
 
 <style>
+  h2 {
+    margin: 0 0 0.25rem;
+  }
+
   .grow {
     flex: 1;
   }

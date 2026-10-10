@@ -3,16 +3,17 @@
   import { answerLabel, aromaLabel } from '../lib/labels'
   import { answered, aromaFamily, APPEARANCE_SCALES, NOSE_SCALES, PALATE_SCALES, SHADES, sortedAromas, type ScaleName } from '../lib/tasting'
   import type { TastingSheet } from '../lib/types'
+  import Icon from './Icon.svelte'
   import TastingPhotos from './TastingPhotos.svelte'
 
   let { sheet }: { sheet: TastingSheet } = $props()
 
   const context = $derived(
     [
-      sheet.people.length > 0 && `👥 ${sheet.people.join(', ')}`,
-      sheet.place && `📍 ${sheet.place}`,
-      sheet.meal && `🍽️ ${sheet.meal}`,
-    ].filter(Boolean),
+      { icon: 'people' as const, text: sheet.people.join(', ') },
+      { icon: 'pin' as const, text: sheet.place },
+      { icon: 'meal' as const, text: sheet.meal },
+    ].filter((c) => c.text),
   )
 
   // Palate answers like "medium" need their attribute name; appearance and nose answers stand alone.
@@ -33,7 +34,9 @@
 <dl class="summary">
   {#if context.length > 0}
     <dt>{t('tasting.context')}</dt>
-    <dd>{context.join(' · ')}</dd>
+    <dd class="context">
+      {#each context as c (c.icon)}<span><Icon name={c.icon} size={16} />{c.text}</span>{/each}
+    </dd>
   {/if}
   {#if sheet.shade || appearance}
     <dt>{t('tasting.appearance')}</dt>
@@ -81,6 +84,22 @@
   dd {
     margin: 0;
     min-width: 0;
+  }
+
+  .context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem 0.75rem;
+  }
+
+  .context span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .context :global(svg) {
+    color: var(--on-surface-variant);
   }
 
   .swatch {
