@@ -5,7 +5,6 @@ export const en = {
   'app.blocked': 'Wine Track is updating. Close its other tabs or windows to continue.',
 
   'tab.wines': 'Wines',
-  'tab.add': 'Add',
   'tab.due': 'Due',
   'tab.settings': 'Settings',
 
@@ -30,6 +29,9 @@ export const en = {
   'list.minRating': 'Min rating',
   'list.clear': 'Clear filters',
   'list.bottles': '{n} bottle(s)',
+  'list.summary': '{bottles} bottle(s) · {wines} wine(s)',
+  'list.drinkNow': 'Drink now',
+  'list.sort': 'Sort by',
 
   'sort.recent': 'Recent',
   'sort.name': 'Name',
@@ -210,7 +212,6 @@ export const fr: Messages<typeof en> = {
   'app.blocked': 'Wine Track se met à jour. Fermez ses autres onglets ou fenêtres pour continuer.',
 
   'tab.wines': 'Vins',
-  'tab.add': 'Ajouter',
   'tab.due': 'À boire',
   'tab.settings': 'Réglages',
 
@@ -235,6 +236,9 @@ export const fr: Messages<typeof en> = {
   'list.minRating': 'Note min.',
   'list.clear': 'Effacer les filtres',
   'list.bottles': '{n} bouteille(s)',
+  'list.summary': '{bottles} bouteille(s) · {wines} vin(s)',
+  'list.drinkNow': 'Prêt à boire',
+  'list.sort': 'Trier par',
 
   'sort.recent': 'Récents',
   'sort.name': 'Nom',
@@ -415,7 +419,6 @@ export const de: Messages<typeof en> = {
   'app.blocked': 'Wine Track wird aktualisiert. Die anderen Tabs oder Fenster schließen, um fortzufahren.',
 
   'tab.wines': 'Weine',
-  'tab.add': 'Hinzufügen',
   'tab.due': 'Fällig',
   'tab.settings': 'Einstellungen',
 
@@ -440,6 +443,9 @@ export const de: Messages<typeof en> = {
   'list.minRating': 'Mindestbewertung',
   'list.clear': 'Filter zurücksetzen',
   'list.bottles': '{n} Flasche(n)',
+  'list.summary': '{bottles} Flasche(n) · {wines} Wein(e)',
+  'list.drinkNow': 'Trinkreif',
+  'list.sort': 'Sortieren nach',
 
   'sort.recent': 'Neueste',
   'sort.name': 'Name',

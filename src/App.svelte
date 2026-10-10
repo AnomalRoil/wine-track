@@ -1,7 +1,9 @@
 <script lang="ts">
   import CaptureFlow from './components/CaptureFlow.svelte'
   import CellarView from './components/CellarView.svelte'
+  import Icon from './components/Icon.svelte'
   import More from './components/More.svelte'
+  import Overview from './components/Overview.svelte'
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
@@ -92,13 +94,15 @@
     locatedWineId = wineId
   }
 
+  const fab = $derived(store.loaded && !selectedWineId && (tab === 'wines' || tab === 'cellar'))
+
   function onWineSaved(wine: Wine) {
     selectTab('wines')
     openWine(wine)
   }
 </script>
 
-<main>
+<main class:with-fab={fab}>
   {#if !store.loaded}
     <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
   {:else if selectedWineId && store.wines.some((w) => w.id === selectedWineId)}
@@ -110,6 +114,8 @@
     <CaptureFlow onsaved={onWineSaved} />
   {:else if tab === 'cellar'}
     <CellarView onopen={openWine} focus={locatedWineId} />
+  {:else if tab === 'overview'}
+    <Overview onopen={openWine} />
   {:else if screen}
     <screen.component onopen={openWine} />
   {:else}
@@ -117,4 +123,26 @@
   {/if}
 </main>
 
+{#if fab}
+  <button class="fab" onclick={() => selectTab('add')}><Icon name="camera" />{t('nav.addBottle')}</button>
+{/if}
 <TabBar {tab} onselect={selectTab} />
+
+<style>
+  .fab {
+    position: fixed;
+    right: max(16px, calc(50vw - 304px));
+    bottom: calc(var(--nav-height) + 16px);
+    z-index: 9;
+    height: 64px;
+    padding: 0 24px 0 20px;
+    gap: 10px;
+    border: none;
+    border-radius: var(--shape-l);
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-size: 1rem;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgb(59 7 21 / 18%);
+  }
+</style>
