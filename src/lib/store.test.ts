@@ -4,14 +4,19 @@ import * as db from './db'
 import { place } from './racks'
 import {
   addMovements,
+  addWine,
   applyImport,
   drink,
   moveBottle,
   patchCellar,
   placeBottle,
   removeCellar,
+  removeWine,
   restore,
+  saveTasting,
+  saveWine,
   store,
+  storeGeneration,
   swapCellars,
   unplace,
   updateRack,
@@ -21,11 +26,14 @@ import type { Cellar, Rack } from './types'
 
 vi.mock('./db', () => ({
   deleteCellar: vi.fn(),
+  deleteWine: vi.fn(),
   loadAll: vi.fn(),
   putCellars: vi.fn(),
   putImport: vi.fn(),
   putMovements: vi.fn(),
   putRacks: vi.fn(),
+  putTasting: vi.fn(),
+  putWine: vi.fn(),
   replaceAll: vi.fn(),
   updatePlacements: vi.fn(),
 }))
@@ -51,7 +59,7 @@ const rack: Rack = { id: 'r', cellarId: 'home', name: '', columns: 2, rows: 3, d
 
 beforeEach(() => {
   pending = []
-  for (const write of [db.deleteCellar, db.putCellars, db.putImport, db.putMovements, db.putRacks, db.replaceAll, db.updatePlacements])
+  for (const write of [db.deleteCellar, db.deleteWine, db.putCellars, db.putImport, db.putMovements, db.putRacks, db.putTasting, db.putWine, db.replaceAll, db.updatePlacements])
     vi.mocked(write).mockReset().mockImplementation(deferred)
   vi.mocked(db.loadAll).mockReset()
   Object.assign(store, {
@@ -210,4 +218,41 @@ it('adds to the wines of an import already committed instead of duplicating them
   expect(store.wines).toHaveLength(1)
   expect(store.cellars.map((c) => c.name)).toEqual(['home', 'Cave'])
   expect(store.movements).toHaveLength(2)
+})
+
+it('drops a capture whose photo was still processing when a backup was restored', async () => {
+  const backup: db.Data = { wines: [makeWine({ id: 'old' })], tastings: [], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
+  vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
+  let processed!: (blob: Blob) => void
+  const processing = new Promise<Blob>((resolve) => (processed = resolve))
+
+  const capture = (async () => {
+    const since = storeGeneration()
+    const blob = await processing
+    const wine = makeWine({ id: 'new', photoId: 'p' })
+    return addWine(wine, { id: 'p', blob }, [mv({ wineId: 'new', cellarId: 'home' })], since)
+  })()
+  const restored = restore(backup, [])
+  await release(restored)
+  processed(new Blob())
+  await release(capture)
+
+  expect(await capture).toBe(false)
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(db.putMovements).not.toHaveBeenCalled()
+  expect(store.wines.map((w) => w.id)).toEqual(['old'])
+})
+
+it('keeps a wine and its tastings deleted while an edit waited', async () => {
+  const wine = makeWine()
+  const removed = removeWine(wine)
+  const edited = saveWine({ ...wine, name: 'Renamed' })
+  const tasted = saveTasting({ id: 't', wineId: wine.id, date: '2026-01-01', rating: 4, notes: '' })
+  await release(removed, edited, tasted)
+
+  expect([await edited, await tasted]).toEqual([false, false])
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(db.putTasting).not.toHaveBeenCalled()
+  expect(store.wines).toEqual([])
+  expect(store.tastings).toEqual([])
 })

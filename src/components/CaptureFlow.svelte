@@ -1,14 +1,13 @@
 <script lang="ts">
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
-  import { putPhoto } from '../lib/db'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
   import { cellarName } from '../lib/labels'
-  import { addMovements, saveWine, sortedCellars } from '../lib/store.svelte'
+  import { addWine, sortedCellars, storeGeneration } from '../lib/store.svelte'
   import type { Aging, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
   import WineForm from './WineForm.svelte'
@@ -45,6 +44,8 @@
   /** The photo being resized, which a save waits for. */
   let photoTask: Promise<Blob> | null = null
   let saving = $state(false)
+  /** A restore ran while saving, so the wine was dropped. */
+  let stale = $state(false)
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -54,6 +55,7 @@
     aging = { ...NO_AGING }
     extractError = null
     photoFailed = false
+    stale = false
     quantity = 0
     unitPrice = null
     photoTask = null
@@ -135,32 +137,31 @@
   // Reads every input before the first await, so edits made while it writes stay out of the saved wine.
   async function write() {
     const current = session
+    const since = storeGeneration()
     const fields = { ...$state.snapshot(draft), ...cleanAging($state.snapshot(aging)) }
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
     const blob = photoTask ? await photoTask.catch(() => null) : photoBlob
-    const photoId = blob ? crypto.randomUUID() : null
-    if (blob && photoId) {
-      await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
-    }
+    const photo = blob && { id: crypto.randomUUID(), blob, thumb: await makeThumb(blob) }
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...fields,
       wished: false,
       value: null,
       valueHistory: [],
-      photoId,
+      photoId: photo?.id ?? null,
       drinkBy: null,
       tasteAgainOn: null,
       createdAt: Date.now(),
     }
-    await saveWine(wine)
-    if (stock.quantity > 0) {
-      await addMovements([
-        { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', ...stock, toCellarId: null, note: '' },
-      ])
-    }
+    const additions =
+      stock.quantity > 0
+        ? [{ id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add' as const, ...stock, toCellarId: null, note: '' }]
+        : []
+    const saved = await addWine(wine, photo, additions, since)
     // Left while writing: the wine is kept, the caller no longer expects it.
     if (current !== session) return
+    stale = !saved
+    if (!saved) return
     reset()
     onsaved(wine)
   }
@@ -187,6 +188,7 @@
   </div>
 {:else}
   {#if photoFailed}<p class="error card">{t('capture.photoFailed')}</p>{/if}
+  {#if stale}<p class="error card">{t('form.stale')}</p>{/if}
   {#if extractError}
     <p class="error card">
       {t(`extract.${extractError.kind}`, { detail: extractError.detail ?? '' })}

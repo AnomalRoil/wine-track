@@ -24,11 +24,19 @@ export const store = $state({
 const stock = $derived(computeStock(store.movements))
 
 /**
- * Runs every write to stock, slots, racks or cellars in turn. Each write rechecks its
+ * Runs every write in turn. Each write rechecks its
  * preconditions against the state the previous ones committed, whichever view or
  * screen started it, and does nothing when they no longer hold.
  */
 const writes = serial()
+
+/** Counts restores, so a save started before one drops its later steps. */
+let generation = 0
+
+/** The current restore count, to pass to a save that has to wait for something first. */
+export function storeGeneration(): number {
+  return generation
+}
 
 /** Current bottles per cellar per wine, recomputed when movements change. */
 export function currentStock() {
@@ -46,6 +54,7 @@ export function initStore(): Promise<void> {
 /** Replaces all data with a backup once the pending writes are done. */
 export function restore(data: db.Data, photos: Photo[]): Promise<void> {
   return writes(async () => {
+    generation++
     await db.replaceAll(data, photos)
     await load()
   })
@@ -91,11 +100,36 @@ export function movementsFor(wineId: string): Movement[] {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
-export async function saveWine(wine: Wine): Promise<void> {
-  await db.putWine($state.snapshot(wine))
-  const i = store.wines.findIndex((w) => w.id === wine.id)
-  if (i >= 0) store.wines[i] = wine
-  else store.wines.push(wine)
+/** Saves an edited wine. False when it is gone. */
+export function saveWine(wine: Wine): Promise<boolean> {
+  return writes(async () => {
+    const i = store.wines.findIndex((w) => w.id === wine.id)
+    if (i < 0) return false
+    await db.putWine($state.snapshot(wine))
+    store.wines[i] = wine
+    return true
+  })
+}
+
+/**
+ * Adds a new wine with its label photo and stock additions. False when a restore ran
+ * since `since`, a storeGeneration() read when the save started.
+ */
+export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], since: number): Promise<boolean> {
+  return writes(async () => {
+    if (since !== generation) return false
+    await db.putWine($state.snapshot(wine), photo)
+    store.wines.push(wine)
+    if (movements.length > 0) await recordMovements(movements, [], [])
+    return true
+  })
+}
+
+/** Stores a thumbnail made for a photo read at `since`, unless a restore or deletion dropped the photo. */
+export function saveThumb(photo: Photo, since: number): Promise<void> {
+  return writes(async () => {
+    if (since === generation && store.wines.some((w) => w.photoId === photo.id)) await db.putPhoto(photo)
+  })
 }
 
 export function removeWine(wine: Wine): Promise<void> {
@@ -108,17 +142,28 @@ export function removeWine(wine: Wine): Promise<void> {
   })
 }
 
-/** Saves a tasting with the photos it gained; `removedPhotoIds` are photos it no longer shows. */
-export async function saveTasting(tasting: Tasting, added: Photo[] = [], removedPhotoIds: string[] = []): Promise<void> {
-  await db.putTasting($state.snapshot(tasting), added, removedPhotoIds)
-  const i = store.tastings.findIndex((t) => t.id === tasting.id)
-  if (i >= 0) store.tastings[i] = tasting
-  else store.tastings.push(tasting)
+/**
+ * Saves a tasting with the photos it gained; `removedPhotoIds` are photos it no longer shows.
+ * False when its wine is gone.
+ */
+export function saveTasting(tasting: Tasting, added: Photo[] = [], removedPhotoIds: string[] = []): Promise<boolean> {
+  return writes(async () => {
+    if (!store.wines.some((w) => w.id === tasting.wineId)) return false
+    await db.putTasting($state.snapshot(tasting), added, removedPhotoIds)
+    const i = store.tastings.findIndex((t) => t.id === tasting.id)
+    if (i >= 0) store.tastings[i] = tasting
+    else store.tastings.push(tasting)
+    return true
+  })
 }
 
-export async function removeTasting(tasting: Tasting): Promise<void> {
-  await db.deleteTasting($state.snapshot(tasting))
-  store.tastings = store.tastings.filter((t) => t.id !== tasting.id)
+export function removeTasting(tasting: Tasting): Promise<void> {
+  return writes(async () => {
+    const current = store.tastings.find((t) => t.id === tasting.id)
+    if (!current) return
+    await db.deleteTasting($state.snapshot(current))
+    store.tastings = store.tastings.filter((t) => t.id !== tasting.id)
+  })
 }
 
 /**

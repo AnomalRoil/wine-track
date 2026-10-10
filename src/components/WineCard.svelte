@@ -1,9 +1,10 @@
 <script lang="ts">
   import { phaseOf } from '../lib/aging'
-  import { getPhoto, putPhoto } from '../lib/db'
+  import { getPhoto } from '../lib/db'
   import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { makeThumb } from '../lib/photo'
+  import { saveThumb, storeGeneration } from '../lib/store.svelte'
   import type { Photo, Wine } from '../lib/types'
   import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
@@ -19,10 +20,10 @@
   const phase = $derived(phaseOf(wine, thisYear()))
 
   // Photos saved before thumbnails existed get one generated and stored here.
-  async function thumbOf(photo: Photo): Promise<Blob> {
+  async function thumbOf(photo: Photo, since: number): Promise<Blob> {
     if (photo.thumb) return photo.thumb
     const thumb = await makeThumb(photo.blob)
-    await putPhoto({ ...photo, thumb })
+    await saveThumb({ ...photo, thumb }, since)
     return thumb
   }
 
@@ -31,9 +32,10 @@
     photoUrl = null
     if (!id) return
     let revoked: string | null = null
+    const since = storeGeneration()
     getPhoto(id).then(async (photo) => {
       if (!photo) return
-      revoked = URL.createObjectURL(await thumbOf(photo))
+      revoked = URL.createObjectURL(await thumbOf(photo, since))
       photoUrl = revoked
     })
     return () => {
