@@ -34,6 +34,9 @@ describe('parseNumber', () => {
     ['12-', NaN],
     ['12.-', 12],
     ['Fr. 12.50', 12.5],
+    ['Fr.50', 50],
+    ['Fr.50.-', 50],
+    ['-.5', -0.5],
   ]
   for (const [raw, want] of cases) {
     it(JSON.stringify(raw), () => {

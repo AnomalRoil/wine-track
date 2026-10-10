@@ -148,9 +148,10 @@ export type ParsedImport =
 /**
  * Parses "12,50", "€ 12.50", "1 234,5", "1,234.50", ".5 l", "12.-" or "75 cl"; NaN when not a number.
  * Only a currency or unit around the number is dropped, so "1E+02", "12-15" or "12-" are rejected.
+ * A dot after a letter ends an abbreviation, so "Fr.50" is 50.
  */
 export function parseNumber(raw: string): number {
-  const number = /^[^\d-]*?(-?(?:\d(?:[\d.,'’\s]*\d)?|[.,]\d+))(?:[.,]-)?[^\d-]*$/u.exec(raw)?.[1]
+  const number = /^[^\d-]*?(-?(?:\d(?:[\d.,'’\s]*\d)?|(?<![\p{L}.])[.,]\d+))(?:[.,]-)?[^\d-]*$/u.exec(raw)?.[1]
   if (!number) return NaN
   let s = number.replace(/['’\s]/g, '')
   const lastComma = s.lastIndexOf(',')
