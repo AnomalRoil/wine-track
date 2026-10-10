@@ -25,7 +25,10 @@
 </div>
 
 {#if mode}
-  <MovementForm {wineId} {mode} ondone={() => (mode = null)} />
+  <!-- A fresh form per mode: its defaults depend on the mode, and a pending save must not close the next one. -->
+  {#key mode}
+    <MovementForm {wineId} {mode} ondone={() => (mode = null)} />
+  {/key}
 {/if}
 
 <style>
