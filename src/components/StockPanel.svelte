@@ -70,7 +70,8 @@
   }
 
   async function remove(id: string, freed: string[]) {
-    if (!(await removeMovement(id, freed))) alert(t('form.stale'))
+    const result = await removeMovement(id, freed)
+    if (result !== 'removed') alert(t(result === 'stale' ? 'form.stale' : 'stock.unbalanced'))
   }
 </script>
 

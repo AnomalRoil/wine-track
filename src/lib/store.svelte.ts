@@ -1,7 +1,7 @@
 import { withAging } from './aging'
 import * as db from './db'
 import { defaultCellar, normalizeCellar } from './migrate'
-import { canRecord, canRemoveCellar, computeStock, emptyCellar } from './stock'
+import { canRecord, canRemoveCellar, computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
 import { planImport, type ImportPlan, type ImportRow, type PlanContext } from './csvImport'
 import { approvedDrops, canPlace, cellarLosing, freedSlots, holds, outside, place, planMove, stalePlacements, type Slot } from './racks'
@@ -265,21 +265,26 @@ async function commitPlacements(put: Placement[], remove: string[]): Promise<voi
 
 /**
  * Deletes a movement, emptying the slots of bottles that disappear; `chosen` names them
- * when only some of a wine's slots empty. False when the movement is gone or `chosen` no longer fits.
+ * when only some of a wine's slots empty. 'stale' when the movement is gone or `chosen` no
+ * longer fits; 'unbalanced' when undoing it would leave a cellar below zero bottles or
+ * return bottles to a deleted cellar.
  */
-export function removeMovement(id: string, chosen: string[] = []): Promise<boolean> {
+export function removeMovement(id: string, chosen: string[] = []): Promise<'removed' | 'stale' | 'unbalanced'> {
   return writes(async () => {
     const m = store.movements.find((x) => x.id === id)
-    if (!m) return false
+    if (!m) return 'stale'
     const cellarId = cellarLosing(m)
     const losses = cellarId ? [{ wineId: m.wineId, cellarId, quantity: m.quantity }] : []
+    const returnsTo = m.kind === 'add' ? null : m.cellarId
+    const inverse = losses.map((l) => ({ ...m, ...l, kind: 'consume' as const, toCellarId: null }))
+    if ((returnsTo && !store.cellars.some((c) => c.id === returnsTo)) || !withinStock(stock, inverse)) return 'unbalanced'
     const freed = freedSlots(losses, chosen, store.racks, store.placements, stock)
-    if (!freed) return false
+    if (!freed) return 'stale'
     await db.deleteMovement(id, freed)
     store.movements = store.movements.filter((x) => x.id !== id)
     if (freed.length > 0) store.placements = store.placements.filter((p) => !freed.includes(p.id))
     await freeStalePlacements()
-    return true
+    return 'removed'
   })
 }
 

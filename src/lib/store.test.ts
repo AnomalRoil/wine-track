@@ -13,6 +13,7 @@ import {
   patchCellar,
   placeBottle,
   removeCellar,
+  removeMovement,
   removeWine,
   restore,
   patchWine,
@@ -28,6 +29,8 @@ import type { Cellar, Rack } from './types'
 
 vi.mock('./db', () => ({
   deleteCellar: vi.fn(),
+  deleteMovement: vi.fn(),
+  deleteTasting: vi.fn(),
   deleteWine: vi.fn(),
   loadAll: vi.fn(),
   putCellars: vi.fn(),
@@ -62,7 +65,7 @@ const rack: Rack = { id: 'r', cellarId: 'home', name: '', columns: 2, rows: 3, d
 
 beforeEach(() => {
   pending = []
-  for (const write of [db.deleteCellar, db.deleteWine, db.putCellars, db.putImport, db.putMovements, db.putRacks, db.putTasting, db.putWine, db.replaceAll, db.updatePlacements])
+  for (const write of [db.deleteCellar, db.deleteMovement, db.deleteTasting, db.deleteWine, db.putCellars, db.putImport, db.putMovements, db.putRacks, db.putTasting, db.putWine, db.replaceAll, db.updatePlacements])
     vi.mocked(write).mockReset().mockImplementation(deferred)
   vi.mocked(db.loadAll).mockReset()
   Object.assign(store, {
@@ -311,4 +314,42 @@ it('keeps nothing of a capture whose write fails', async () => {
   expect(vi.mocked(db.putWine).mock.calls[0][2]).toEqual(additions)
   expect(store.wines.map((w) => w.id)).toEqual(['w1'])
   expect(store.movements).toEqual([])
+})
+
+it('refuses to delete an addition whose bottles were drunk', async () => {
+  store.movements = [mv({ id: 'a', quantity: 2, cellarId: 'home' }), mv({ id: 'c', kind: 'consume', quantity: 2, cellarId: 'home' })]
+  const removed = removeMovement('a')
+  await release(removed)
+
+  expect(await removed).toBe('unbalanced')
+  expect(db.deleteMovement).not.toHaveBeenCalled()
+  expect(store.movements).toHaveLength(2)
+})
+
+it('refuses to delete a transfer whose bottles were drunk at its destination', async () => {
+  store.cellars = [cellar('home'), cellar('cave', 1)]
+  store.movements = [
+    mv({ id: 'a', quantity: 2, cellarId: 'home' }),
+    mv({ id: 't', kind: 'transfer', quantity: 2, cellarId: 'home', toCellarId: 'cave' }),
+    mv({ id: 'c', kind: 'consume', quantity: 1, cellarId: 'cave' }),
+  ]
+  const removed = removeMovement('t')
+  await release(removed)
+
+  expect(await removed).toBe('unbalanced')
+  expect(store.movements).toHaveLength(3)
+})
+
+it('refuses to return bottles to a deleted cellar', async () => {
+  store.cellars = [cellar('home'), cellar('cave', 1)]
+  store.movements = [mv({ id: 'a', quantity: 2, cellarId: 'cave' })]
+  const deleted = removeCellar('cave', 'home')
+  await release(deleted)
+  const transfer = store.movements.find((m) => m.kind === 'transfer')!
+
+  const removed = removeMovement(transfer.id)
+  await release(removed)
+
+  expect(await removed).toBe('unbalanced')
+  expect(store.movements).toContainEqual(transfer)
 })
