@@ -1,8 +1,9 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { journal, type JournalEntry } from '../lib/journal'
-  import { cellarName } from '../lib/labels'
+  import { aromaLabel, cellarName, wineLabel } from '../lib/labels'
   import { store } from '../lib/store.svelte'
+  import { aromaFamily, keyAromas } from '../lib/tasting'
   import type { Wine } from '../lib/types'
   import Stars from './Stars.svelte'
 
@@ -14,7 +15,7 @@
 
   function label(w: Wine | undefined): string {
     if (!w) return t('journal.deletedWine')
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
+    return wineLabel(w)
   }
 
   function icon(e: JournalEntry): string {
@@ -43,6 +44,11 @@
         <span class="muted">{e.date} · {detail(e)}</span>
         {#if e.type === 'tasting'}
           <span class="row"><Stars value={e.tasting.rating} />{#if e.tasting.notes}<span class="muted note">{e.tasting.notes}</span>{/if}</span>
+          {#if e.tasting.sheet?.aromas.length}
+            <span class="muted note">
+              👃 {#each keyAromas(e.tasting.sheet) as aroma, i (aroma)}{#if i > 0}{', '}{/if}<span class:fault={aromaFamily(aroma) === 'faults'}>{aromaLabel(aroma)}</span>{/each}{#if e.tasting.sheet.aromas.length > 3}…{/if}
+            </span>
+          {/if}
         {:else if e.movement.note}
           <span class="muted note">{e.movement.note}</span>
         {/if}
@@ -82,6 +88,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .fault {
+    color: var(--danger);
   }
 
   .center {

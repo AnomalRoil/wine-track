@@ -32,6 +32,7 @@ instructions = "Focus on data integrity, state management and user-visible behav
 
 [review.subagents.security]
 agent = "claude-code"
+model = "claude-mythos-5-1"
 review_type = "security"
 allow_failure = true
 instructions = "Focus on XSS through user text or imported files, API key handling, and untrusted data from label extraction or imports."

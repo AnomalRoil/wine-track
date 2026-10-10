@@ -1,8 +1,12 @@
 <script lang="ts">
-  import { getPhoto, putPhoto } from '../lib/db'
+  import { phaseOf } from '../lib/aging'
+  import { getPhoto } from '../lib/db'
+  import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { makeThumb } from '../lib/photo'
+  import { saveThumb, storeGeneration } from '../lib/store.svelte'
   import type { Photo, Wine } from '../lib/types'
+  import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
 
   let {
@@ -13,12 +17,13 @@
   }: { wine: Wine; rating: number | null; bottles: number; onopen: (wine: Wine) => void } = $props()
 
   let photoUrl = $state<string | null>(null)
+  const phase = $derived(phaseOf(wine, thisYear()))
 
   // Photos saved before thumbnails existed get one generated and stored here.
-  async function thumbOf(photo: Photo): Promise<Blob> {
+  async function thumbOf(photo: Photo, since: number): Promise<Blob> {
     if (photo.thumb) return photo.thumb
     const thumb = await makeThumb(photo.blob)
-    await putPhoto({ ...photo, thumb })
+    await saveThumb({ ...photo, thumb }, since)
     return thumb
   }
 
@@ -27,9 +32,10 @@
     photoUrl = null
     if (!id) return
     let revoked: string | null = null
+    const since = storeGeneration()
     getPhoto(id).then(async (photo) => {
       if (!photo) return
-      revoked = URL.createObjectURL(await thumbOf(photo))
+      revoked = URL.createObjectURL(await thumbOf(photo, since))
       photoUrl = revoked
     })
     return () => {
@@ -53,6 +59,7 @@
     </span>
     <span class="meta">
       <span class="dot {wine.color}"></span>
+      {#if phase}<PhaseBadge {phase} />{/if}
       {#if rating !== null}<Stars value={rating} />{/if}
       {#if bottles > 0}
         <span class="badge">{t('list.bottles', { n: bottles })}</span>
@@ -106,8 +113,9 @@
 
   .meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.2rem 0.5rem;
     font-size: 0.8rem;
   }
 
@@ -117,6 +125,7 @@
     border-radius: 999px;
     padding: 0 0.5rem;
     color: var(--muted);
+    white-space: nowrap;
   }
 
   .wish {

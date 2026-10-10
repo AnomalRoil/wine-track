@@ -1,26 +1,38 @@
 <script lang="ts">
+  import { phaseOf } from '../lib/aging'
   import { getPhoto } from '../lib/db'
   import { downloadFile } from '../lib/download'
-  import { addYears, today } from '../lib/due'
+  import { addYears, thisYear, today } from '../lib/due'
   import { emptyDraft, type WineDraft } from '../lib/extract'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
-  import { sizeLabel } from '../lib/labels'
-  import { removeTasting, removeWine, saveWine, store, tastingsFor } from '../lib/store.svelte'
-  import type { Wine } from '../lib/types'
+  import { sizeLabel, wineLabel } from '../lib/labels'
+  import { patchWine, removeTasting, removeWine, store, storeGeneration, tastingsFor } from '../lib/store.svelte'
+  import type { Tasting, Wine } from '../lib/types'
+  import AgingPanel from './AgingPanel.svelte'
+  import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
   import StockPanel from './StockPanel.svelte'
+  import StorageHint from './StorageHint.svelte'
   import TastingForm from './TastingForm.svelte'
+  import TastingSummary from './TastingSummary.svelte'
   import ValuePanel from './ValuePanel.svelte'
   import WineForm from './WineForm.svelte'
 
-  let { wineId, onclose }: { wineId: string; onclose: () => void } = $props()
+  let {
+    wineId,
+    onclose,
+    onlocate,
+  }: { wineId: string; onclose: () => void; onlocate?: (wineId: string) => void } = $props()
 
   const wine = $derived(store.wines.find((w) => w.id === wineId))
   const tastings = $derived(tastingsFor(wineId))
+  const phase = $derived(wine && phaseOf(wine, thisYear()))
 
   let editing = $state(false)
+  let since = 0
   let addingTasting = $state(false)
+  let editingTastingId = $state<string | null>(null)
   let fullscreen = $state(false)
   let draft = $state<WineDraft>(emptyDraft())
   let photoUrl = $state<string | null>(null)
@@ -41,26 +53,24 @@
     }
   })
 
-  function label(w: Wine): string {
-    return [w.name || w.producer, w.vintage].filter(Boolean).join(' ')
-  }
-
   function startEdit() {
     if (!wine) return
     const { name, producer, vintage, grapes, region, country, color, sizeCl, tags } = wine
     draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags] }
+    since = storeGeneration()
     editing = true
   }
 
   async function saveEdit() {
-    if (!wine) return
-    await saveWine({ ...wine, ...$state.snapshot(draft) })
+    if (!wine || store.restoring) return
+    const fields = $state.snapshot(draft)
+    await patchWine(wine.id, () => fields, since)
     editing = false
   }
 
   async function update(patch: Partial<Wine>) {
     if (!wine) return
-    await saveWine({ ...wine, ...patch })
+    await patchWine(wine.id, () => patch)
   }
 
   async function del() {
@@ -70,18 +80,18 @@
     onclose()
   }
 
-  async function delTasting(id: string) {
+  async function delTasting(tasting: Tasting) {
     if (!confirm(t('tasting.deleteConfirm'))) return
-    await removeTasting(id)
+    await removeTasting(tasting)
   }
 
   function calendarItems(w: Wine): CalendarItem[] {
     const items: CalendarItem[] = []
     if (w.drinkBy) {
-      items.push({ uid: `${w.id}-drink`, date: w.drinkBy, summary: `${t('detail.drinkBy')}: ${label(w)}` })
+      items.push({ uid: `${w.id}-drink`, date: w.drinkBy, summary: `${t('detail.drinkBy')}: ${wineLabel(w)}` })
     }
     if (w.tasteAgainOn) {
-      items.push({ uid: `${w.id}-taste`, date: w.tasteAgainOn, summary: `${t('detail.tasteAgain')}: ${label(w)}` })
+      items.push({ uid: `${w.id}-taste`, date: w.tasteAgainOn, summary: `${t('detail.tasteAgain')}: ${wineLabel(w)}` })
     }
     return items
   }
@@ -95,22 +105,22 @@
 {#if !wine}
   <p class="muted">…</p>
 {:else if editing}
-  <WineForm bind:draft title={t('form.editWine')} {photoUrl} onsave={saveEdit} oncancel={() => (editing = false)} />
+  <WineForm bind:draft title={t('form.editWine')} {photoUrl} saving={store.restoring} onsave={saveEdit} oncancel={() => (editing = false)} />
 {:else}
   <header class="row">
     <button onclick={onclose}>←</button>
     <div class="spacer"></div>
-    <button onclick={startEdit}>{t('detail.edit')}</button>
+    <button disabled={store.restoring} onclick={startEdit}>{t('detail.edit')}</button>
     <button class="danger" onclick={del}>{t('detail.delete')}</button>
   </header>
 
   {#if photoUrl}
     <button class="photo" class:fullscreen onclick={() => (fullscreen = !fullscreen)}>
-      <img src={photoUrl} alt={label(wine)} />
+      <img src={photoUrl} alt={wineLabel(wine)} />
     </button>
   {/if}
 
-  <h1>{wine.name || wine.producer}</h1>
+  <h1>{wine.name || wine.producer} {#if phase}<PhaseBadge {phase} />{/if}</h1>
   <p class="muted">
     {[wine.producer, wine.vintage, wine.region, wine.country].filter(Boolean).join(' · ')}
   </p>
@@ -124,12 +134,13 @@
     <span class="chip card">{sizeLabel(wine.sizeCl)}</span>
     {#each wine.tags as tag (tag)}<span class="chip card">#{tag}</span>{/each}
   </div>
-  <button class="chip" class:active={wine.wished} onclick={() => update({ wished: !wine.wished })}>
+  <button class="chip" class:active={wine.wished} onclick={() => patchWine(wine.id, (w) => ({ wished: !w.wished }))}>
     {wine.wished ? `♥ ${t('stock.wished')}` : `♡ ${t('stock.wish')}`}
   </button>
 
-  <StockPanel wineId={wine.id} />
+  <StockPanel wineId={wine.id} {onlocate} />
   <ValuePanel {wine} />
+  <AgingPanel {wine} />
 
   <label for="drinkby">{t('detail.drinkBy')}</label>
   <input
@@ -138,6 +149,7 @@
     value={wine.drinkBy}
     onchange={(e) => update({ drinkBy: e.currentTarget.value || null })}
   />
+  {#if wine.drinkBy}<StorageHint wineId={wine.id} until={wine.drinkBy} />{/if}
 
   <label for="tasteagain">{t('detail.tasteAgain')}</label>
   <input
@@ -160,24 +172,32 @@
 
   <h2>{t('detail.tastings')}</h2>
   {#if addingTasting}
-    <TastingForm wineId={wine.id} ondone={() => (addingTasting = false)} />
+    <TastingForm wineId={wine.id} color={wine.color} ondone={() => (addingTasting = false)} />
   {:else}
-    <button class="primary" onclick={() => (addingTasting = true)}>{t('detail.addTasting')}</button>
+    <button class="primary" disabled={store.restoring} onclick={() => (addingTasting = true)}>{t('detail.addTasting')}</button>
   {/if}
   {#if tastings.length === 0 && !addingTasting}
     <p class="muted">{t('detail.noTastings')}</p>
   {/if}
   {#each tastings as tasting (tasting.id)}
-    <div class="card tasting">
-      <div class="row">
-        <span class="muted">{tasting.date}</span>
-        <Stars value={tasting.rating} />
-        <span class="muted">{tasting.rating.toFixed(1)}</span>
-        <div class="spacer"></div>
-        <button class="link danger" onclick={() => delTasting(tasting.id)}>✕</button>
+    {#if editingTastingId === tasting.id}
+      <div class="tasting">
+        <TastingForm wineId={wine.id} color={wine.color} {tasting} ondone={() => (editingTastingId = null)} />
       </div>
-      {#if tasting.notes}<p class="notes">{tasting.notes}</p>{/if}
-    </div>
+    {:else}
+      <div class="card tasting">
+        <div class="row">
+          <span class="muted">{tasting.date}</span>
+          <Stars value={tasting.rating} />
+          <span class="muted">{tasting.rating.toFixed(1)}</span>
+          <div class="spacer"></div>
+          <button class="link" aria-label={t('tasting.edit')} disabled={store.restoring} onclick={() => (editingTastingId = tasting.id)}>✎</button>
+          <button class="link danger" onclick={() => delTasting(tasting)}>✕</button>
+        </div>
+        {#if tasting.notes}<p class="notes">{tasting.notes}</p>{/if}
+        {#if tasting.sheet}<TastingSummary sheet={tasting.sheet} />{/if}
+      </div>
+    {/if}
   {/each}
 {/if}
 

@@ -1,0 +1,107 @@
+import type { StorageAnswers, StorageFactor } from './types'
+
+export type StorageGrade = 'good' | 'fair' | 'poor'
+
+export interface StorageQuestion {
+  factor: StorageFactor
+  /** Relative importance in the overall score. */
+  weight: number
+  /** A null grade counts as answered but leaves the score unchanged. */
+  options: readonly { id: string; grade: StorageGrade | null }[]
+}
+
+const good = (id: string) => ({ id, grade: 'good' as const })
+const fair = (id: string) => ({ id, grade: 'fair' as const })
+const poor = (id: string) => ({ id, grade: 'poor' as const })
+const unscored = (id: string) => ({ id, grade: null })
+
+/** The checklist, in display order. Temperature and its stability weigh most on how a wine ages. */
+export const STORAGE_QUESTIONS: readonly StorageQuestion[] = [
+  { factor: 'temperature', weight: 3, options: [fair('cold'), good('cool'), fair('mild'), poor('warm')] },
+  { factor: 'stability', weight: 2, options: [good('steady'), fair('seasonal'), poor('daily')] },
+  { factor: 'humidity', weight: 2, options: [poor('dry'), good('ideal'), fair('damp'), unscored('unknown')] },
+  { factor: 'airflow', weight: 1, options: [good('fresh'), fair('still'), poor('stuffy')] },
+  { factor: 'light', weight: 1, options: [good('dark'), fair('dim'), poor('bright')] },
+  { factor: 'position', weight: 1, options: [good('lying'), fair('mixed'), poor('standing')] },
+  { factor: 'vibration', weight: 1, options: [good('none'), fair('occasional'), poor('constant')] },
+  { factor: 'odors', weight: 1, options: [good('none'), fair('faint'), poor('strong')] },
+]
+
+const POINTS: Record<StorageGrade, number> = { good: 1, fair: 0.5, poor: 0 }
+
+export interface StorageAssessment {
+  /** 0–100, weighted over the answered questions; null when none is answered. */
+  score: number | null
+  answered: number
+  /** Factors graded poor, in checklist order. */
+  poor: StorageFactor[]
+}
+
+export function assessStorage(answers: StorageAnswers): StorageAssessment {
+  let points = 0
+  let weights = 0
+  let answered = 0
+  const poor: StorageFactor[] = []
+  for (const q of STORAGE_QUESTIONS) {
+    const option = q.options.find((o) => o.id === answers[q.factor])
+    if (!option) continue
+    answered++
+    const grade = option.grade
+    if (!grade) continue
+    points += q.weight * POINTS[grade]
+    weights += q.weight
+    if (grade === 'poor') poor.push(q.factor)
+  }
+  return { score: weights ? Math.round((100 * points) / weights) : null, answered, poor }
+}
+
+export function scoreGrade(score: number): StorageGrade {
+  if (score >= 75) return 'good'
+  if (score >= 50) return 'fair'
+  return 'poor'
+}
+
+/** Share of the remaining time in bottle a wine loses under conditions of this score; only poor storage costs any. */
+export function agingPenalty(score: number | null): number {
+  return score !== null && scoreGrade(score) === 'poor' ? 0.3 : 0
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * The "YYYY-MM-DD" date to drink by once the penalty is applied to the time
+ * left until `until`, or null when nothing changes. Display only: stored
+ * dates stay as the user entered them. Imported dates need not be ISO; those
+ * are left alone.
+ */
+export function shortenedUntil(until: string, today: string, score: number | null): string | null {
+  const penalty = agingPenalty(score)
+  const start = Date.parse(`${today}T00:00:00Z`)
+  const end = Date.parse(`${until}T00:00:00Z`)
+  if (penalty === 0 || !ISO_DATE.test(until) || Number.isNaN(end) || end <= start) return null
+  const days = Math.floor(((end - start) / 86_400_000) * (1 - penalty))
+  return new Date(start + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+/** `shortenedUntil` for a drinking window ending in `until`, by calendar year. */
+export function shortenedYear(until: number, year: number, score: number | null): number | null {
+  const penalty = agingPenalty(score)
+  if (penalty === 0 || !Number.isFinite(until) || until <= year) return null
+  const shortened = year + Math.floor((until - year) * (1 - penalty))
+  return shortened < until ? shortened : null
+}
+
+/** Of the cellars holding a wine, the one with the lowest storage score; null when none is assessed. */
+export function worstCellar<C extends { id: string; storage: StorageAnswers }>(
+  cellars: C[],
+  holding: Iterable<string>,
+): { cellar: C; score: number } | null {
+  const ids = new Set(holding)
+  let worst: { cellar: C; score: number } | null = null
+  for (const cellar of cellars) {
+    if (!ids.has(cellar.id)) continue
+    const { score } = assessStorage(cellar.storage)
+    if (score !== null && (!worst || score < worst.score)) worst = { cellar, score }
+  }
+  return worst
+}

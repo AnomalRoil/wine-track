@@ -9,6 +9,7 @@
     type FilterContext,
     type SortKey,
   } from '../lib/filters'
+  import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import { currentStock, store, tastingsFor } from '../lib/store.svelte'
@@ -25,6 +26,7 @@
     tastings: store.tastings,
     stock: currentStock(),
     buyPrices: averageBuyPrices(store.movements),
+    year: thisYear(),
   })
   const visible = $derived(sortWines(filterWines(store.wines, ctx, filter), ctx, sort))
   const grapes = $derived(distinctGrapes(store.wines))

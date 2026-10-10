@@ -15,6 +15,7 @@
     photoUrl = null,
     onsave,
     oncancel,
+    saving = false,
     extra,
   }: {
     draft: WineDraft
@@ -22,6 +23,8 @@
     photoUrl?: string | null
     onsave: () => void
     oncancel: () => void
+    /** Disables the actions while the caller writes. */
+    saving?: boolean
     /** Extra fields rendered above the actions. */
     extra?: Snippet
   } = $props()
@@ -144,8 +147,8 @@
   {@render extra?.()}
 
   <div class="row actions">
-    <button type="button" onclick={oncancel}>{t('form.cancel')}</button>
-    <button type="submit" class="primary grow">{t('form.save')}</button>
+    <button type="button" disabled={saving} onclick={oncancel}>{t('form.cancel')}</button>
+    <button type="submit" class="primary grow" disabled={saving}>{t('form.save')}</button>
   </div>
 </form>
 

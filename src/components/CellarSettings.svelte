@@ -1,12 +1,16 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
-  import { currentStock, removeCellar, saveCellars, sortedCellars } from '../lib/store.svelte'
+  import { assessStorage } from '../lib/storage'
+  import { addCellar, currentStock, patchCellar, removeCellar, sortedCellars, swapCellars } from '../lib/store.svelte'
   import type { Cellar } from '../lib/types'
+  import StorageBadge from './StorageBadge.svelte'
+  import StorageChecklist from './StorageChecklist.svelte'
 
   let newName = $state('')
   /** Cellar awaiting a decision about its bottles before deletion. */
   let deleting = $state<{ cellar: Cellar; bottles: number } | null>(null)
+  let checking = $state<string | null>(null)
 
   const cellars = $derived(sortedCellars())
 
@@ -21,21 +25,17 @@
     const name = newName.trim()
     if (!name) return
     const position = Math.max(-1, ...cellars.map((c) => c.position)) + 1
-    await saveCellars([{ id: crypto.randomUUID(), name, position }])
+    await addCellar({ id: crypto.randomUUID(), name, position, storage: {} })
     newName = ''
   }
 
   async function rename(cellar: Cellar) {
     const name = prompt(t('cellar.rename'), cellarName(cellar.id))?.trim()
-    if (name) await saveCellars([{ ...cellar, name }])
+    if (name) await patchCellar(cellar.id, (c) => ({ ...c, name }))
   }
 
   async function moveUp(i: number) {
-    const [a, b] = [cellars[i - 1], cellars[i]]
-    await saveCellars([
-      { ...a, position: b.position },
-      { ...b, position: a.position },
-    ])
+    await swapCellars(cellars[i - 1].id, cellars[i].id)
   }
 
   async function startDelete(cellar: Cellar) {
@@ -48,13 +48,18 @@
       deleting = { cellar, bottles }
       return
     }
-    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await removeCellar(cellar.id, null)
+    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await remove(cellar.id, null)
   }
 
   async function finishDelete(targetId: string | null) {
     if (!deleting) return
-    await removeCellar(deleting.cellar.id, targetId)
+    const id = deleting.cellar.id
     deleting = null
+    await remove(id, targetId)
+  }
+
+  async function remove(id: string, targetId: string | null) {
+    if (!(await removeCellar(id, targetId))) alert(t('form.stale'))
   }
 </script>
 
@@ -66,6 +71,20 @@
     <button class="link" onclick={() => rename(cellar)}>{t('cellar.rename')}</button>
     <button class="link danger" onclick={() => startDelete(cellar)}>{t('cellar.delete')}</button>
   </div>
+  <button
+    class="link storage"
+    aria-expanded={checking === cellar.id}
+    onclick={() => (checking = checking === cellar.id ? null : cellar.id)}
+  >
+    {t('storage.check')}
+    <StorageBadge score={assessStorage(cellar.storage).score} />
+  </button>
+  {#if checking === cellar.id}
+    <div class="card">
+      <StorageChecklist {cellar} />
+      <button class="primary done" onclick={() => (checking = null)}>{t('storage.done')}</button>
+    </div>
+  {/if}
 {/each}
 
 {#if deleting}
@@ -99,6 +118,18 @@
 
   .cellar {
     padding: 0.2rem 0;
+  }
+
+  .storage {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0 0 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  .done {
+    margin-top: 0.5rem;
   }
 
   .add {

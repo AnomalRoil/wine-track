@@ -2,6 +2,7 @@ import type { Messages } from './types'
 
 export const en = {
   'app.name': 'Wine Track',
+  'app.blocked': 'Wine Track is updating. Close its other tabs or windows to continue.',
 
   'tab.wines': 'Wines',
   'tab.add': 'Add',
@@ -40,6 +41,7 @@ export const en = {
   'capture.manual': 'Enter manually',
   'capture.extracting': 'Reading the label…',
   'capture.skip': 'Skip extraction',
+  'capture.photoFailed': 'The photo could not be read. The wine is saved without it; cancel to take another.',
 
   'extract.no-key': 'No API key configured. Add one in Settings, or fill the form manually.',
   'extract.auth': 'The API rejected your key. Check it in Settings.',
@@ -68,6 +70,7 @@ export const en = {
   'form.color': 'Type',
   'form.save': 'Save',
   'form.cancel': 'Cancel',
+  'form.stale': 'Something changed in the meantime. Check and try again.',
 
   'detail.drinkBy': 'Drink before',
   'detail.tasteAgain': 'Taste again on',
@@ -160,6 +163,7 @@ export const en = {
   'stock.note': 'Note',
   'stock.save': 'Save',
   'stock.tooMany': 'Only {n} bottle(s) in this cellar.',
+  'stock.unbalanced': 'This entry can no longer be deleted: its bottles have left, or their cellar was deleted.',
   'stock.wish': 'Add to wishlist',
   'stock.wished': 'On my wishlist',
   'stock.history': 'History',
@@ -203,6 +207,7 @@ export const en = {
 
 export const fr: Messages<typeof en> = {
   'app.name': 'Wine Track',
+  'app.blocked': 'Wine Track se met à jour. Fermez ses autres onglets ou fenêtres pour continuer.',
 
   'tab.wines': 'Vins',
   'tab.add': 'Ajouter',
@@ -241,6 +246,7 @@ export const fr: Messages<typeof en> = {
   'capture.manual': 'Saisie manuelle',
   'capture.extracting': 'Lecture de l’étiquette…',
   'capture.skip': 'Passer l’extraction',
+  'capture.photoFailed': 'Photo illisible. Le vin sera enregistré sans elle ; annulez pour en prendre une autre.',
 
   'extract.no-key': 'Aucune clé API configurée. Ajoutez-en une dans Réglages, ou remplissez le formulaire.',
   'extract.auth': 'Clé API refusée. Vérifiez-la dans Réglages.',
@@ -269,6 +275,7 @@ export const fr: Messages<typeof en> = {
   'form.color': 'Type',
   'form.save': 'Enregistrer',
   'form.cancel': 'Annuler',
+  'form.stale': 'Quelque chose a changé entre-temps. Vérifiez et réessayez.',
 
   'detail.drinkBy': 'À boire avant',
   'detail.tasteAgain': 'Regoûter le',
@@ -361,6 +368,7 @@ export const fr: Messages<typeof en> = {
   'stock.note': 'Note',
   'stock.save': 'Enregistrer',
   'stock.tooMany': 'Seulement {n} bouteille(s) dans cette cave.',
+  'stock.unbalanced': 'Cette entrée ne peut plus être supprimée : ses bouteilles sont sorties ou leur cave a été supprimée.',
   'stock.wish': 'Ajouter à mes envies',
   'stock.wished': 'Dans mes envies',
   'stock.history': 'Historique',
@@ -404,6 +412,7 @@ export const fr: Messages<typeof en> = {
 
 export const de: Messages<typeof en> = {
   'app.name': 'Wine Track',
+  'app.blocked': 'Wine Track wird aktualisiert. Die anderen Tabs oder Fenster schließen, um fortzufahren.',
 
   'tab.wines': 'Weine',
   'tab.add': 'Hinzufügen',
@@ -442,6 +451,7 @@ export const de: Messages<typeof en> = {
   'capture.manual': 'Manuell eingeben',
   'capture.extracting': 'Etikett wird gelesen…',
   'capture.skip': 'Auslesen überspringen',
+  'capture.photoFailed': 'Das Foto ist nicht lesbar. Der Wein wird ohne Foto gespeichert; abbrechen, um ein neues aufzunehmen.',
 
   'extract.no-key':
     'Kein API-Schlüssel hinterlegt. In den Einstellungen eintragen oder das Formular manuell ausfüllen.',
@@ -472,6 +482,7 @@ export const de: Messages<typeof en> = {
   'form.color': 'Weintyp',
   'form.save': 'Speichern',
   'form.cancel': 'Abbrechen',
+  'form.stale': 'Inzwischen hat sich etwas geändert. Bitte prüfen Sie und versuchen Sie es erneut.',
 
   'detail.drinkBy': 'Trinken vor',
   'detail.tasteAgain': 'Erneut verkosten am',
@@ -564,6 +575,7 @@ export const de: Messages<typeof en> = {
   'stock.note': 'Notiz',
   'stock.save': 'Speichern',
   'stock.tooMany': 'Nur {n} Flasche(n) in diesem Keller.',
+  'stock.unbalanced': 'Dieser Eintrag kann nicht mehr gelöscht werden: Seine Flaschen sind weg oder ihr Keller wurde gelöscht.',
   'stock.wish': 'Zur Wunschliste hinzufügen',
   'stock.wished': 'Auf meiner Wunschliste',
   'stock.history': 'Verlauf',

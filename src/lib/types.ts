@@ -1,3 +1,5 @@
+import type { SCALES, Shade } from './tasting'
+
 export type WineColor =
   | 'red'
   | 'white'
@@ -41,10 +43,40 @@ export const STANDARD_SIZE_CL = 75
 export interface PricePoint {
   /** "YYYY-MM-DD" */
   date: string
-  value: number
+  /** Null when the estimate was cleared that day. */
+  value: number | null
 }
 
-export interface Wine {
+/** How a wine tastes, each axis 0–10 from the first pole to the second. */
+export interface TasteProfile {
+  /** light ↔ bold */
+  body: number
+  /** smooth ↔ tannic */
+  tannin: number
+  /** dry ↔ sweet */
+  sweetness: number
+  /** soft ↔ acidic */
+  acidity: number
+  /** still ↔ fizzy; shown for sparkling wines only. */
+  fizz: number
+}
+
+/** Drinking window and serving advice; every field is null when unknown. */
+export interface Aging {
+  /** Years: ready to drink from, at peak from/until, drinkable until. */
+  drinkFrom: number | null
+  peakFrom: number | null
+  peakUntil: number | null
+  drinkUntil: number | null
+  /** Serving temperature range, always stored in °C. */
+  servingMinC: number | null
+  servingMaxC: number | null
+  /** 0 means no decanting. */
+  decantMinutes: number | null
+  profile: TasteProfile | null
+}
+
+export interface Wine extends Aging {
   id: string
   name: string
   producer: string
@@ -77,7 +109,50 @@ export interface Cellar {
   name: string
   /** Display order, ascending. */
   position: number
+  /** Storage-conditions checklist; unanswered questions are absent. */
+  storage: StorageAnswers
 }
+
+export const RACK_LAYOUTS = ['lying', 'standing', 'diamond'] as const
+/** How bottles sit in a rack: lying necks out, standing, or lying in rows shifted by half a slot. */
+export type RackLayout = (typeof RACK_LAYOUTS)[number]
+
+/** A grid of bottle slots in a cellar. */
+export interface Rack {
+  id: string
+  cellarId: string
+  name: string
+  columns: number
+  rows: number
+  /** 1 for a single layer, 2 for front and back. */
+  depth: number
+  layout: RackLayout
+  /** Display order within the cellar, ascending. */
+  position: number
+}
+
+/** One bottle of a wine sitting in a rack slot. Rows and columns count from 0, top left; layer 0 is the front. */
+export interface Placement {
+  /** Derived from the slot, so a slot never holds two bottles. */
+  id: string
+  rackId: string
+  layer: number
+  row: number
+  column: number
+  wineId: string
+}
+export type StorageFactor =
+  | 'temperature'
+  | 'stability'
+  | 'humidity'
+  | 'airflow'
+  | 'light'
+  | 'position'
+  | 'vibration'
+  | 'odors'
+
+/** Chosen option id per checklist question; see STORAGE_QUESTIONS. */
+export type StorageAnswers = Partial<Record<StorageFactor, string>>
 
 export type MovementKind = 'add' | 'consume' | 'gift' | 'adjust' | 'transfer'
 
@@ -112,6 +187,31 @@ export interface Tasting {
   /** 1.0–5.0, one decimal. */
   rating: number
   notes: string
+  /** Detailed tasting sheet; absent for a quick tasting. */
+  sheet?: TastingSheet
+}
+
+type Answer<K extends keyof typeof SCALES> = (typeof SCALES)[K][number] | null
+
+export interface TastingSheet {
+  people: string[]
+  place: string
+  meal: string
+  /** Photos taken during the tasting, in the `photos` store. */
+  photoIds: string[]
+  clarity: Answer<'clarity'>
+  colorIntensity: Answer<'colorIntensity'>
+  shade: Shade | null
+  noseIntensity: Answer<'noseIntensity'>
+  openness: Answer<'openness'>
+  /** Aroma ids from `AROMA_GROUPS`. */
+  aromas: string[]
+  sweetness: Answer<'sweetness'>
+  acidity: Answer<'acidity'>
+  tannin: Answer<'tannin'>
+  body: Answer<'body'>
+  finish: Answer<'finish'>
+  conclusion: string
 }
 
 export interface Photo {

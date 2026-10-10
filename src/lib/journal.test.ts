@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { journal } from './journal'
-import { makeMovement, makeWine } from './testing'
+import { emptySheet } from './tasting'
+import { makeMovement, makeTasting, makeWine } from './testing'
 import type { Tasting } from './types'
 
 const wines = [makeWine({ id: 'w1', name: 'Chablis' }), makeWine({ id: 'w2', name: 'Margaux' })]
@@ -9,7 +10,10 @@ const movements = [
   makeMovement({ id: 'm2', wineId: 'w2', date: '2026-03-01', kind: 'gift', note: 'for Sam' }),
   makeMovement({ id: 'm3', wineId: 'gone', date: '2026-02-01' }),
 ]
-const tastings: Tasting[] = [{ id: 't1', wineId: 'w1', date: '2026-02-15', rating: 4, notes: 'flinty' }]
+const tastings: Tasting[] = [
+  { id: 't1', wineId: 'w1', date: '2026-02-15', rating: 4, notes: 'flinty' },
+  makeTasting({ id: 't2', wineId: 'w2', date: '2026-01-10', sheet: { ...emptySheet(), people: ['Ana'], place: 'Lyon', meal: 'Roast duck', conclusion: 'Keep' } }),
+]
 
 function ids(search: string): string[] {
   return journal(wines, movements, tastings, search).map((e) => (e.type === 'movement' ? e.movement.id : e.tasting.id))
@@ -17,7 +21,7 @@ function ids(search: string): string[] {
 
 describe('journal', () => {
   it('merges movements and tastings, newest first', () => {
-    expect(ids('')).toEqual(['m2', 't1', 'm3', 'm1'])
+    expect(ids('')).toEqual(['m2', 't1', 'm3', 't2', 'm1'])
   })
   it('puts the latest-recorded first within a day', () => {
     const sameDay = [makeMovement({ id: 'a' }), makeMovement({ id: 'b' })]
@@ -30,6 +34,10 @@ describe('journal', () => {
     { name: 'wine name', search: 'chablis', want: ['t1', 'm1'] },
     { name: 'movement note', search: 'sam', want: ['m2'] },
     { name: 'tasting notes', search: 'FLINT', want: ['t1'] },
+    { name: 'tasting people', search: 'ana', want: ['t2'] },
+    { name: 'tasting place', search: 'lyon', want: ['t2'] },
+    { name: 'tasting meal', search: 'duck', want: ['t2'] },
+    { name: 'tasting conclusion', search: 'keep', want: ['t2'] },
   ]
   for (const c of searches) {
     it(`searches by ${c.name}`, () => {

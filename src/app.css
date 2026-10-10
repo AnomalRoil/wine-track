@@ -8,6 +8,15 @@
   --accent-text: #ffffff;
   --danger: #b3261e;
   --star: #c9972a;
+  --phase-youth: #3f6fa3;
+  --phase-maturity: #2f7d4f;
+  --phase-peak: #a87a12;
+  --phase-decline: #a4462a;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #8a5cd1;
+  --series-5: #d14d8a;
   color-scheme: light dark;
 }
 
@@ -21,6 +30,15 @@
     --accent: #b05561;
     --accent-text: #ffffff;
     --danger: #ff6b5e;
+    --phase-youth: #7aa7d6;
+    --phase-maturity: #6cbf86;
+    --phase-peak: #e0b44f;
+    --phase-decline: #e0805c;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #9b72e0;
+    --series-5: #e0679c;
   }
 }
 

@@ -1,8 +1,8 @@
 import { defaultCellar, migrateWinesV1, type WineV1 } from './migrate'
-import type { Cellar, Movement, Photo, Tasting, Wine } from './types'
+import type { Cellar, Movement, Photo, Placement, Rack, Tasting, Wine } from './types'
 
 const DB_NAME = 'wine-track'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 let db: IDBDatabase | null = null
 
@@ -21,31 +21,50 @@ function done(tx: IDBTransaction): Promise<void> {
   })
 }
 
-export async function openDb(): Promise<IDBDatabase> {
+/**
+ * Opens the database. `onblocked` runs while a tab still holding an older
+ * version keeps the upgrade from starting.
+ */
+export async function openDb(onblocked?: () => void): Promise<IDBDatabase> {
   if (db) return db
   const r = indexedDB.open(DB_NAME, DB_VERSION)
-  r.onupgradeneeded = (e) => {
-    const d = r.result
-    const tx = r.transaction!
-    if (e.oldVersion < 1) {
-      d.createObjectStore('wines', { keyPath: 'id' })
-      d.createObjectStore('tastings', { keyPath: 'id' }).createIndex('wineId', 'wineId')
-      d.createObjectStore('photos', { keyPath: 'id' })
-    }
-    if (e.oldVersion < 2) {
-      d.createObjectStore('cellars', { keyPath: 'id' }).put(defaultCellar())
-      d.createObjectStore('movements', { keyPath: 'id' }).createIndex('wineId', 'wineId')
-      const wines = tx.objectStore('wines')
-      wines.getAll().onsuccess = (ev) => {
-        const old = (ev.target as IDBRequest<WineV1[]>).result
-        const migrated = migrateWinesV1(old)
-        for (const w of migrated.wines) wines.put(w)
-        for (const m of migrated.movements) tx.objectStore('movements').put(m)
-      }
+  r.onupgradeneeded = (e) => upgrade(r.result, r.transaction!, e.oldVersion)
+  r.onblocked = () => onblocked?.()
+  const opened = await req(r)
+  // A newer version opened in another tab: this code no longer matches the schema.
+  opened.onversionchange = () => {
+    opened.close()
+    db = null
+    location.reload()
+  }
+  db = opened
+  return db
+}
+
+/** Creates and migrates the stores of a database at `oldVersion` up to DB_VERSION. */
+export function upgrade(d: IDBDatabase, tx: IDBTransaction, oldVersion: number): void {
+  if (oldVersion < 1) {
+    d.createObjectStore('wines', { keyPath: 'id' })
+    d.createObjectStore('tastings', { keyPath: 'id' }).createIndex('wineId', 'wineId')
+    d.createObjectStore('photos', { keyPath: 'id' })
+  }
+  if (oldVersion < 2) {
+    d.createObjectStore('cellars', { keyPath: 'id' }).put(defaultCellar())
+    d.createObjectStore('movements', { keyPath: 'id' }).createIndex('wineId', 'wineId')
+    const wines = tx.objectStore('wines')
+    wines.getAll().onsuccess = (ev) => {
+      const old = (ev.target as IDBRequest<WineV1[]>).result
+      const migrated = migrateWinesV1(old)
+      for (const w of migrated.wines) wines.put(w)
+      for (const m of migrated.movements) tx.objectStore('movements').put(m)
     }
   }
-  db = await req(r)
-  return db
+  if (oldVersion < 3) {
+    d.createObjectStore('racks', { keyPath: 'id' }).createIndex('cellarId', 'cellarId')
+    const placements = d.createObjectStore('placements', { keyPath: 'id' })
+    placements.createIndex('rackId', 'rackId')
+    placements.createIndex('wineId', 'wineId')
+  }
 }
 
 export interface Data {
@@ -53,51 +72,81 @@ export interface Data {
   tastings: Tasting[]
   cellars: Cellar[]
   movements: Movement[]
+  racks: Rack[]
+  placements: Placement[]
 }
 
-export async function loadAll(): Promise<Data> {
+const DATA_STORES = ['wines', 'tastings', 'cellars', 'movements', 'racks', 'placements'] as const
+
+export async function loadAll(onblocked?: () => void): Promise<Data> {
+  const d = await openDb(onblocked)
+  return readData(d.transaction(DATA_STORES))
+}
+
+/** Reads every record and photo in one transaction, so the records match the photos they reference. */
+export async function snapshot(): Promise<{ data: Data; photos: Photo[] }> {
   const d = await openDb()
-  const tx = d.transaction(['wines', 'tastings', 'cellars', 'movements'])
-  const [wines, tastings, cellars, movements] = await Promise.all([
+  const tx = d.transaction([...DATA_STORES, 'photos'])
+  const [data, photos] = await Promise.all([readData(tx), req(tx.objectStore('photos').getAll() as IDBRequest<Photo[]>)])
+  return { data, photos }
+}
+
+async function readData(tx: IDBTransaction): Promise<Data> {
+  const [wines, tastings, cellars, movements, racks, placements] = await Promise.all([
     req(tx.objectStore('wines').getAll() as IDBRequest<Wine[]>),
     req(tx.objectStore('tastings').getAll() as IDBRequest<Tasting[]>),
     req(tx.objectStore('cellars').getAll() as IDBRequest<Cellar[]>),
     req(tx.objectStore('movements').getAll() as IDBRequest<Movement[]>),
+    req(tx.objectStore('racks').getAll() as IDBRequest<Rack[]>),
+    req(tx.objectStore('placements').getAll() as IDBRequest<Placement[]>),
   ])
-  return { wines, tastings, cellars, movements }
+  return { wines, tastings, cellars, movements, racks, placements }
 }
 
-export async function putWine(wine: Wine): Promise<void> {
+/** Saves a wine and, for a new one, its label photo and stock additions, atomically. */
+export async function putWine(wine: Wine, photo: Photo | null = null, movements: Movement[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('wines', 'readwrite')
+  const tx = d.transaction(['wines', 'photos', 'movements'], 'readwrite')
   tx.objectStore('wines').put(wine)
+  if (photo) tx.objectStore('photos').put(photo)
+  for (const m of movements) tx.objectStore('movements').put(m)
   await done(tx)
 }
 
-/** Deletes the wine plus its tastings, movements and photo in one transaction. */
+/** Deletes the wine plus its tastings, movements, placements and photos in one transaction. */
 export async function deleteWine(wine: Wine): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction(['wines', 'tastings', 'movements', 'photos'], 'readwrite')
+  const tx = d.transaction(['wines', 'tastings', 'movements', 'placements', 'photos'], 'readwrite')
   tx.objectStore('wines').delete(wine.id)
   if (wine.photoId) tx.objectStore('photos').delete(wine.photoId)
-  for (const name of ['tastings', 'movements'] as const) {
+  const tastings = await req(tx.objectStore('tastings').index('wineId').getAll(wine.id) as IDBRequest<Tasting[]>)
+  for (const tasting of tastings) {
+    tx.objectStore('tastings').delete(tasting.id)
+    for (const id of tasting.sheet?.photoIds ?? []) tx.objectStore('photos').delete(id)
+  }
+  for (const name of ['movements', 'placements'] as const) {
     const keys = await req(tx.objectStore(name).index('wineId').getAllKeys(wine.id))
     for (const key of keys) tx.objectStore(name).delete(key)
   }
   await done(tx)
 }
 
-export async function putMovements(movements: Movement[]): Promise<void> {
+/** Records movements, empties the slots of the bottles that left and fills `placed`, atomically. */
+export async function putMovements(movements: Movement[], freed: string[] = [], placed: Placement[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('movements', 'readwrite')
+  const tx = d.transaction(['movements', 'placements'], 'readwrite')
   for (const m of movements) tx.objectStore('movements').put(m)
+  for (const id of freed) tx.objectStore('placements').delete(id)
+  for (const p of placed) tx.objectStore('placements').put(p)
   await done(tx)
 }
 
-export async function deleteMovement(id: string): Promise<void> {
+/** Deletes a movement and empties the slots of the bottles it no longer accounts for, atomically. */
+export async function deleteMovement(id: string, freed: string[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('movements', 'readwrite')
+  const tx = d.transaction(['movements', 'placements'], 'readwrite')
   tx.objectStore('movements').delete(id)
+  for (const p of freed) tx.objectStore('placements').delete(p)
   await done(tx)
 }
 
@@ -108,26 +157,74 @@ export async function putCellars(cellars: Cellar[]): Promise<void> {
   await done(tx)
 }
 
-/** Deletes a cellar after recording the movements that empty it, atomically. */
+/** Deletes a cellar and its racks after recording the movements that empty it, atomically. */
 export async function deleteCellar(id: string, emptying: Movement[]): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction(['cellars', 'movements'], 'readwrite')
+  const tx = d.transaction(['cellars', 'movements', 'racks', 'placements'], 'readwrite')
   for (const m of emptying) tx.objectStore('movements').put(m)
   tx.objectStore('cellars').delete(id)
+  const rackIds = await req(tx.objectStore('racks').index('cellarId').getAllKeys(id))
+  for (const rackId of rackIds) deleteRackIn(tx, rackId as string)
   await done(tx)
 }
 
-export async function putTasting(tasting: Tasting): Promise<void> {
+/** Adds the wines, cellars and movements of an import in one transaction. */
+export async function putImport(data: Pick<Data, 'wines' | 'cellars' | 'movements'>): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('tastings', 'readwrite')
+  const tx = d.transaction(['wines', 'cellars', 'movements'], 'readwrite')
+  for (const w of data.wines) tx.objectStore('wines').put(w)
+  for (const c of data.cellars) tx.objectStore('cellars').put(c)
+  for (const m of data.movements) tx.objectStore('movements').put(m)
+  await done(tx)
+}
+
+/** Saves racks and removes the placements a resize left outside them, atomically. */
+export async function putRacks(racks: Rack[], dropped: string[] = []): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction(['racks', 'placements'], 'readwrite')
+  for (const r of racks) tx.objectStore('racks').put(r)
+  for (const id of dropped) tx.objectStore('placements').delete(id)
+  await done(tx)
+}
+
+export async function deleteRack(id: string): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction(['racks', 'placements'], 'readwrite')
+  deleteRackIn(tx, id)
+  await done(tx)
+}
+
+function deleteRackIn(tx: IDBTransaction, id: string) {
+  tx.objectStore('racks').delete(id)
+  const placements = tx.objectStore('placements')
+  placements.index('rackId').getAllKeys(id).onsuccess = (e) => {
+    for (const key of (e.target as IDBRequest<IDBValidKey[]>).result) placements.delete(key)
+  }
+}
+
+export async function updatePlacements(put: Placement[], remove: string[]): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction('placements', 'readwrite')
+  for (const id of remove) tx.objectStore('placements').delete(id)
+  for (const p of put) tx.objectStore('placements').put(p)
+  await done(tx)
+}
+
+/** Saves a tasting with its new photos and deletes the photos it no longer uses, atomically. */
+export async function putTasting(tasting: Tasting, added: Photo[] = [], removedPhotoIds: string[] = []): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction(['tastings', 'photos'], 'readwrite')
   tx.objectStore('tastings').put(tasting)
+  for (const p of added) tx.objectStore('photos').put(p)
+  for (const id of removedPhotoIds) tx.objectStore('photos').delete(id)
   await done(tx)
 }
 
-export async function deleteTasting(id: string): Promise<void> {
+export async function deleteTasting(tasting: Tasting): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('tastings', 'readwrite')
-  tx.objectStore('tastings').delete(id)
+  const tx = d.transaction(['tastings', 'photos'], 'readwrite')
+  tx.objectStore('tastings').delete(tasting.id)
+  for (const id of tasting.sheet?.photoIds ?? []) tx.objectStore('photos').delete(id)
   await done(tx)
 }
 
@@ -144,22 +241,18 @@ export async function getPhoto(id: string): Promise<Photo | undefined> {
   return req(tx.objectStore('photos').get(id) as IDBRequest<Photo | undefined>)
 }
 
-export async function getAllPhotos(): Promise<Photo[]> {
-  const d = await openDb()
-  const tx = d.transaction('photos')
-  return req(tx.objectStore('photos').getAll() as IDBRequest<Photo[]>)
-}
-
 /** Replaces the entire database content in one transaction (backup import). */
 export async function replaceAll(data: Data, photos: Photo[]): Promise<void> {
   const d = await openDb()
-  const names = ['wines', 'tastings', 'cellars', 'movements', 'photos'] as const
+  const names = ['wines', 'tastings', 'cellars', 'movements', 'racks', 'placements', 'photos'] as const
   const tx = d.transaction(names, 'readwrite')
   for (const name of names) tx.objectStore(name).clear()
   for (const w of data.wines) tx.objectStore('wines').put(w)
   for (const t of data.tastings) tx.objectStore('tastings').put(t)
   for (const c of data.cellars) tx.objectStore('cellars').put(c)
   for (const m of data.movements) tx.objectStore('movements').put(m)
+  for (const r of data.racks) tx.objectStore('racks').put(r)
+  for (const p of data.placements) tx.objectStore('placements').put(p)
   for (const p of photos) tx.objectStore('photos').put(p)
   await done(tx)
 }

@@ -1,6 +1,11 @@
 import { settings } from './settings.svelte'
 
-/** Formats an amount in the settings currency and locale, e.g. "12,50 €". */
-export function money(amount: number): string {
+/** Formats an amount in the settings currency and locale, e.g. "12,50 €", even when prices are hidden. */
+export function formatMoney(amount: number): string {
   return new Intl.NumberFormat(settings.locale, { style: 'currency', currency: settings.currency }).format(amount)
+}
+
+/** Like formatMoney, but masked when prices are hidden on screen. */
+export function money(amount: number): string {
+  return settings.hidePrices ? '•••' : formatMoney(amount)
 }

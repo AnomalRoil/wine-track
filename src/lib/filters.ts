@@ -1,3 +1,4 @@
+import { lastYear, phaseOf, urgency, type Phase } from './aging'
 import { bottlesOf, type Stock } from './stock'
 import type { Tasting, Wine, WineColor } from './types'
 
@@ -7,6 +8,8 @@ export interface FilterContext {
   stock: Stock
   /** Average price paid per bottle, by wine id. */
   buyPrices: Map<string, number>
+  /** Current year, for drinking phases. */
+  year: number
 }
 
 export interface WineFilter {
@@ -21,6 +24,7 @@ export interface WineFilter {
   /** Only wines with bottles in this cellar. */
   cellarId: string | null
   tag: string | null
+  phases: Phase[]
 }
 
 export function emptyFilter(): WineFilter {
@@ -35,6 +39,7 @@ export function emptyFilter(): WineFilter {
     wishedOnly: false,
     cellarId: null,
     tag: null,
+    phases: [],
   }
 }
 
@@ -49,7 +54,8 @@ export function isFilterActive(f: WineFilter): boolean {
     f.ownedOnly ||
     f.wishedOnly ||
     f.cellarId !== null ||
-    f.tag !== null
+    f.tag !== null ||
+    f.phases.length > 0
   )
 }
 
@@ -87,6 +93,10 @@ export function filterWines(wines: Wine[], ctx: FilterContext, f: WineFilter): W
     if (f.vintageMin !== null && (w.vintage === null || w.vintage < f.vintageMin)) return false
     if (f.vintageMax !== null && (w.vintage === null || w.vintage > f.vintageMax)) return false
     if (f.grape !== null && !hasName(w.grapes, f.grape)) return false
+    if (f.phases.length > 0) {
+      const phase = phaseOf(w, ctx.year)
+      if (phase === null || !f.phases.includes(phase)) return false
+    }
     if (ratings) {
       const r = ratings.get(w.id)
       if (r === undefined || r < f.minRating!) return false
@@ -101,7 +111,7 @@ export function filterWines(wines: Wine[], ctx: FilterContext, f: WineFilter): W
   })
 }
 
-export const SORT_KEYS = ['recent', 'name', 'vintage', 'rating', 'value', 'buyPrice'] as const
+export const SORT_KEYS = ['recent', 'name', 'vintage', 'rating', 'value', 'buyPrice', 'urgency'] as const
 export type SortKey = (typeof SORT_KEYS)[number]
 
 /** Sorts by a number, highest first, with wines lacking it last. */
@@ -126,6 +136,10 @@ export function sortWines(wines: Wine[], ctx: FilterContext, key: SortKey): Wine
       return byDescending(sorted, (w) => w.value)
     case 'buyPrice':
       return byDescending(sorted, (w) => ctx.buyPrices.get(w.id))
+    case 'urgency':
+      return sorted.sort(
+        (a, b) => urgency(phaseOf(a, ctx.year)) - urgency(phaseOf(b, ctx.year)) || lastYear(a) - lastYear(b),
+      )
   }
 }
 

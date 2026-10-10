@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PHASES, type Phase } from '../lib/aging'
   import { emptyFilter, isFilterActive, SORT_KEYS, type SortKey, type WineFilter } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
@@ -10,7 +11,7 @@
     sort = $bindable(),
     grapes,
     tags,
-  }: { filter: WineFilter; sort: SortKey; grapes: string[]; tags: string[] } = $props()
+  }: { filter: WineFilter; sort?: SortKey; grapes: string[]; tags: string[] } = $props()
 
   let expanded = $state(false)
 
@@ -18,6 +19,16 @@
     filter.colors = filter.colors.includes(color)
       ? filter.colors.filter((c) => c !== color)
       : [...filter.colors, color]
+  }
+
+  function togglePhase(phase: Phase) {
+    filter.phases = filter.phases.includes(phase)
+      ? filter.phases.filter((p) => p !== phase)
+      : [...filter.phases, phase]
+  }
+
+  function sortLabel(key: SortKey): string {
+    return key === 'urgency' ? t('aging.sort') : t(`sort.${key}`)
   }
 
   function colorLabel(color: WineColor): string {
@@ -45,11 +56,13 @@
   <button class="link" onclick={() => (expanded = !expanded)}>
     {t('list.filters')} {expanded ? '▴' : '▾'}
   </button>
-  <select bind:value={sort} aria-label="sort">
-    {#each SORT_KEYS as key (key)}
-      <option value={key}>{t(`sort.${key}`)}</option>
-    {/each}
-  </select>
+  {#if sort !== undefined}
+    <select bind:value={sort} aria-label="sort">
+      {#each SORT_KEYS as key (key)}
+        <option value={key}>{sortLabel(key)}</option>
+      {/each}
+    </select>
+  {/if}
 </div>
 
 {#if expanded}
@@ -63,6 +76,14 @@
         <label for="vmax">{t('list.vintageMax')}</label>
         <input id="vmax" type="number" inputmode="numeric" bind:value={filter.vintageMax} />
       </div>
+    </div>
+    <label for="phase-chips">{t('aging.filter')}</label>
+    <div class="chips wrap" id="phase-chips">
+      {#each PHASES as phase (phase)}
+        <button class="chip" class:active={filter.phases.includes(phase)} onclick={() => togglePhase(phase)}>
+          {t(`aging.phase.${phase}`)}
+        </button>
+      {/each}
     </div>
     <label for="grape">{t('list.grape')}</label>
     <select id="grape" bind:value={filter.grape}>
@@ -118,6 +139,10 @@
 
   .grow {
     flex: 1;
+  }
+
+  .wrap {
+    flex-wrap: wrap;
   }
 
   input[type='range'] {
