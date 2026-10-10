@@ -2,6 +2,7 @@
   import { getPhoto } from '../lib/db'
   import { t } from '../lib/i18n.svelte'
   import type { Photo } from '../lib/types'
+  import Icon from './Icon.svelte'
 
   let {
     ids,
@@ -67,7 +68,7 @@
           {#if thumbs[id]}<img src={thumbs[id]} alt="" />{/if}
         </button>
         {#if onremove}
-          <button type="button" class="remove" aria-label={t('tasting.removePhoto')} onclick={() => onremove(id)}>✕</button>
+          <button type="button" class="remove" aria-label={t('tasting.removePhoto')} onclick={() => onremove(id)}><Icon name="close" size={16} /></button>
         {/if}
       </span>
     {/each}

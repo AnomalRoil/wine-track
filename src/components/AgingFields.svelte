@@ -5,6 +5,7 @@
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
   import type { Aging } from '../lib/types'
+  import Icon from './Icon.svelte'
 
   let { aging = $bindable(), wine }: { aging: Aging; wine: WineDraft & { id?: string } } = $props()
 
@@ -66,7 +67,7 @@
 </script>
 
 <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(wine)} onclick={lookup}>
-  🔎 {lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
+  <Icon name="search" size={20} />{lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
 </button>
 {#if lookupNote}<p class="muted">{lookupNote}</p>{/if}
 

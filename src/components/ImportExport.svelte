@@ -10,6 +10,7 @@
   import { settings } from '../lib/settings.svelte'
   import { store } from '../lib/store.svelte'
   import ImportPanel from './ImportPanel.svelte'
+  import Icon from './Icon.svelte'
 
   let {}: Partial<ScreenProps> = $props()
 
@@ -59,7 +60,7 @@
 
 <h2>{t('io.export')}</h2>
 <p class="muted">{t('io.exportHelp')}</p>
-<button onclick={exportCollection}>⬇️ {t('io.exportButton')}</button>
+<button onclick={exportCollection}><Icon name="download" size={20} />{t('io.exportButton')}</button>
 
 <h2>{t('io.inventory')}</h2>
 <p class="muted">{t('io.inventoryHelp')}</p>
@@ -68,7 +69,7 @@
 <label for="address">{t('io.address')}</label>
 <textarea id="address" rows="3" autocomplete="street-address" bind:value={address}></textarea>
 <div class="row wrap">
-  <button onclick={openInventory}>🖨️ {t('io.openInventory')}</button>
+  <button onclick={openInventory}><Icon name="print" size={20} />{t('io.openInventory')}</button>
   <button class="link" onclick={saveInventory}>{t('io.saveInventory')}</button>
 </div>
 {#if inventoryMessage}

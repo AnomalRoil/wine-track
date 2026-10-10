@@ -2,6 +2,7 @@
   import { t, type MessageKey } from '../lib/i18n.svelte'
   import { aromaLabel } from '../lib/labels'
   import { AROMA_FAMILIES, AROMA_GROUPS, aromaFamily, sortedAromas, type AromaFamily } from '../lib/tasting'
+  import Icon from './Icon.svelte'
 
   let { aromas = $bindable() }: { aromas: string[] } = $props()
 
@@ -21,7 +22,7 @@
 {#if aromas.length > 0}
   <div class="chips wrap">
     {#each sortedAromas(aromas) as aroma (aroma)}
-      <button type="button" class="chip active" onclick={() => toggle(aroma)}>{aromaLabel(aroma)} ✕</button>
+      <button type="button" class="chip input" aria-label={t('form.remove', { value: aromaLabel(aroma) })} onclick={() => toggle(aroma)}>{aromaLabel(aroma)}<Icon name="close" size={16} /></button>
     {/each}
   </div>
 {/if}

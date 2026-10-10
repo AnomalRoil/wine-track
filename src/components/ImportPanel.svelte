@@ -11,6 +11,7 @@
   import { matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
+  import Icon from './Icon.svelte'
 
   let rows = $state.raw<ImportRow[] | null>(null)
   let ignored = $state.raw<string[]>([])
@@ -182,8 +183,8 @@
 <p class="muted">{t('io.importHelp', { columns: COLUMNS.map((c) => HEADERS[c]).join(', ') })}</p>
 <p class="muted">{t('io.importRules')}</p>
 <div class="row wrap">
-  <label class="file">
-    📄 {t('io.chooseFile')}
+  <label class="button">
+    <Icon name="file" size={20} />{t('io.chooseFile')}
     <input type="file" accept=".csv,.tsv,.txt,text/csv" disabled={committing} onchange={onFile} />
   </label>
   <button class="link" onclick={downloadTemplate}>{t('io.template')}</button>
@@ -209,7 +210,7 @@
         <p class="pulse">{t('io.completing', progress)}</p>
       {:else}
         <p class="muted">{t('io.completeHelp', { n: incomplete.length, size: COMPLETION_BATCH })}</p>
-        <button disabled={committing} onclick={complete}>✨ {t('io.complete', { n: incomplete.length })}</button>
+        <button disabled={committing} onclick={complete}><Icon name="sparkle" size={20} />{t('io.complete', { n: incomplete.length })}</button>
       {/if}
       {#if completeError}
         <p class="error-text">{t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>
@@ -241,7 +242,7 @@
       {:else}
         <div class="muted">
           {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
-          {#if completed.has(row.line)}<span class="badge">✨ {t('io.completed')}</span>{/if}
+          {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
         </div>
         {#if lwinMatches.has(row.line) && match.kind === 'new'}
           <label class="lwin">
@@ -267,26 +268,6 @@
 <style>
   .wrap {
     flex-wrap: wrap;
-  }
-
-  .file {
-    border: 1px solid var(--outline-variant);
-    border-radius: 10px;
-    background: var(--surface-container-low);
-    padding: 0.55rem 0.9rem;
-    cursor: pointer;
-    margin: 0;
-    font-size: 1rem;
-    color: var(--on-surface);
-  }
-
-  .file input {
-    display: none;
-  }
-
-  .file:has(input:disabled) {
-    opacity: 0.5;
-    cursor: default;
   }
 
   .note {

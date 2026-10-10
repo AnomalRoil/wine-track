@@ -13,7 +13,9 @@
   import { addToWine, addWine, sortedCellars, store, storeGeneration } from '../lib/store.svelte'
   import type { Aging, Photo, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
+  import BottleGlyph from './BottleGlyph.svelte'
   import WineForm from './WineForm.svelte'
+  import Icon from './Icon.svelte'
 
   let {
     onsaved,
@@ -241,12 +243,14 @@
 
 {#if step === 'idle'}
   <div class="start">
-    <label class="capture primary">
-      📷 {t('capture.take')}
+    <BottleGlyph color="red" size={96} />
+    <h1>{t('nav.addBottle')}</h1>
+    <label class="button primary capture">
+      <Icon name="camera" size={24} />{t('capture.take')}
       <input type="file" accept="image/*" capture="environment" onchange={onPhotoPicked} />
     </label>
-    <label class="capture">
-      🖼️ {t('capture.gallery')}
+    <label class="button capture">
+      <Icon name="image" size={24} />{t('capture.gallery')}
       <input type="file" accept="image/*" onchange={onPhotoPicked} />
     </label>
     <button class="link" onclick={() => (step = 'form')}>{t('capture.manual')}</button>
@@ -271,10 +275,10 @@
   {/if}
   {#if lwinMatch}
     <div class="card match">
-      <p>{t('lwin.matches', { name: displayName(lwinMatch) })}</p>
+      <p class="row"><Icon name="sparkle" />{t('lwin.matches', { name: displayName(lwinMatch) })}</p>
       <div class="row">
         <button class="primary" onclick={applyMatch}>{t('lwin.apply')}</button>
-        <button onclick={() => (lwinMatch = null)}>{t('lwin.ignore')}</button>
+        <button class="link" onclick={() => (lwinMatch = null)}>{t('lwin.ignore')}</button>
       </div>
     </div>
   {/if}
@@ -328,6 +332,16 @@
 
   .match {
     margin-bottom: 0.5rem;
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+  }
+
+  .match .row {
+    align-items: flex-start;
+  }
+
+  .match .link {
+    color: var(--on-tertiary-container);
   }
 
   .match p,
@@ -337,7 +351,8 @@
 
   .duplicate {
     margin-top: 1rem;
-    border-color: var(--primary);
+    background: var(--primary-container);
+    color: var(--on-primary-container);
   }
 
   .wrap {
@@ -345,7 +360,8 @@
   }
 
   .aging summary {
-    font-weight: 600;
+    margin: 0 0.25rem;
+    font-weight: 650;
     cursor: pointer;
   }
 
@@ -354,29 +370,20 @@
     flex-direction: column;
     gap: 0.9rem;
     align-items: stretch;
-    margin-top: 15vh;
+    margin-top: 8vh;
     text-align: center;
   }
 
+  .start > :global(svg) {
+    align-self: center;
+  }
+
+  .start h1 {
+    margin: 0.5rem 0 1rem;
+  }
+
   .capture {
-    display: block;
-    border: 1px solid var(--outline-variant);
-    border-radius: 14px;
-    background: var(--surface-container-low);
-    padding: 1.1rem;
-    font-size: 1.05rem;
-    cursor: pointer;
-    margin: 0;
-  }
-
-  .capture.primary {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--on-primary);
-  }
-
-  .capture input {
-    display: none;
+    min-height: 56px;
   }
 
   .preview {
@@ -393,8 +400,9 @@
     animation: pulse 1.2s ease-in-out infinite;
   }
 
-  .error {
-    border-color: var(--error);
+  .error.card {
+    margin: 0 0 0.5rem;
+    background: color-mix(in srgb, var(--error) 12%, var(--surface));
   }
 
   @keyframes pulse {

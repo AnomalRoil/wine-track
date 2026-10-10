@@ -72,6 +72,7 @@ export const en = {
   'form.color': 'Type',
   'form.save': 'Save',
   'form.cancel': 'Cancel',
+  'form.remove': 'Remove {value}',
   'form.stale': 'Something changed in the meantime. Check and try again.',
 
   'detail.drinkBy': 'Drink before',
@@ -289,6 +290,7 @@ export const fr: Messages<typeof en> = {
   'form.color': 'Type',
   'form.save': 'Enregistrer',
   'form.cancel': 'Annuler',
+  'form.remove': 'Retirer {value}',
   'form.stale': 'Quelque chose a changé entre-temps. Vérifiez et réessayez.',
 
   'detail.drinkBy': 'À boire avant',
@@ -508,6 +510,7 @@ export const de: Messages<typeof en> = {
   'form.color': 'Weintyp',
   'form.save': 'Speichern',
   'form.cancel': 'Abbrechen',
+  'form.remove': '{value} entfernen',
   'form.stale': 'Inzwischen hat sich etwas geändert. Bitte prüfen Sie und versuchen Sie es erneut.',
 
   'detail.drinkBy': 'Trinken vor',

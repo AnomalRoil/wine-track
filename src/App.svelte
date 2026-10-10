@@ -64,6 +64,7 @@
       if (unwindingTo) {
         tab = unwindingTo
         unwindingTo = null
+        window.scrollTo(0, 0)
         history.replaceState({ tab, wine: null, screen: null, depth: 0 } satisfies ViewState, '')
       } else if (view?.tab) {
         tab = view.tab
@@ -87,6 +88,7 @@
     screen = null
     locatedWineId = null
     tab = next
+    window.scrollTo(0, 0)
   }
 
   function locate(wineId: string) {

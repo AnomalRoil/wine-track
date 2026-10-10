@@ -26,6 +26,7 @@
   import BottleSheet from './BottleSheet.svelte'
   import CaptureFlow from './CaptureFlow.svelte'
   import FilterBar from './FilterBar.svelte'
+  import Icon from './Icon.svelte'
   import RackForm from './RackForm.svelte'
   import RackGrid from './RackGrid.svelte'
   import SlotSheet from './SlotSheet.svelte'
@@ -210,7 +211,7 @@
 </script>
 
 {#if capture}
-  <p class="muted target">📍 {t('rack.newFor', { slot: title(capture.slot) })}</p>
+  <p class="muted target"><Icon name="pin" size={18} />{t('rack.newFor', { slot: title(capture.slot) })}</p>
   <CaptureFlow photo={capture.photo} intoCellar={cellarId} onsaved={captured} oncancel={() => (capture = null)} />
 {:else if editing}
   <RackForm rack={editing.rack} {cellarId} ondone={() => (editing = null)} />
@@ -231,7 +232,7 @@
     <p class="muted status">{waitingTotal > 0 ? t('rack.unplaced', { n: waitingTotal }) : t('rack.allPlaced')}</p>
     {#if focusWineId && wines.get(focusWineId)}
       <button class="chip active" onclick={() => (focusWineId = null)}>
-        {t('rack.showing', { name: wineLabel(wines.get(focusWineId)!) })} ✕
+        {t('rack.showing', { name: wineLabel(wines.get(focusWineId)!) })}<Icon name="close" size={18} />
       </button>
     {:else}
       <FilterBar bind:filter grapes={distinctGrapes(store.wines)} tags={distinctTags(store.wines)} />
@@ -261,7 +262,7 @@
     />
   {/each}
 
-  <button class="add" onclick={() => (editing = { rack: null })}>＋ {t('rack.add')}</button>
+  <button class="tonal add" onclick={() => (editing = { rack: null })}><Icon name="plus" size={20} />{t('rack.add')}</button>
 {/if}
 
 {#if selected && !capture}
@@ -282,10 +283,17 @@
 
 <style>
   .status {
-    margin: 0.25rem 0 0.5rem;
+    margin: 0.25rem 0.25rem 0.5rem;
+  }
+
+  .chips {
+    margin-top: 0.5rem;
   }
 
   .target {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
     margin: 0.25rem 0 0;
   }
 
@@ -294,7 +302,8 @@
     top: 0.5rem;
     z-index: 5;
     margin-top: 0.5rem;
-    border-color: var(--primary);
+    background: var(--secondary-container);
+    color: var(--on-secondary-container);
   }
 
   .grow {
@@ -304,7 +313,7 @@
   .add {
     display: block;
     width: 100%;
+    width: 100%;
     margin-top: 0.75rem;
-    border-style: dashed;
   }
 </style>

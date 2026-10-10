@@ -6,6 +6,7 @@
   import { wineLabel } from '../lib/labels'
   import { store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
+  import Icon from './Icon.svelte'
 
   let { onopen }: { onopen: (wine: Wine) => void } = $props()
 
@@ -52,7 +53,7 @@
 {:else}
   {@render section(t('due.drinkSoon'), due.drinkSoon)}
   {@render section(t('due.tasteAgain'), due.tasteAgain)}
-  <p><button onclick={exportAll}>📅 {t('due.exportAll')}</button></p>
+  <p><button onclick={exportAll}><Icon name="calendar" size={20} />{t('due.exportAll')}</button></p>
 {/if}
 
 <style>

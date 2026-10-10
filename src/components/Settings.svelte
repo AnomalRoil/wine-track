@@ -8,6 +8,7 @@
   import { backupSnapshot, restore, store } from '../lib/store.svelte'
   import CellarSettings from './CellarSettings.svelte'
   import LwinSettings from './LwinSettings.svelte'
+  import Icon from './Icon.svelte'
 
   let {}: Partial<ScreenProps> = $props()
 
@@ -95,11 +96,11 @@
 
 <h2>{t('settings.backup')}</h2>
 {#if backupStale}
-  <p class="muted">⚠️ {t('settings.backupHint')}</p>
+  <p class="muted warn"><Icon name="warning" size={18} />{t('settings.backupHint')}</p>
 {/if}
 <div class="row">
   <button onclick={exportBackup}>{t('settings.export')}</button>
-  <label class="import">
+  <label class="button import">
     {t('settings.import')}
     <input type="file" accept=".json,application/json" onchange={importBackup} />
   </label>
@@ -113,21 +114,6 @@
 {/if}
 
 <style>
-  .import {
-    border: 1px solid var(--outline-variant);
-    border-radius: 10px;
-    background: var(--surface-container-low);
-    padding: 0.55rem 0.9rem;
-    cursor: pointer;
-    margin: 0;
-    font-size: 1rem;
-    color: var(--on-surface);
-  }
-
-  .import input {
-    display: none;
-  }
-
   .row {
     margin-top: 0.5rem;
   }

@@ -245,24 +245,34 @@
   .shortcut {
     text-align: left;
     font-size: 0.85rem;
-    border-left-width: 4px;
   }
 
   .shortcut.ready {
-    border-left-color: var(--series-3);
+    background: var(--phase-maturity);
+    color: var(--on-phase-maturity);
   }
 
   .shortcut.peak {
-    border-left-color: var(--star);
+    background: var(--phase-peak);
+    color: var(--on-phase-peak);
   }
 
   .shortcut.decline {
-    border-left-color: var(--error);
+    background: var(--phase-decline);
+    color: var(--on-phase-decline);
   }
 
   .shortcut.active {
-    background: var(--surface);
-    border-color: var(--primary);
+    outline: 3px solid currentColor;
+    outline-offset: -3px;
+  }
+
+  .tile,
+  .shortcut {
+    border-radius: var(--shape-l);
+    padding: 0.9rem 1rem;
+    justify-content: flex-start;
+    font-weight: 500;
   }
 
   .big {
@@ -287,6 +297,7 @@
   }
 
   .wine {
+    border-radius: var(--shape-l);
     display: flex;
     justify-content: space-between;
     gap: 0.5rem;

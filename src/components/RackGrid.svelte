@@ -3,6 +3,7 @@
   import { rackName, slotLabel, wineLabel } from '../lib/labels'
   import { matchesPerLayer, slotId, type Slot } from '../lib/racks'
   import type { Placement, Rack, Wine } from '../lib/types'
+  import Icon from './Icon.svelte'
   import SlotBottle from './SlotBottle.svelte'
 
   let {
@@ -53,8 +54,8 @@
     <h2>{rackName(rack)}</h2>
     <span class="muted">{t('rack.size', { columns: rack.columns, rows: rack.rows })} · {t('cellar.bottles', { n: filled })}</span>
     <div class="spacer"></div>
-    {#if onup}<button class="link" aria-label={t('rack.up')} onclick={onup}>↑</button>{/if}
-    <button class="link" aria-label={t('rack.edit')} onclick={onedit}>✎</button>
+    {#if onup}<button class="icon" aria-label={t('rack.up')} onclick={onup}><Icon name="up" size={20} /></button>{/if}
+    <button class="icon" aria-label={t('rack.edit')} onclick={onedit}><Icon name="edit" size={20} /></button>
   </header>
 
   {#if rack.depth > 1}
@@ -99,22 +100,22 @@
 <style>
   .rack {
     margin-top: 0.75rem;
-    padding: 0.5rem 0.6rem 0.6rem;
+    padding: 0.5rem 0.75rem 0.9rem;
   }
 
   header h2 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.1rem;
+    margin-left: 0.25rem;
   }
 
   .spacer {
     flex: 1;
   }
 
-  header .link {
-    font-size: 1.1rem;
-    text-decoration: none;
-    padding: 0.1rem 0.4rem;
+  header .icon {
+    width: 40px;
+    height: 40px;
   }
 
   .scroll {
@@ -131,8 +132,8 @@
     width: max-content;
     margin: 0 auto;
     padding: 4px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--outline-variant) 45%, transparent);
+    border-radius: var(--shape-m);
+    background: var(--surface-container-high);
   }
 
   .line {
@@ -166,8 +167,8 @@
     height: var(--slot);
     padding: 3px;
     border: 1px solid transparent;
-    border-radius: 6px;
-    background: var(--surface-container-low);
+    border-radius: var(--shape-xs);
+    background: var(--surface-container-lowest);
     display: flex;
     transition: opacity 0.15s;
   }
@@ -183,16 +184,16 @@
   }
 
   .slot.match {
-    border-color: var(--star);
-    box-shadow: 0 0 0 2px var(--star);
+    border-color: var(--tertiary);
+    box-shadow: 0 0 0 2px var(--tertiary);
   }
 
   .badge {
     margin-left: 0.35rem;
     padding: 0 0.35rem;
     border-radius: 999px;
-    background: var(--star);
-    color: #000;
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
     font-size: 0.75rem;
   }
 

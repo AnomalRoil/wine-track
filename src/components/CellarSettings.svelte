@@ -6,6 +6,7 @@
   import type { Cellar } from '../lib/types'
   import StorageBadge from './StorageBadge.svelte'
   import StorageChecklist from './StorageChecklist.svelte'
+  import Icon from './Icon.svelte'
 
   let newName = $state('')
   /** Cellar awaiting a decision about its bottles before deletion. */
@@ -67,7 +68,7 @@
 {#each cellars as cellar, i (cellar.id)}
   <div class="row cellar">
     <span class="grow">{cellarName(cellar.id)} <span class="muted">· {t('cellar.bottles', { n: bottlesIn(cellar.id) })}</span></span>
-    {#if i > 0}<button class="link" aria-label={t('cellar.up')} onclick={() => moveUp(i)}>↑</button>{/if}
+    {#if i > 0}<button class="link" aria-label={t('cellar.up')} onclick={() => moveUp(i)}><Icon name="up" size={20} /></button>{/if}
     <button class="link" onclick={() => rename(cellar)}>{t('cellar.rename')}</button>
     <button class="link danger" onclick={() => startDelete(cellar)}>{t('cellar.delete')}</button>
   </div>

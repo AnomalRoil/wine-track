@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '../lib/i18n.svelte'
+  import Icon from './Icon.svelte'
   let {
     values = $bindable(),
     id,
@@ -25,7 +27,7 @@
 {#if values.length > 0}
   <div class="chips wrap">
     {#each values as value (value)}
-      <button type="button" class="chip active" onclick={() => remove(value)}>{value} ✕</button>
+      <button type="button" class="chip input" aria-label={t('form.remove', { value })} onclick={() => remove(value)}>{value}<Icon name="close" size={16} /></button>
     {/each}
   </div>
 {/if}

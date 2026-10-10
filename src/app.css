@@ -462,3 +462,55 @@ span.chip {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A file picker label shown as a tonal (or .primary filled) button. */
+label.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 1.25rem;
+  border-radius: var(--shape-full);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: 1rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+label.button.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+label.button input {
+  display: none;
+}
+
+label.button:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Removable value chip. */
+.chip.input {
+  padding-right: 0.5rem;
+  background: var(--secondary-container);
+  border-color: transparent;
+  color: var(--on-secondary-container);
+}
+
+/* A muted line led by an icon. */
+.hint,
+.warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+
+.warn svg {
+  color: var(--error);
+}

@@ -4,6 +4,7 @@
   import { cellarName } from '../lib/labels'
   import { shortenedUntil, shortenedYear, worstCellar } from '../lib/storage'
   import { currentStock, store } from '../lib/store.svelte'
+  import Icon from './Icon.svelte'
 
   /** `until` is the stored "YYYY-MM-DD" drinking limit or the last year of the window; the hint never changes it. */
   let { wineId, until }: { wineId: string; until: string | number } = $props()
@@ -18,5 +19,5 @@
 </script>
 
 {#if hint}
-  <p class="muted">🌡️ {t(typeof until === 'number' ? 'storage.windowHint' : 'storage.hint', { ...hint, until })}</p>
+  <p class="muted hint"><Icon name="thermometer" size={18} /><span>{t(typeof until === 'number' ? 'storage.windowHint' : 'storage.hint', { ...hint, until })}</span></p>
 {/if}

@@ -5,6 +5,7 @@
   import { store } from '../lib/store.svelte'
   import { aromaFamily, keyAromas } from '../lib/tasting'
   import type { Wine } from '../lib/types'
+  import Icon, { type IconName } from './Icon.svelte'
   import Stars from './Stars.svelte'
 
   let { onopen }: { onopen: (wine: Wine) => void } = $props()
@@ -18,9 +19,9 @@
     return wineLabel(w)
   }
 
-  function icon(e: JournalEntry): string {
-    if (e.type === 'tasting') return '🍷'
-    return { add: '📥', consume: '🥂', gift: '🎁', adjust: '📋', transfer: '⇄' }[e.movement.kind]
+  function icon(e: JournalEntry): IconName {
+    if (e.type === 'tasting') return 'wine'
+    return ({ add: 'plus', consume: 'minus', gift: 'gift', adjust: 'edit', transfer: 'move' } as const)[e.movement.kind]
   }
 
   function detail(e: JournalEntry): string {
@@ -38,7 +39,7 @@
 {:else}
   {#each entries as e (e.type === 'movement' ? e.movement.id : e.tasting.id)}
     <button class="card entry" disabled={!e.wine} onclick={() => e.wine && onopen(e.wine)}>
-      <span class="icon">{icon(e)}</span>
+      <span class="icon"><Icon name={icon(e)} /></span>
       <span class="body">
         <span class="name">{label(e.wine)}</span>
         <span class="muted">{e.date} · {detail(e)}</span>
@@ -46,7 +47,7 @@
           <span class="row"><Stars value={e.tasting.rating} />{#if e.tasting.notes}<span class="muted note">{e.tasting.notes}</span>{/if}</span>
           {#if e.tasting.sheet?.aromas.length}
             <span class="muted note">
-              👃 {#each keyAromas(e.tasting.sheet) as aroma, i (aroma)}{#if i > 0}{', '}{/if}<span class:fault={aromaFamily(aroma) === 'faults'}>{aromaLabel(aroma)}</span>{/each}{#if e.tasting.sheet.aromas.length > 3}…{/if}
+              {#each keyAromas(e.tasting.sheet) as aroma, i (aroma)}{#if i > 0}{', '}{/if}<span class:fault={aromaFamily(aroma) === 'faults'}>{aromaLabel(aroma)}</span>{/each}{#if e.tasting.sheet.aromas.length > 3}…{/if}
             </span>
           {/if}
         {:else if e.movement.note}

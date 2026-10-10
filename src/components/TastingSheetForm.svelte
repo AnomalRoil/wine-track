@@ -8,6 +8,7 @@
   import ChipInput from './ChipInput.svelte'
   import ChoiceRow from './ChoiceRow.svelte'
   import TastingPhotos from './TastingPhotos.svelte'
+  import Icon from './Icon.svelte'
 
   let {
     sheet = $bindable(),
@@ -73,8 +74,8 @@
   <input id="tasting-meal" type="text" bind:value={sheet.meal} />
   <span class="label">{t('tasting.photos')}</span>
   <TastingPhotos ids={sheet.photoIds} {pending} onremove={removePhoto} />
-  <label class="take">
-    📷 {t('tasting.takePhoto')}
+  <label class="button take">
+    <Icon name="camera" size={20} />{t('tasting.takePhoto')}
     <input type="file" accept="image/*" capture="environment" onchange={addPhoto} />
   </label>
   {#if photoFailed}<p class="error">{t('tasting.photoFailed')}</p>{/if}
@@ -133,19 +134,7 @@
   }
 
   .take {
-    display: inline-block;
-    border: 1px solid var(--outline-variant);
-    border-radius: 10px;
-    background: var(--surface-container-low);
-    padding: 0.45rem 0.8rem;
-    margin: 0.2rem 0 0;
-    font-size: 0.9rem;
-    color: var(--on-surface);
-    cursor: pointer;
-  }
-
-  .take input {
-    display: none;
+    margin-top: 0.25rem;
   }
 
   textarea {
