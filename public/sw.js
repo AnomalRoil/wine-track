@@ -1,4 +1,5 @@
-const CACHE = 'wine-track-v1'
+// Bump on any change to an unhashed public file (icons, manifest, favicon): assets are served cache-first.
+const CACHE = 'wine-track-v2'
 const SHELL = new URL('.', self.registration.scope).pathname
 
 self.addEventListener('install', () => self.skipWaiting())
@@ -13,7 +14,7 @@ self.addEventListener('activate', (event) => {
 })
 
 // Navigations: network-first so new deploys are picked up, cached shell offline.
-// Same-origin assets: cache-first — Vite filenames are hashed, hence immutable.
+// Same-origin assets: cache-first — Vite filenames are hashed, public files are versioned by query and CACHE.
 self.addEventListener('fetch', (event) => {
   const request = event.request
   if (request.method !== 'GET') return
