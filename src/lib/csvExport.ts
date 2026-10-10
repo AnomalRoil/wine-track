@@ -41,6 +41,7 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
       wine.peakFrom,
       wine.peakUntil,
       wine.drinkUntil,
+      wine.lwin,
     ])
   }
 

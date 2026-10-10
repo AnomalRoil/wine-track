@@ -23,6 +23,7 @@ export const COLUMNS = [
   'peak_from',
   'peak_until',
   'drink_until',
+  'lwin',
 ] as const
 export type Column = (typeof COLUMNS)[number]
 
@@ -45,6 +46,7 @@ export const HEADERS: Record<Column, string> = {
   peak_from: 'peak from',
   peak_until: 'peak until',
   drink_until: 'drink until',
+  lwin: 'lwin',
 }
 
 /** Lowercase, without accents, spaces or punctuation: "Größe (cl)" → "grossecl". */
@@ -76,6 +78,7 @@ const HEADER_ALIASES: Record<Column, string[]> = {
   peak_from: ['peakfrom', 'debutapogee', 'apogeeapartirde', 'hohepunktab'],
   peak_until: ['peakuntil', 'finapogee', 'apogeejusqua', 'hohepunktbis'],
   drink_until: ['drinkuntil', 'aboirejusqua', 'jusqua', 'trinkenbis'],
+  lwin: ['lwin', 'lwin7', 'lwincode'],
 }
 
 /** CSV column of each drinking-window year. */
@@ -116,7 +119,7 @@ for (const size of BOTTLE_SIZES) {
   for (const m of [core.en, core.fr, core.de]) SIZE_ALIASES.set(fold(m[`size.${size.name}`]), size.cl)
 }
 
-export type RowError = 'missing-name' | 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window'
+export type RowError = 'missing-name' | 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window' | 'lwin'
 
 /** Drinking-window years of a row; all null when the row has none. */
 export type WindowYears = Pick<Aging, (typeof WINDOW_KEYS)[number]>
@@ -161,6 +164,12 @@ export function parseNumber(raw: string): number {
   s = s.replace(/^(-?)\./, '$10.')
   const n = /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN
   return Number.isFinite(n) ? n : NaN
+}
+
+/** "1066553", "1066553.0" or a longer LWIN (LWIN11, 16, 18) → "1066553"; null otherwise. */
+function parseLwinCode(raw: string): string | null {
+  const digits = raw.trim().replace(/\.0+$/, '')
+  return /^\d{7}(\d{4}|\d{9}|\d{11})?$/.test(digits) ? digits.slice(0, 7) : null
 }
 
 function parseVintage(raw: string, maxYear: number): number | null | undefined {
@@ -254,6 +263,10 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
       else if (!errors.includes('window')) errors.push('window')
     }
 
+    const rawLwin = get('lwin')
+    const lwin = rawLwin === '' ? null : parseLwinCode(rawLwin)
+    if (rawLwin !== '' && lwin === null) errors.push('lwin')
+
     const name = get('name')
     const producer = get('producer')
     if (!name && !producer) errors.push('missing-name')
@@ -271,6 +284,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
         color: color ?? 'other',
         sizeCl: sizeCl ?? STANDARD_SIZE_CL,
         tags: parseList(get('tags')),
+        lwin,
       },
       quantity: errors.includes('quantity') ? 0 : quantity,
       price: errors.includes('price') ? null : price,

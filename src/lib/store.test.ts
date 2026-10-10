@@ -6,6 +6,7 @@ import { place } from './racks'
 import { emptySheet } from './tasting'
 import {
   addMovements,
+  addToWine,
   addWine,
   applyImport,
   backupSnapshot,
@@ -306,6 +307,67 @@ it('keeps nothing of a capture whose cellar was deleted while it waited', async 
   expect(db.putWine).not.toHaveBeenCalled()
   expect(store.wines.map((w) => w.id)).toEqual(['w1'])
   expect(store.movements).toEqual([])
+})
+
+/** Adds bottles to a duplicate once its photo, held until the test releases it, is processed. */
+function addToDuplicate(quantity: number) {
+  let processed!: (blob: Blob) => void
+  const processing = new Promise<Blob>((resolve) => (processed = resolve))
+  const added = (async () => {
+    const since = storeGeneration()
+    const blob = await processing
+    return addToWine('w1', { id: 'p', blob }, [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity })], since)
+  })()
+  return { added, processed: () => processed(new Blob()) }
+}
+
+it('keeps edits made to a duplicate while its photo was processing', async () => {
+  const { added, processed } = addToDuplicate(2)
+  const edited = patchWine('w1', () => ({ name: 'Renamed', wished: true }))
+  await release(edited)
+  processed()
+  await release(added)
+
+  expect(await added).toMatchObject({ name: 'Renamed', wished: true, photoId: 'p' })
+  expect(store.wines).toEqual([expect.objectContaining({ name: 'Renamed', wished: true, photoId: 'p' })])
+  expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[0]).toEqual(store.wines[0])
+  expect(store.movements.map((m) => m.id)).toEqual(['m'])
+})
+
+it('keeps a duplicate deleted while its photo was processing', async () => {
+  const { added, processed } = addToDuplicate(2)
+  await release(removeWine(makeWine()))
+  processed()
+  await release(added)
+
+  expect(await added).toBeNull()
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(store.wines).toEqual([])
+  expect(store.movements).toEqual([])
+})
+
+it('drops bottles added to a duplicate when a backup was restored meanwhile', async () => {
+  const backup: db.Data = { wines: [makeWine()], tastings: [], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
+  vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
+  const { added, processed } = addToDuplicate(2)
+  await release(restore(backup, []))
+  processed()
+  await release(added)
+
+  expect(await added).toBeNull()
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(store.movements).toEqual([])
+})
+
+it('keeps the photo a duplicate gained meanwhile', async () => {
+  const { added, processed } = addToDuplicate(1)
+  await release(patchWine('w1', () => ({ photoId: 'mine' })))
+  processed()
+  await release(added)
+
+  expect(await added).toMatchObject({ photoId: 'mine' })
+  expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[1]).toBeNull()
+  expect(store.movements.map((m) => m.id)).toEqual(['m'])
 })
 
 it('keeps nothing of a capture whose write fails', async () => {

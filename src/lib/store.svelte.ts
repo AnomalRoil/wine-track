@@ -1,6 +1,5 @@
-import { withAging } from './aging'
 import * as db from './db'
-import { defaultCellar, normalizeCellar } from './migrate'
+import { defaultCellar, normalizeCellar, normalizeWine } from './migrate'
 import { canRecord, canRemoveCellar, computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
 import { planImport, type ImportPlan, type ImportRow, type PlanContext } from './csvImport'
@@ -72,7 +71,7 @@ export function restore(data: db.Data, photos: Photo[]): Promise<void> {
 export function backupSnapshot(): Promise<{ data: db.Data; photos: Photo[] }> {
   return writes(async () => {
     const { data, photos } = await db.snapshot()
-    const normalized = { ...data, wines: data.wines.map(withAging), tastings: data.tastings.map(normalizeTasting), cellars: data.cellars.map(normalizeCellar) }
+    const normalized = { ...data, wines: data.wines.map(normalizeWine), tastings: data.tastings.map(normalizeTasting), cellars: data.cellars.map(normalizeCellar) }
     return { data: normalized, photos }
   })
 }
@@ -83,7 +82,7 @@ async function load(): Promise<void> {
     all.cellars = [defaultCellar()]
     await db.putCellars(all.cellars)
   }
-  store.wines = all.wines.map(withAging)
+  store.wines = all.wines.map(normalizeWine)
   store.tastings = all.tastings.map(normalizeTasting)
   store.cellars = all.cellars.map(normalizeCellar)
   store.movements = all.movements
@@ -162,6 +161,32 @@ export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], 
     store.wines.push(wine)
     store.movements.push(...movements)
     return true
+  })
+}
+
+/**
+ * Adds stock additions to a stored wine, giving it `photo` when it has none yet, all or
+ * nothing. Returns the wine as saved; null when it is gone, a restore ran since `since`,
+ * an addition's cellar is gone, or the write fails.
+ */
+export function addToWine(id: string, photo: Photo | null, movements: Movement[], since: number): Promise<Wine | null> {
+  return writes(async () => {
+    if (since !== generation) return null
+    const i = store.wines.findIndex((w) => w.id === id)
+    if (i < 0) return null
+    if (!canRecord(stock, movements, new Set(store.wines.map((w) => w.id)), new Set(store.cellars.map((c) => c.id)))) return null
+    const current = store.wines[i]
+    const newPhoto = current.photoId ? null : photo
+    if (!newPhoto && movements.length === 0) return current
+    const wine = newPhoto ? { ...current, photoId: newPhoto.id } : current
+    try {
+      await db.putWine($state.snapshot(wine), newPhoto, movements)
+    } catch {
+      return null
+    }
+    store.wines[i] = wine
+    store.movements.push(...movements)
+    return wine
   })
 }
 

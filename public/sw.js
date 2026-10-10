@@ -33,6 +33,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
   if (url.origin !== location.origin) return
+  // The wine names database lives in IndexedDB once downloaded; caching it too would double its size and hide updates.
+  if (url.pathname.startsWith(`${SHELL}lwin/`)) return
 
   event.respondWith(
     caches.match(request).then(

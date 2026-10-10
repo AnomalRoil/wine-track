@@ -22,10 +22,11 @@ function fakeDb() {
 describe('upgrade', () => {
   const cases = [
     {
-      name: 'from v2 adds racks and placements only',
+      name: 'from v2 adds racks, placements and the cache',
       oldVersion: 2,
-      want: { racks: ['cellarId'], placements: ['rackId', 'wineId'] },
+      want: { racks: ['cellarId'], placements: ['rackId', 'wineId'], cache: [] },
     },
+    { name: 'from v3 adds the cache only', oldVersion: 3, want: { cache: [] } },
     {
       name: 'from scratch creates every store',
       oldVersion: 0,
@@ -37,9 +38,10 @@ describe('upgrade', () => {
         movements: ['wineId'],
         racks: ['cellarId'],
         placements: ['rackId', 'wineId'],
+        cache: [],
       },
     },
-    { name: 'at v3 changes nothing', oldVersion: 3, want: {} },
+    { name: 'at v4 changes nothing', oldVersion: 4, want: {} },
   ]
   for (const c of cases) {
     it(c.name, () => {

@@ -10,6 +10,7 @@ const wine = makeWine({
   name: 'Chablis',
   photoId: 'p1',
   tags: ['Fish'],
+  lwin: '1066540',
   value: 30,
   valueHistory: [
     { date: '2026-08-20', value: 25 },
@@ -42,8 +43,8 @@ describe('backup', () => {
     expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo, tastingPhoto] })
   })
 
-  it('fills aging fields missing from an older version 2 backup', () => {
-    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, ...older } = wine
+  it('fills aging fields and the LWIN missing from an older version 2 backup', () => {
+    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, lwin, ...older } = wine
     const json = JSON.stringify({
       app: 'wine-track',
       version: 2,
@@ -54,7 +55,7 @@ describe('backup', () => {
       movements: [],
       photos: [],
     })
-    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING }])
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING, lwin: null }])
   })
 
   it('reads a version 2 backup made before racks existed', () => {

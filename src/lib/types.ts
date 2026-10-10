@@ -89,6 +89,8 @@ export interface Wine extends Aging {
   color: WineColor
   sizeCl: number
   tags: string[]
+  /** LWIN7 code from the wine names database, or null. */
+  lwin: string | null
   /** On the wishlist: wanted, regardless of stock. */
   wished: boolean
   /** Latest estimated value of one bottle, in the settings currency. */

@@ -1,8 +1,9 @@
+import type { LwinMeta } from './lwin'
 import { defaultCellar, migrateWinesV1, type WineV1 } from './migrate'
 import type { Cellar, Movement, Photo, Placement, Rack, Tasting, Wine } from './types'
 
 const DB_NAME = 'wine-track'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 let db: IDBDatabase | null = null
 
@@ -64,6 +65,10 @@ export function upgrade(d: IDBDatabase, tx: IDBTransaction, oldVersion: number):
     const placements = d.createObjectStore('placements', { keyPath: 'id' })
     placements.createIndex('rackId', 'rackId')
     placements.createIndex('wineId', 'wineId')
+  }
+  if (oldVersion < 4) {
+    // Downloaded reference data, keyed by name; never part of a backup.
+    d.createObjectStore('cache')
   }
 }
 
@@ -255,4 +260,48 @@ export async function replaceAll(data: Data, photos: Photo[]): Promise<void> {
   for (const p of data.placements) tx.objectStore('placements').put(p)
   for (const p of photos) tx.objectStore('photos').put(p)
   await done(tx)
+}
+
+/** The wine names database as downloaded: its description and the decompressed data file. */
+export interface LwinCache {
+  meta: LwinMeta
+  data: Blob
+}
+
+const LWIN_KEY = 'lwin'
+
+export async function getLwin(): Promise<LwinCache | undefined> {
+  const d = await openDb()
+  return req(d.transaction('cache').objectStore('cache').get(LWIN_KEY) as IDBRequest<LwinCache | undefined>)
+}
+
+export async function putLwin(cache: LwinCache): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction('cache', 'readwrite')
+  tx.objectStore('cache').put(cache, LWIN_KEY)
+  await done(tx)
+}
+
+export async function deleteLwin(): Promise<void> {
+  const d = await openDb()
+  const tx = d.transaction('cache', 'readwrite')
+  tx.objectStore('cache').delete(LWIN_KEY)
+  await done(tx)
+}
+
+/**
+ * Reads the wine names database from a worker, through a short-lived connection
+ * at the current version so it never upgrades nor blocks the page's upgrades.
+ */
+export async function readLwin(): Promise<LwinCache | undefined> {
+  const r = indexedDB.open(DB_NAME)
+  // The page creates the database; a worker must not create an empty one first.
+  r.onupgradeneeded = () => r.transaction!.abort()
+  const d = await req(r)
+  try {
+    if (!d.objectStoreNames.contains('cache')) return undefined
+    return await req(d.transaction('cache').objectStore('cache').get(LWIN_KEY) as IDBRequest<LwinCache | undefined>)
+  } finally {
+    d.close()
+  }
 }

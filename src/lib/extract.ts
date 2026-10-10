@@ -64,6 +64,8 @@ export interface WineDraft {
   color: WineColor
   sizeCl: number
   tags: string[]
+  /** LWIN7 code, set when the wine was picked from the wine names database. */
+  lwin: string | null
 }
 
 export function emptyDraft(): WineDraft {
@@ -77,6 +79,7 @@ export function emptyDraft(): WineDraft {
     color: 'red',
     sizeCl: STANDARD_SIZE_CL,
     tags: [],
+    lwin: null,
   }
 }
 
@@ -92,6 +95,7 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
     color: e.color === 'unknown' ? 'other' : e.color,
     sizeCl: e.volumeCl && e.volumeCl > 0 ? e.volumeCl : STANDARD_SIZE_CL,
     tags: [],
+    lwin: null,
   }
 }
 
