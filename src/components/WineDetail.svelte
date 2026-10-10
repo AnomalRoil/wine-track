@@ -7,7 +7,7 @@
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel, wineLabel } from '../lib/labels'
-  import { removeTasting, removeWine, saveWine, store, tastingsFor } from '../lib/store.svelte'
+  import { patchWine, removeTasting, removeWine, store, tastingsFor } from '../lib/store.svelte'
   import type { Tasting, Wine } from '../lib/types'
   import AgingPanel from './AgingPanel.svelte'
   import PhaseBadge from './PhaseBadge.svelte'
@@ -61,13 +61,14 @@
 
   async function saveEdit() {
     if (!wine) return
-    await saveWine({ ...wine, ...$state.snapshot(draft) })
+    const fields = $state.snapshot(draft)
+    await patchWine(wine.id, () => fields)
     editing = false
   }
 
   async function update(patch: Partial<Wine>) {
     if (!wine) return
-    await saveWine({ ...wine, ...patch })
+    await patchWine(wine.id, () => patch)
   }
 
   async function del() {
@@ -131,7 +132,7 @@
     <span class="chip card">{sizeLabel(wine.sizeCl)}</span>
     {#each wine.tags as tag (tag)}<span class="chip card">#{tag}</span>{/each}
   </div>
-  <button class="chip" class:active={wine.wished} onclick={() => update({ wished: !wine.wished })}>
+  <button class="chip" class:active={wine.wished} onclick={() => patchWine(wine.id, (w) => ({ wished: !w.wished }))}>
     {wine.wished ? `♥ ${t('stock.wished')}` : `♡ ${t('stock.wish')}`}
   </button>
 

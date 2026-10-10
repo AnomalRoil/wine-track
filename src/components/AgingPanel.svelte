@@ -3,7 +3,7 @@
   import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
-  import { saveWine } from '../lib/store.svelte'
+  import { patchWine } from '../lib/store.svelte'
   import type { Aging, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
   import AgingTimeline from './AgingTimeline.svelte'
@@ -30,7 +30,8 @@
     if (saving) return
     saving = true
     try {
-      await saveWine({ ...wine, ...cleanAging($state.snapshot(draft)) })
+      const aging = cleanAging($state.snapshot(draft))
+      await patchWine(wine.id, () => aging)
     } finally {
       saving = false
     }

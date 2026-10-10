@@ -100,11 +100,12 @@ export function movementsFor(wineId: string): Movement[] {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
-/** Saves an edited wine. False when it is gone. */
-export function saveWine(wine: Wine): Promise<boolean> {
+/** Changes a wine, applying `patch` to the wine as the previous writes left it. False when it is gone. */
+export function patchWine(id: string, patch: (wine: Wine) => Partial<Wine>): Promise<boolean> {
   return writes(async () => {
-    const i = store.wines.findIndex((w) => w.id === wine.id)
+    const i = store.wines.findIndex((w) => w.id === id)
     if (i < 0) return false
+    const wine = { ...store.wines[i], ...patch($state.snapshot(store.wines[i])) }
     await db.putWine($state.snapshot(wine))
     store.wines[i] = wine
     return true

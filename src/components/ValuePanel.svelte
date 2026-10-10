@@ -4,7 +4,7 @@
   import { money } from '../lib/money'
   import { settings } from '../lib/settings.svelte'
   import { averageBuyPrice, bottlesOf } from '../lib/stock'
-  import { currentStock, saveWine, store } from '../lib/store.svelte'
+  import { currentStock, patchWine, store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
 
   let { wine }: { wine: Wine } = $props()
@@ -23,8 +23,7 @@
     if (value === wine.value) return
     // One point per day: a same-day correction replaces the earlier entry.
     const date = today()
-    const history = [...wine.valueHistory.filter((p) => p.date !== date), { date, value }]
-    await saveWine({ ...wine, value, valueHistory: history })
+    await patchWine(wine.id, (w) => ({ value, valueHistory: [...w.valueHistory.filter((p) => p.date !== date), { date, value }] }))
   }
 </script>
 

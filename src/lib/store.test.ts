@@ -13,8 +13,8 @@ import {
   removeCellar,
   removeWine,
   restore,
+  patchWine,
   saveTasting,
-  saveWine,
   store,
   storeGeneration,
   swapCellars,
@@ -220,6 +220,16 @@ it('adds to the wines of an import already committed instead of duplicating them
   expect(store.movements).toHaveLength(2)
 })
 
+it('keeps every field of overlapping wine edits', async () => {
+  const aging = patchWine('w1', () => ({ drinkFrom: 2028, drinkUntil: 2040 }))
+  const value = patchWine('w1', (w) => ({ value: 30, valueHistory: [...w.valueHistory, { date: '2026-01-01', value: 30 }] }))
+  const wished = patchWine('w1', (w) => ({ wished: !w.wished }))
+  await release(aging, value, wished)
+
+  expect(store.wines[0]).toMatchObject({ drinkFrom: 2028, drinkUntil: 2040, value: 30, valueHistory: [{ date: '2026-01-01', value: 30 }], wished: true })
+  expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[0]).toEqual(store.wines[0])
+})
+
 it('drops a capture whose photo was still processing when a backup was restored', async () => {
   const backup: db.Data = { wines: [makeWine({ id: 'old' })], tastings: [], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
   vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
@@ -246,7 +256,7 @@ it('drops a capture whose photo was still processing when a backup was restored'
 it('keeps a wine and its tastings deleted while an edit waited', async () => {
   const wine = makeWine()
   const removed = removeWine(wine)
-  const edited = saveWine({ ...wine, name: 'Renamed' })
+  const edited = patchWine(wine.id, () => ({ name: 'Renamed' }))
   const tasted = saveTasting({ id: 't', wineId: wine.id, date: '2026-01-01', rating: 4, notes: '' })
   await release(removed, edited, tasted)
 
