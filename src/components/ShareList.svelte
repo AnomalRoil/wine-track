@@ -27,7 +27,7 @@
   const percent = $derived(new Intl.NumberFormat(settings.locale, { style: 'percent', maximumFractionDigits: 0 }))
 
   function colorOf(i: number): string {
-    return i < STACKED ? `var(--series-${i + 1})` : 'var(--border)'
+    return i < STACKED ? `var(--series-${i + 1})` : 'var(--outline-variant)'
   }
 </script>
 

@@ -3,6 +3,7 @@ import type { Messages } from './types'
 export const en = {
   'tasting.sheet': 'Detailed tasting sheet',
   'tasting.edit': 'Edit tasting',
+  'tasting.delete': 'Delete tasting',
   'tasting.context': 'Context',
   'tasting.people': 'Who was there',
   'tasting.addPerson': 'Add a person…',
@@ -151,6 +152,7 @@ export const en = {
 export const fr: Messages<typeof en> = {
   'tasting.sheet': 'Fiche de dégustation détaillée',
   'tasting.edit': 'Modifier la dégustation',
+  'tasting.delete': 'Supprimer la dégustation',
   'tasting.context': 'Contexte',
   'tasting.people': 'Avec qui',
   'tasting.addPerson': 'Ajouter une personne…',
@@ -299,6 +301,7 @@ export const fr: Messages<typeof en> = {
 export const de: Messages<typeof en> = {
   'tasting.sheet': 'Ausführliches Verkostungsblatt',
   'tasting.edit': 'Verkostung bearbeiten',
+  'tasting.delete': 'Verkostung löschen',
   'tasting.context': 'Rahmen',
   'tasting.people': 'Wer war dabei',
   'tasting.addPerson': 'Person hinzufügen…',

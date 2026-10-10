@@ -6,6 +6,8 @@
   import { makeThumb } from '../lib/photo'
   import { saveThumb, storeGeneration } from '../lib/store.svelte'
   import type { Photo, Wine } from '../lib/types'
+  import BottleGlyph from './BottleGlyph.svelte'
+  import Icon from './Icon.svelte'
   import PhaseBadge from './PhaseBadge.svelte'
   import Stars from './Stars.svelte'
 
@@ -44,51 +46,48 @@
   })
 </script>
 
-<button class="card wine" onclick={() => onopen(wine)}>
-  <span class="thumb" class:placeholder={!photoUrl}>
+<button class="group-item wine" onclick={() => onopen(wine)}>
+  <span class="thumb wine-{wine.color}">
     {#if photoUrl}
       <img src={photoUrl} alt="" />
     {:else}
-      🍾
+      <BottleGlyph color={wine.color} />
     {/if}
   </span>
   <span class="info">
     <span class="name">{wine.name || wine.producer}</span>
-    <span class="muted">
+    <span class="sub">
       {wine.producer}{wine.producer && wine.vintage ? ' · ' : ''}{wine.vintage ?? ''}
     </span>
-    <span class="meta">
-      <span class="dot {wine.color}"></span>
-      {#if phase}<PhaseBadge {phase} />{/if}
-      {#if rating !== null}<Stars value={rating} />{/if}
-      {#if bottles > 0}
-        <span class="badge">{t('list.bottles', { n: bottles })}</span>
-      {/if}
-      {#if wine.wished}<span class="wish">♥</span>{/if}
-    </span>
+    {#if phase || rating !== null || wine.wished}
+      <span class="meta">
+        {#if phase}<PhaseBadge {phase} />{/if}
+        {#if rating !== null}<Stars value={rating} />{/if}
+        {#if wine.wished}<span class="wish"><Icon name="heart" size={16} filled label={t('stock.wished')} /></span>{/if}
+      </span>
+    {/if}
   </span>
+  {#if bottles > 0}
+    <span class="count" title={t('list.bottles', { n: bottles })}>{bottles}</span>
+  {/if}
 </button>
 
 <style>
   .wine {
-    display: flex;
-    gap: 0.75rem;
-    width: 100%;
-    text-align: left;
-    align-items: center;
+    gap: 14px;
+    padding: 12px 16px 12px 12px;
   }
 
   .thumb {
     width: 56px;
     height: 56px;
-    border-radius: 8px;
+    border-radius: var(--shape-m);
     overflow: hidden;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    background: var(--bg);
+    background: var(--tint);
   }
 
   .thumb img {
@@ -98,14 +97,24 @@
   }
 
   .info {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 2px;
     min-width: 0;
   }
 
   .name {
-    font-weight: 600;
+    font-weight: 650;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sub {
+    font-size: 0.875rem;
+    color: var(--on-surface-variant);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -115,37 +124,34 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.2rem 0.5rem;
+    gap: 0.25rem 0.5rem;
+    margin-top: 3px;
     font-size: 0.8rem;
   }
 
-  .badge {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0 0.5rem;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-
   .wish {
-    color: var(--accent);
+    display: flex;
+    color: var(--primary);
   }
 
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
+  .count {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    background: var(--surface-container);
+    color: var(--on-primary-container);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 
-  .dot.red { background: #7c2231; }
-  .dot.white { background: #f2e8b8; }
-  .dot.rose { background: #f4b8c0; }
-  .dot.orange { background: #e08a3c; }
-  .dot.sparkling { background: #f7e7a8; }
-  .dot.sweet { background: #d9a441; }
-  .dot.fortified { background: #5e2b1e; }
-  .dot.other { background: var(--muted); }
+  @media (prefers-color-scheme: dark) {
+    .count {
+      background: var(--surface-container-highest);
+    }
+  }
 </style>

@@ -1,60 +1,56 @@
 <script lang="ts">
-  import { segmentYears, type Timeline } from '../lib/aging'
+  import { phaseOf, type Timeline } from '../lib/aging'
   import { t } from '../lib/i18n.svelte'
+  import type { Aging } from '../lib/types'
 
-  let { timeline, year }: { timeline: Timeline; year: number } = $props()
+  let { timeline, aging, year }: { timeline: Timeline; aging: Aging; year: number } = $props()
 
-  const span = $derived(timeline.end - timeline.start)
-  const pct = (years: number) => `${(years / span) * 100}%`
+  const WIDTH = 300
+  const phase = $derived(phaseOf(aging, year) ?? 'maturity')
+  /** x where today falls: a wave up to it, a flat track after. */
+  const today = $derived(
+    Math.round(Math.min(1, Math.max(0, (year + 0.5 - timeline.start) / (timeline.end - timeline.start))) * WIDTH),
+  )
+  const wave = $derived.by(() => {
+    const points = []
+    for (let x = 2; x <= Math.max(2, today); x += 2) points.push(`${x},${(8 + 3 * Math.sin((x / 22) * Math.PI * 2)).toFixed(1)}`)
+    return `M${points.join('L')}`
+  })
 </script>
 
-<div class="bar">
-  {#each timeline.segments as s (s.from)}
-    <span style:width={pct(s.to - s.from)} style:background="var(--phase-{s.phase})"></span>
-  {/each}
-  <span class="now" style:left={pct(year + 0.5 - timeline.start)} title={t('aging.now')}></span>
-</div>
-<div class="legend">
-  {#each timeline.segments as s, i (s.from)}
-    <span class="muted">
-      <span class="dot" style:background="var(--phase-{s.phase})"></span>
-      {t(`aging.phase.${s.phase}`)}
-      {segmentYears(s, i === timeline.segments.length - 1)}
-    </span>
-  {/each}
-</div>
+<svg
+  viewBox="0 0 {WIDTH} 16"
+  preserveAspectRatio="none"
+  role="img"
+  aria-label="{t('aging.title')}: {timeline.start}–{timeline.end - 1}, {t('aging.now')} {year}"
+  style:--ink="var(--on-phase-{phase})"
+  style:--track="var(--phase-{phase})"
+>
+  <path class="wave" d={wave} />
+  {#if today < WIDTH - 12}<path class="track" d="M{today + 10} 8H{WIDTH - 8}" />{/if}
+  <path class="wave" d="M{WIDTH - 2} 8h0" />
+</svg>
 
 <style>
-  .bar {
-    position: relative;
-    display: flex;
-    height: 14px;
-    border-radius: 7px;
-    overflow: hidden;
-    margin-top: 0.5rem;
+  svg {
+    display: block;
+    width: 100%;
+    height: 16px;
+    overflow: visible;
   }
 
-  .now {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    margin-left: -1.5px;
-    background: var(--text);
-    box-shadow: 0 0 0 1px var(--surface);
+  path {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
   }
 
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.9rem;
-    margin-top: 0.25rem;
+  .wave {
+    stroke: var(--ink);
   }
 
-  .dot {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
+  .track {
+    stroke: var(--track);
   }
 </style>

@@ -2,6 +2,8 @@
   import { t } from '../lib/i18n.svelte'
   import type { Wine } from '../lib/types'
   import Sheet from './Sheet.svelte'
+  import BottleGlyph from './BottleGlyph.svelte'
+  import Icon from './Icon.svelte'
 
   let {
     title,
@@ -36,16 +38,16 @@
 </script>
 
 <Sheet {title} {onclose}>
-  <label class="capture primary">
-    📷 {t('rack.photo')}
+  <label class="button primary capture">
+    <Icon name="camera" size={20} />{t('rack.photo')}
     <input type="file" accept="image/*" capture="environment" onchange={picked} />
   </label>
   <div class="row secondary">
-    <label class="capture">
-      🖼️ {t('rack.gallery')}
+    <label class="button capture">
+      <Icon name="image" size={20} />{t('rack.gallery')}
       <input type="file" accept="image/*" onchange={picked} />
     </label>
-    <button class="capture" onclick={() => onnew(null)}>✎ {t('rack.manual')}</button>
+    <button class="tonal capture" onclick={() => onnew(null)}><Icon name="edit" size={20} />{t('rack.manual')}</button>
   </div>
 
   <h2>{t('rack.pick')}</h2>
@@ -55,10 +57,10 @@
     {#if placeable.length > 5}
       <input type="search" placeholder={t('list.search')} bind:value={search} />
     {/if}
-    <div class="list">
+    <div class="group list">
       {#each shown as { wine, n } (wine.id)}
-        <button class="card pick" onclick={() => onpick(wine)}>
-          <span class="dot {wine.color}"></span>
+        <button class="group-item pick" onclick={() => onpick(wine)}>
+          <BottleGlyph color={wine.color} size={28} />
           <span class="name">{wine.name || wine.producer}</span>
           <span class="muted">{wine.vintage ?? ''}</span>
           <span class="badge">×{n}</span>
@@ -70,28 +72,8 @@
 
 <style>
   .capture {
-    display: block;
-    margin: 0.5rem 0 0;
-    padding: 0.8rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.95rem;
-    text-align: center;
-    cursor: pointer;
-  }
-
-  .capture.primary {
-    padding: 1rem;
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text);
-    font-size: 1.05rem;
-  }
-
-  .capture input {
-    display: none;
+    display: flex;
+    margin-top: 0.5rem;
   }
 
   .secondary > * {
@@ -103,7 +85,6 @@
   .list {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
     margin-top: 0.5rem;
   }
 
@@ -125,24 +106,7 @@
   }
 
   .badge {
-    color: var(--muted);
+    color: var(--on-surface-variant);
     font-size: 0.85rem;
   }
-
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .dot.red { background: #7c2231; }
-  .dot.white { background: #f2e8b8; }
-  .dot.rose { background: #f4b8c0; }
-  .dot.orange { background: #e08a3c; }
-  .dot.sparkling { background: #f7e7a8; }
-  .dot.sweet { background: #d9a441; }
-  .dot.fortified { background: #5e2b1e; }
-  .dot.other { background: var(--muted); }
 </style>

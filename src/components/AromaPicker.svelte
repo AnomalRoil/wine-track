@@ -2,6 +2,7 @@
   import { t, type MessageKey } from '../lib/i18n.svelte'
   import { aromaLabel } from '../lib/labels'
   import { AROMA_FAMILIES, AROMA_GROUPS, aromaFamily, sortedAromas, type AromaFamily } from '../lib/tasting'
+  import Icon from './Icon.svelte'
 
   let { aromas = $bindable() }: { aromas: string[] } = $props()
 
@@ -21,7 +22,7 @@
 {#if aromas.length > 0}
   <div class="chips wrap">
     {#each sortedAromas(aromas) as aroma (aroma)}
-      <button type="button" class="chip active" onclick={() => toggle(aroma)}>{aromaLabel(aroma)} ✕</button>
+      <button type="button" class="chip input" aria-label={t('form.remove', { value: aromaLabel(aroma) })} onclick={() => toggle(aroma)}>{aromaLabel(aroma)}<Icon name="close" size={16} /></button>
     {/each}
   </div>
 {/if}
@@ -53,8 +54,8 @@
   }
 
   .current {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--primary);
+    color: var(--primary);
     font-weight: 600;
   }
 
@@ -62,8 +63,8 @@
     margin-left: 0.35rem;
     padding: 0 0.4rem;
     border-radius: 999px;
-    background: var(--accent);
-    color: var(--accent-text);
+    background: var(--primary);
+    color: var(--on-primary);
     font-size: 0.75rem;
   }
 
@@ -75,6 +76,6 @@
     display: block;
     margin-top: 0.3rem;
     font-size: 0.8rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 </style>

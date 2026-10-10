@@ -28,7 +28,7 @@
     display: block;
     margin: 0.6rem 0 0.1rem;
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   .wrap {
@@ -41,7 +41,7 @@
     height: 0.8rem;
     margin-right: 0.35rem;
     border-radius: 50%;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     vertical-align: -0.1rem;
   }
 </style>

@@ -44,7 +44,7 @@
 
   legend {
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
     padding: 0;
   }
 

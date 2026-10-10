@@ -19,8 +19,8 @@
     padding: 0.1rem 0.55rem;
     font-size: 0.8rem;
     white-space: nowrap;
-    border: 1px solid var(--border);
-    color: var(--muted);
+    border: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
   }
 
   .good {
@@ -34,7 +34,7 @@
   }
 
   .poor {
-    color: var(--danger);
+    color: var(--error);
     border-color: currentColor;
   }
 </style>

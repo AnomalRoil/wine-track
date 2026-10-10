@@ -5,7 +5,6 @@ export const en = {
   'app.blocked': 'Wine Track is updating. Close its other tabs or windows to continue.',
 
   'tab.wines': 'Wines',
-  'tab.add': 'Add',
   'tab.due': 'Due',
   'tab.settings': 'Settings',
 
@@ -30,6 +29,9 @@ export const en = {
   'list.minRating': 'Min rating',
   'list.clear': 'Clear filters',
   'list.bottles': '{n} bottle(s)',
+  'list.summary': '{bottles} bottle(s) · {wines} wine(s)',
+  'list.drinkNow': 'Drink now',
+  'list.sort': 'Sort by',
 
   'sort.recent': 'Recent',
   'sort.name': 'Name',
@@ -70,6 +72,7 @@ export const en = {
   'form.color': 'Type',
   'form.save': 'Save',
   'form.cancel': 'Cancel',
+  'form.remove': 'Remove {value}',
   'form.stale': 'Something changed in the meantime. Check and try again.',
 
   'detail.drinkBy': 'Drink before',
@@ -85,6 +88,14 @@ export const en = {
   'detail.delete': 'Delete',
   'detail.deleteConfirm': 'Delete this wine, its photo and {n} tasting(s)?',
   'detail.noTastings': 'No tastings yet.',
+  'detail.inStock': 'In stock',
+  'detail.valuePerBottle': 'Value per bottle',
+  'detail.gainOnStock': '{amount} on stock',
+  'detail.serveAt': 'Serve at',
+  'detail.decanting': 'Decanting',
+  'detail.set': 'Set',
+  'detail.clear': 'Clear',
+  'detail.movements': '{n} movement(s)',
 
   'tasting.date': 'Date',
   'tasting.rating': 'Rating',
@@ -167,6 +178,8 @@ export const en = {
   'stock.wish': 'Add to wishlist',
   'stock.wished': 'On my wishlist',
   'stock.history': 'History',
+  'stock.drink': 'Drink a bottle',
+  'stock.move': 'Move',
 
   'movement.add': 'Added',
   'movement.consume': 'Drunk',
@@ -210,7 +223,6 @@ export const fr: Messages<typeof en> = {
   'app.blocked': 'Wine Track se met à jour. Fermez ses autres onglets ou fenêtres pour continuer.',
 
   'tab.wines': 'Vins',
-  'tab.add': 'Ajouter',
   'tab.due': 'À boire',
   'tab.settings': 'Réglages',
 
@@ -235,6 +247,9 @@ export const fr: Messages<typeof en> = {
   'list.minRating': 'Note min.',
   'list.clear': 'Effacer les filtres',
   'list.bottles': '{n} bouteille(s)',
+  'list.summary': '{bottles} bouteille(s) · {wines} vin(s)',
+  'list.drinkNow': 'Prêt à boire',
+  'list.sort': 'Trier par',
 
   'sort.recent': 'Récents',
   'sort.name': 'Nom',
@@ -275,6 +290,7 @@ export const fr: Messages<typeof en> = {
   'form.color': 'Type',
   'form.save': 'Enregistrer',
   'form.cancel': 'Annuler',
+  'form.remove': 'Retirer {value}',
   'form.stale': 'Quelque chose a changé entre-temps. Vérifiez et réessayez.',
 
   'detail.drinkBy': 'À boire avant',
@@ -290,6 +306,14 @@ export const fr: Messages<typeof en> = {
   'detail.delete': 'Supprimer',
   'detail.deleteConfirm': 'Supprimer ce vin, sa photo et {n} dégustation(s) ?',
   'detail.noTastings': 'Aucune dégustation.',
+  'detail.inStock': 'En stock',
+  'detail.valuePerBottle': 'Valeur par bouteille',
+  'detail.gainOnStock': '{amount} sur le stock',
+  'detail.serveAt': 'Servir à',
+  'detail.decanting': 'Carafage',
+  'detail.set': 'Définir',
+  'detail.clear': 'Effacer',
+  'detail.movements': '{n} mouvement(s)',
 
   'tasting.date': 'Date',
   'tasting.rating': 'Note',
@@ -372,6 +396,8 @@ export const fr: Messages<typeof en> = {
   'stock.wish': 'Ajouter à mes envies',
   'stock.wished': 'Dans mes envies',
   'stock.history': 'Historique',
+  'stock.drink': 'Boire une bouteille',
+  'stock.move': 'Déplacer',
 
   'movement.add': 'Ajouté',
   'movement.consume': 'Bu',
@@ -415,7 +441,6 @@ export const de: Messages<typeof en> = {
   'app.blocked': 'Wine Track wird aktualisiert. Die anderen Tabs oder Fenster schließen, um fortzufahren.',
 
   'tab.wines': 'Weine',
-  'tab.add': 'Hinzufügen',
   'tab.due': 'Fällig',
   'tab.settings': 'Einstellungen',
 
@@ -440,6 +465,9 @@ export const de: Messages<typeof en> = {
   'list.minRating': 'Mindestbewertung',
   'list.clear': 'Filter zurücksetzen',
   'list.bottles': '{n} Flasche(n)',
+  'list.summary': '{bottles} Flasche(n) · {wines} Wein(e)',
+  'list.drinkNow': 'Trinkreif',
+  'list.sort': 'Sortieren nach',
 
   'sort.recent': 'Neueste',
   'sort.name': 'Name',
@@ -482,6 +510,7 @@ export const de: Messages<typeof en> = {
   'form.color': 'Weintyp',
   'form.save': 'Speichern',
   'form.cancel': 'Abbrechen',
+  'form.remove': '{value} entfernen',
   'form.stale': 'Inzwischen hat sich etwas geändert. Bitte prüfen Sie und versuchen Sie es erneut.',
 
   'detail.drinkBy': 'Trinken vor',
@@ -497,6 +526,14 @@ export const de: Messages<typeof en> = {
   'detail.delete': 'Löschen',
   'detail.deleteConfirm': 'Diesen Wein, sein Foto und {n} Verkostung(en) löschen?',
   'detail.noTastings': 'Noch keine Verkostungen.',
+  'detail.inStock': 'Auf Lager',
+  'detail.valuePerBottle': 'Wert pro Flasche',
+  'detail.gainOnStock': '{amount} auf den Bestand',
+  'detail.serveAt': 'Trinktemperatur',
+  'detail.decanting': 'Dekantieren',
+  'detail.set': 'Festlegen',
+  'detail.clear': 'Löschen',
+  'detail.movements': '{n} Bewegung(en)',
 
   'tasting.date': 'Datum',
   'tasting.rating': 'Bewertung',
@@ -579,6 +616,8 @@ export const de: Messages<typeof en> = {
   'stock.wish': 'Zur Wunschliste hinzufügen',
   'stock.wished': 'Auf meiner Wunschliste',
   'stock.history': 'Verlauf',
+  'stock.drink': 'Flasche trinken',
+  'stock.move': 'Umlagern',
 
   'movement.add': 'Hinzugefügt',
   'movement.consume': 'Getrunken',

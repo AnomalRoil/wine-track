@@ -5,7 +5,7 @@
   import { MAX_COLUMNS, MAX_ROWS, outside, racksOf } from '../lib/racks'
   import { addRack, removeRack, store, updateRack } from '../lib/store.svelte'
   import { RACK_LAYOUTS, type Rack } from '../lib/types'
-  import BottleGlyph from './BottleGlyph.svelte'
+  import SlotBottle from './SlotBottle.svelte'
 
   /** Edits `rack`, or creates one in `cellarId` when it is null. */
   let { rack, cellarId, ondone }: { rack: Rack | null; cellarId: string; ondone: () => void } = $props()
@@ -111,7 +111,7 @@
       >
         <span class="sample {layout}">
           {#each ['red', 'white', 'rose'] as const as color (color)}
-            <span><BottleGlyph {color} {layout} /></span>
+            <span><SlotBottle {color} {layout} /></span>
           {/each}
         </span>
         {t(`rack.layout.${layout}`)}
@@ -130,7 +130,7 @@
 
 <style>
   .error {
-    color: var(--danger);
+    color: var(--error);
     font-size: 0.85rem;
     margin: 0.75rem 0 0;
   }
@@ -145,14 +145,14 @@
     align-items: center;
     margin-top: 0.9rem;
     font-size: 0.95rem;
-    color: var(--text);
+    color: var(--on-surface);
   }
 
   .label {
     display: block;
     margin: 0.9rem 0 0.25rem;
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   .layouts {
@@ -171,8 +171,8 @@
   }
 
   .layout.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
   }
 
   .sample {

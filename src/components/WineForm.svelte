@@ -113,7 +113,7 @@
   <label for="producer">{t('form.producer')}</label>
   <input id="producer" type="text" autocomplete="off" bind:value={draft.producer} oninput={suggest} />
   {#if suggestions.length > 0}
-    <ul class="suggestions card" aria-label={t('lwin.suggestions')}>
+    <ul class="suggestions group" aria-label={t('lwin.suggestions')}>
       {#each suggestions as { wine } (wine.lwin)}
         <li>
           <button type="button" onclick={() => pick(wine)}>
@@ -125,7 +125,7 @@
     </ul>
   {/if}
   {#if draft.lwin}
-    <p class="muted">
+    <p class="muted lwin">
       {t('lwin.code', { code: draft.lwin })}
       <button type="button" class="link" onclick={() => (draft.lwin = null)}>{t('lwin.unlink')}</button>
     </p>
@@ -219,23 +219,34 @@
 
   .suggestions {
     list-style: none;
-    margin: 0.25rem 0 0;
-    padding: 0.25rem;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   .suggestions button {
-    display: flex;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
     width: 100%;
+    min-height: 56px;
+    padding: 0.5rem 1rem;
     border: none;
-    background: none;
+    border-radius: inherit;
+    background: var(--surface-container-high);
+    color: var(--on-surface);
+    font-weight: 600;
     text-align: left;
-    padding: 0.45rem 0.5rem;
-    color: var(--text);
   }
 
-  .suggestions li + li {
-    border-top: 1px solid var(--border);
+  .suggestions .muted {
+    font-weight: 400;
+  }
+
+  .lwin {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0.5rem 0.25rem 0;
   }
 </style>

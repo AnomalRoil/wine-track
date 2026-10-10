@@ -86,7 +86,7 @@
     display: block;
     margin: 0.7rem 0 0.25rem;
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   .link {
