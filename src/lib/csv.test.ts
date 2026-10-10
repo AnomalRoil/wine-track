@@ -14,6 +14,8 @@ describe('parseCsv', () => {
     { name: 'empty', text: '', want: [] },
     { name: 'semicolons after a blank line', text: '\r\n  \na;b\n1,5;2', want: [['a', 'b'], ['1,5', '2']] },
     { name: 'tabs after a blank line', text: '\na\tb\n1\t2', want: [['a', 'b'], ['1', '2']] },
+    { name: 'commas after a tab-only line', text: '\n\t\t\nname,quantity\nClos,2', want: [['name', 'quantity'], ['Clos', '2']] },
+    { name: 'semicolons after a tab-only line', text: '\t\t\na;b\n1,5;2', want: [['a', 'b'], ['1,5', '2']] },
   ]
   for (const c of cases) {
     it(c.name, () => {

@@ -12,6 +12,7 @@ function detectDelimiter(text: string): string {
     if (ch === '"') quoted = !quoted
     else if (!quoted && (ch === '\n' || ch === '\r')) {
       if (!blank) break
+      for (const d of DELIMITERS) counts.set(d, 0)
       continue
     } else if (!quoted && counts.has(ch)) counts.set(ch, counts.get(ch)! + 1)
     if (ch.trim() !== '') blank = false
