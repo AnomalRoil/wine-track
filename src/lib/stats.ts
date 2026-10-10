@@ -1,7 +1,7 @@
 import { lastYear, phaseOf, type Phase } from './aging'
 import { addDays, DRINK_HORIZON_DAYS } from './due'
 import { averageBuyPrices, bottlesOf, computeStock, type Stock } from './stock'
-import type { Movement, Tasting, Wine } from './types'
+import type { Movement, PricePoint, Tasting, Wine } from './types'
 
 export interface Totals {
   bottles: number
@@ -152,14 +152,15 @@ export interface ValuePoint {
 }
 
 /**
- * Latest value set by the end of `month`, else the purchase price, else 0. The current
- * month uses `wine.value`, which also covers estimates cleared before clearing was dated.
+ * Latest-dated value set by the end of `month`, else the purchase price, else 0. The history
+ * can be out of order, e.g. after a clock correction. The current month uses `wine.value`,
+ * which also covers estimates cleared before clearing was dated.
  */
 function valueAt(wine: Wine, month: string, current: string, buy: number | undefined): number {
   if (month >= current) return wine.value ?? buy ?? 0
-  let value: number | null = null
-  for (const p of wine.valueHistory) if (p.date.slice(0, 7) <= month) value = p.value
-  return value ?? buy ?? 0
+  let latest: PricePoint | undefined
+  for (const p of wine.valueHistory) if (p.date.slice(0, 7) <= month && (!latest || p.date >= latest.date)) latest = p
+  return latest?.value ?? buy ?? 0
 }
 
 /**

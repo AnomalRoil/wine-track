@@ -51,7 +51,7 @@
 {#if wine.valueHistory.length > 1}
   <details>
     <summary class="muted">{t('value.history')}</summary>
-    {#each [...wine.valueHistory].reverse() as p (p.date)}
+    {#each [...wine.valueHistory].sort((a, b) => b.date.localeCompare(a.date)) as p (p.date)}
       <div class="row"><span class="muted grow">{p.date}</span>{p.value === null ? '—' : money(p.value)}</div>
     {/each}
   </details>
