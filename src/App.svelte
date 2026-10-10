@@ -100,7 +100,9 @@
 
   // A history entry can point at a wine deleted since; the view then falls through to the tab.
   const detail = $derived(selectedWineId !== null && store.wines.some((w) => w.id === selectedWineId))
-  const fab = $derived(store.loaded && !detail && (tab === 'wines' || tab === 'cellar'))
+  /** The Cellar tab has a sheet or form open, which the add button would cover. */
+  let cellarOverlay = $state(false)
+  const fab = $derived(store.loaded && !detail && (tab === 'wines' || (tab === 'cellar' && !cellarOverlay)))
 
   function onWineSaved(wine: Wine) {
     selectTab('wines')
@@ -118,7 +120,7 @@
   {:else if tab === 'add'}
     <CaptureFlow onsaved={onWineSaved} />
   {:else if tab === 'cellar'}
-    <CellarView onopen={openWine} focus={locatedWineId} />
+    <CellarView onopen={openWine} focus={locatedWineId} onoverlay={(open) => (cellarOverlay = open)} />
   {:else if tab === 'overview'}
     <Overview onopen={openWine} />
   {:else if screen}
