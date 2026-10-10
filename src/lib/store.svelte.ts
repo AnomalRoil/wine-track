@@ -17,6 +17,8 @@ export const store = $state({
   racks: [] as Rack[],
   placements: [] as Placement[],
   loaded: false,
+  /** A backup is replacing the data; editors stay closed and cannot save until it is done. */
+  restoring: false,
   /** Another tab holds an older database version and keeps it from upgrading. */
   blocked: false,
 })
@@ -30,7 +32,7 @@ const stock = $derived(computeStock(store.movements))
  */
 const writes = serial()
 
-/** Counts restores, so a save started before one drops its later steps. */
+/** Counts restore boundaries, so a save started before or during a restore drops its later steps. */
 let generation = 0
 
 /** The current restore count, to pass to a save that has to wait for something first. */
@@ -54,9 +56,15 @@ export function initStore(): Promise<void> {
 /** Replaces all data with a backup once the pending writes are done. */
 export function restore(data: db.Data, photos: Photo[]): Promise<void> {
   return writes(async () => {
+    store.restoring = true
     generation++
-    await db.replaceAll(data, photos)
-    await load()
+    try {
+      await db.replaceAll(data, photos)
+      await load()
+    } finally {
+      generation++
+      store.restoring = false
+    }
   })
 }
 
@@ -109,9 +117,13 @@ export function movementsFor(wineId: string): Movement[] {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
-/** Changes a wine, applying `patch` to the wine as the previous writes left it. False when it is gone. */
-export function patchWine(id: string, patch: (wine: Wine) => Partial<Wine>): Promise<boolean> {
+/**
+ * Changes a wine, applying `patch` to the wine as the previous writes left it. False when it
+ * is gone, or when a restore ran since `since`, a storeGeneration() read when an editor opened.
+ */
+export function patchWine(id: string, patch: (wine: Wine) => Partial<Wine>, since = generation): Promise<boolean> {
   return writes(async () => {
+    if (since !== generation) return false
     const i = store.wines.findIndex((w) => w.id === id)
     if (i < 0) return false
     const wine = { ...store.wines[i], ...patch($state.snapshot(store.wines[i])) }

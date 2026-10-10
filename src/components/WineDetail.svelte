@@ -7,7 +7,7 @@
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel, wineLabel } from '../lib/labels'
-  import { patchWine, removeTasting, removeWine, store, tastingsFor } from '../lib/store.svelte'
+  import { patchWine, removeTasting, removeWine, store, storeGeneration, tastingsFor } from '../lib/store.svelte'
   import type { Tasting, Wine } from '../lib/types'
   import AgingPanel from './AgingPanel.svelte'
   import PhaseBadge from './PhaseBadge.svelte'
@@ -30,6 +30,7 @@
   const phase = $derived(wine && phaseOf(wine, thisYear()))
 
   let editing = $state(false)
+  let since = 0
   let addingTasting = $state(false)
   let editingTastingId = $state<string | null>(null)
   let fullscreen = $state(false)
@@ -56,13 +57,14 @@
     if (!wine) return
     const { name, producer, vintage, grapes, region, country, color, sizeCl, tags } = wine
     draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags] }
+    since = storeGeneration()
     editing = true
   }
 
   async function saveEdit() {
-    if (!wine) return
+    if (!wine || store.restoring) return
     const fields = $state.snapshot(draft)
-    await patchWine(wine.id, () => fields)
+    await patchWine(wine.id, () => fields, since)
     editing = false
   }
 
@@ -103,12 +105,12 @@
 {#if !wine}
   <p class="muted">…</p>
 {:else if editing}
-  <WineForm bind:draft title={t('form.editWine')} {photoUrl} onsave={saveEdit} oncancel={() => (editing = false)} />
+  <WineForm bind:draft title={t('form.editWine')} {photoUrl} saving={store.restoring} onsave={saveEdit} oncancel={() => (editing = false)} />
 {:else}
   <header class="row">
     <button onclick={onclose}>←</button>
     <div class="spacer"></div>
-    <button onclick={startEdit}>{t('detail.edit')}</button>
+    <button disabled={store.restoring} onclick={startEdit}>{t('detail.edit')}</button>
     <button class="danger" onclick={del}>{t('detail.delete')}</button>
   </header>
 
@@ -172,7 +174,7 @@
   {#if addingTasting}
     <TastingForm wineId={wine.id} color={wine.color} ondone={() => (addingTasting = false)} />
   {:else}
-    <button class="primary" onclick={() => (addingTasting = true)}>{t('detail.addTasting')}</button>
+    <button class="primary" disabled={store.restoring} onclick={() => (addingTasting = true)}>{t('detail.addTasting')}</button>
   {/if}
   {#if tastings.length === 0 && !addingTasting}
     <p class="muted">{t('detail.noTastings')}</p>
@@ -189,7 +191,7 @@
           <Stars value={tasting.rating} />
           <span class="muted">{tasting.rating.toFixed(1)}</span>
           <div class="spacer"></div>
-          <button class="link" aria-label={t('tasting.edit')} onclick={() => (editingTastingId = tasting.id)}>✎</button>
+          <button class="link" aria-label={t('tasting.edit')} disabled={store.restoring} onclick={() => (editingTastingId = tasting.id)}>✎</button>
           <button class="link danger" onclick={() => delTasting(tasting)}>✕</button>
         </div>
         {#if tasting.notes}<p class="notes">{tasting.notes}</p>{/if}

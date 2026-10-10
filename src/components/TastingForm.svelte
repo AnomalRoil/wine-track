@@ -2,7 +2,7 @@
   import { untrack } from 'svelte'
   import { today } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
-  import { saveTasting, storeGeneration } from '../lib/store.svelte'
+  import { saveTasting, store, storeGeneration } from '../lib/store.svelte'
   import { emptySheet, isEmptySheet } from '../lib/tasting'
   import type { Photo, Tasting, WineColor } from '../lib/types'
   import RatingDial from './RatingDial.svelte'
@@ -32,7 +32,7 @@
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
-    if (processing > 0 || saving) return
+    if (processing > 0 || saving || store.restoring) return
     saving = true
     sheetForm?.commit()
     const filled = $state.snapshot(sheet)
@@ -70,7 +70,7 @@
 
   <div class="row">
     <button type="button" disabled={saving} onclick={ondone}>{t('form.cancel')}</button>
-    <button type="submit" class="primary grow" disabled={processing > 0 || saving}>{t('tasting.save')}</button>
+    <button type="submit" class="primary grow" disabled={processing > 0 || saving || store.restoring}>{t('tasting.save')}</button>
   </div>
 </form>
 

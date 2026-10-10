@@ -3,7 +3,7 @@
   import { thisYear } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
-  import { patchWine } from '../lib/store.svelte'
+  import { patchWine, store, storeGeneration } from '../lib/store.svelte'
   import type { Aging, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
   import AgingTimeline from './AgingTimeline.svelte'
@@ -18,20 +18,22 @@
   let editing = $state(false)
   let draft = $state<Aging>({ ...NO_AGING })
   let saving = $state(false)
+  let since = 0
 
   function startEdit() {
     // A snapshot, so sliders never mutate the stored wine before saving.
     draft = mergeAging(NO_AGING, $state.snapshot(wine))
+    since = storeGeneration()
     editing = true
   }
 
   async function save(e: SubmitEvent) {
     e.preventDefault()
-    if (saving) return
+    if (saving || store.restoring) return
     saving = true
     try {
       const aging = cleanAging($state.snapshot(draft))
-      await patchWine(wine.id, () => aging)
+      await patchWine(wine.id, () => aging, since)
     } finally {
       saving = false
     }
@@ -41,7 +43,7 @@
 
 <div class="row head">
   <h2 class="grow">{t('aging.title')}</h2>
-  {#if !editing}<button class="link" onclick={startEdit}>{t('aging.edit')}</button>{/if}
+  {#if !editing}<button class="link" disabled={store.restoring} onclick={startEdit}>{t('aging.edit')}</button>{/if}
 </div>
 
 {#if editing}
@@ -50,7 +52,7 @@
 
     <div class="row actions">
       <button type="button" disabled={saving} onclick={() => (editing = false)}>{t('form.cancel')}</button>
-      <button type="submit" class="primary grow" disabled={saving}>{t('form.save')}</button>
+      <button type="submit" class="primary grow" disabled={saving || store.restoring}>{t('form.save')}</button>
     </div>
   </form>
 {:else}

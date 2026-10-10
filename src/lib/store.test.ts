@@ -387,6 +387,31 @@ it('drops a tasting edit started before a restore', async () => {
   expect(store.tastings).toEqual([])
 })
 
+it('refuses saves from editors opened during a slow restore', async () => {
+  const tasting = { id: 't', wineId: 'w1', date: '2026-01-01', rating: 4, notes: '' }
+  const backup: db.Data = { wines: [makeWine({ name: 'Restored' })], tastings: [tasting], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
+  vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
+  store.tastings = [tasting]
+
+  const restored = restore(backup, [])
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  expect(store.restoring).toBe(true)
+  const since = storeGeneration()
+  pending[0]()
+  await restored
+
+  expect(store.restoring).toBe(false)
+  const edited = saveTasting({ ...tasting, notes: 'Stale' }, { since, edit: true })
+  const renamed = patchWine('w1', () => ({ name: 'Stale' }), since)
+  await release(edited, renamed)
+
+  expect([await edited, await renamed]).toEqual([false, false])
+  expect(db.putTasting).not.toHaveBeenCalled()
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(store.wines[0].name).toBe('Restored')
+  expect(store.tastings).toEqual([tasting])
+})
+
 it('keeps a value corrected back while the first change waited', async () => {
   store.wines = [makeWine({ value: 10 })]
   const raised = setWineValue('w1', 20, '2026-01-01')
