@@ -28,6 +28,10 @@
   )
 
   let stale = $state(false)
+  let saving = $state(false)
+  // Bumped when the form closes, so a write still pending then does not close the next form.
+  let session = 0
+  $effect(() => () => void session++)
 
   const valid = $derived(
     Number.isInteger(draft.columns) &&
@@ -40,20 +44,35 @@
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
-    if (!valid) return
+    if (!valid || saving) return
     const next = { ...$state.snapshot(draft), name: draft.name.trim() }
     const dropped = outside(next, store.placements)
     if (dropped.length > 0 && !confirm(t('rack.resizeConfirm', { n: dropped.length }))) return
-    stale = !(await (rack ? updateRack(next, dropped.map((p) => p.id)) : addRack(next)))
-    if (!stale) ondone()
+    const current = session
+    saving = true
+    let saved: boolean
+    try {
+      saved = await (rack ? updateRack(next, dropped.map((p) => p.id)) : addRack(next))
+    } finally {
+      saving = false
+    }
+    if (current !== session) return
+    stale = !saved
+    if (saved) ondone()
   }
 
   async function del() {
-    if (!rack) return
+    if (!rack || saving) return
     const n = store.placements.filter((p) => p.rackId === rack.id).length
     if (!confirm(t('rack.deleteConfirm', { name: rackName(rack), n }))) return
-    await removeRack(rack.id)
-    ondone()
+    const current = session
+    saving = true
+    try {
+      await removeRack(rack.id)
+    } finally {
+      saving = false
+    }
+    if (current === session) ondone()
   }
 </script>
 
@@ -103,9 +122,9 @@
   {#if stale}<p class="error">{t('form.stale')}</p>{/if}
 
   <div class="row actions">
-    {#if rack}<button type="button" class="danger" onclick={del}>{t('rack.delete')}</button>{/if}
+    {#if rack}<button type="button" class="danger" disabled={saving} onclick={del}>{t('rack.delete')}</button>{/if}
     <button type="button" onclick={ondone}>{t('rack.cancel')}</button>
-    <button type="submit" class="primary grow" disabled={!valid}>{t('rack.save')}</button>
+    <button type="submit" class="primary grow" disabled={!valid || saving}>{t('rack.save')}</button>
   </div>
 </form>
 

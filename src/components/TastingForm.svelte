@@ -26,6 +26,9 @@
   let pending = $state<Record<string, Photo>>({})
   let processing = $state(0)
   let saving = $state(false)
+  // Bumped when the form closes, so a write still pending then does not close the next form.
+  let session = 0
+  $effect(() => () => void session++)
   /** The tasting or its wine changed while the form was open, so the save was dropped. */
   let stale = $state(false)
   let sheetForm: TastingSheetForm | undefined = $state()
@@ -33,6 +36,7 @@
   async function submit(e: SubmitEvent) {
     e.preventDefault()
     if (processing > 0 || saving || store.restoring) return
+    const current = session
     saving = true
     sheetForm?.commit()
     const filled = $state.snapshot(sheet)
@@ -41,12 +45,15 @@
     const kept = new Set(saved.sheet?.photoIds)
     const added = Object.values($state.snapshot(pending)).filter((p) => kept.has(p.id))
     const removed = (initial?.sheet?.photoIds ?? []).filter((id) => !kept.has(id))
+    let ok: boolean
     try {
-      stale = !(await saveTasting(saved, { since, edit: initial !== undefined, added, removedPhotoIds: removed }))
+      ok = await saveTasting(saved, { since, edit: initial !== undefined, added, removedPhotoIds: removed })
     } finally {
       saving = false
     }
-    if (!stale) ondone()
+    if (current !== session) return
+    stale = !ok
+    if (ok) ondone()
   }
 </script>
 

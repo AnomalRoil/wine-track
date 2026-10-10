@@ -26,6 +26,9 @@
   let date = $state(today())
   let note = $state('')
   let saving = $state(false)
+  // Bumped when the form closes, so a write still pending then does not close the next form.
+  let session = 0
+  $effect(() => () => void session++)
   let stale = $state(false)
 
   $effect(() => {
@@ -61,6 +64,7 @@
   async function submit(e: SubmitEvent) {
     e.preventDefault()
     if (!valid || saving) return
+    const current = session
     saving = true
     const movement = {
       id: crypto.randomUUID(),
@@ -79,6 +83,7 @@
     } finally {
       saving = false
     }
+    if (current !== session) return
     stale = !saved
     if (saved) ondone()
   }
