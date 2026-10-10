@@ -5,8 +5,9 @@ const modules = import.meta.glob<{ en: Record<string, string>; fr: Record<string
   { eager: true },
 )
 
+/** Names of `{name}` and `{name|one|other}` placeholders. */
 function placeholders(s: string): string[] {
-  return [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
+  return [...new Set([...s.matchAll(/\{(\w+)(?:\|[^|{}]*\|[^|{}]*)?\}/g)].map((m) => m[1]))].sort()
 }
 
 describe('messages', () => {
@@ -18,6 +19,7 @@ describe('messages', () => {
         for (const [key, value] of Object.entries(m.en)) {
           expect(m[locale][key], key).not.toBe('')
           expect(placeholders(m[locale][key]), key).toEqual(placeholders(value))
+          for (const text of [value, m[locale][key]]) expect(text, key).not.toMatch(/\w\((s|n|e|en|x)\)/)
         }
       })
     }

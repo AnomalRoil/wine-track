@@ -9,7 +9,7 @@ export const en = {
   'dashboard.invested': 'Invested',
   'dashboard.value': 'Estimated value',
   'dashboard.added': 'Added value',
-  'dashboard.unpriced': '{n} bottle(s) without a purchase price.',
+  'dashboard.unpriced': '{n} {n|bottle|bottles} without a purchase price.',
 
   'dashboard.ready': 'Ready to drink',
   'dashboard.peak': 'At peak',
@@ -46,7 +46,7 @@ export const en = {
   'dashboard.topAdded': 'Top added value',
   'dashboard.drunkRegions': 'Most drunk regions',
   'dashboard.ratings': 'Ratings',
-  'dashboard.tastings': '{n} tasting(s)',
+  'dashboard.tastings': '{n} {n|tasting|tastings}',
 
   'dashboard.hidePrices': 'Hide prices',
   'dashboard.hidePricesNote': 'Masks every amount in the app, for example when showing it to guests.',
@@ -61,7 +61,7 @@ export const fr: Messages<typeof en> = {
   'dashboard.invested': 'Investi',
   'dashboard.value': 'Valeur estimée',
   'dashboard.added': 'Plus-value',
-  'dashboard.unpriced': '{n} bouteille(s) sans prix d’achat.',
+  'dashboard.unpriced': '{n} {n|bouteille|bouteilles} sans prix d’achat.',
 
   'dashboard.ready': 'Prêts à boire',
   'dashboard.peak': 'À leur apogée',
@@ -99,7 +99,7 @@ export const fr: Messages<typeof en> = {
   'dashboard.topAdded': 'Meilleures plus-values',
   'dashboard.drunkRegions': 'Régions les plus bues',
   'dashboard.ratings': 'Notes',
-  'dashboard.tastings': '{n} dégustation(s)',
+  'dashboard.tastings': '{n} {n|dégustation|dégustations}',
 
   'dashboard.hidePrices': 'Masquer les prix',
   'dashboard.hidePricesNote': 'Cache tous les montants de l’application, par exemple pour la montrer à des invités.',
@@ -114,7 +114,7 @@ export const de: Messages<typeof en> = {
   'dashboard.invested': 'Investiert',
   'dashboard.value': 'Geschätzter Wert',
   'dashboard.added': 'Wertzuwachs',
-  'dashboard.unpriced': '{n} Flasche(n) ohne Kaufpreis.',
+  'dashboard.unpriced': '{n} {n|Flasche|Flaschen} ohne Kaufpreis.',
 
   'dashboard.ready': 'Trinkreif',
   'dashboard.peak': 'Auf dem Höhepunkt',
@@ -152,7 +152,7 @@ export const de: Messages<typeof en> = {
   'dashboard.topAdded': 'Größter Wertzuwachs',
   'dashboard.drunkRegions': 'Meistgetrunkene Regionen',
   'dashboard.ratings': 'Bewertungen',
-  'dashboard.tastings': '{n} Verkostung(en)',
+  'dashboard.tastings': '{n} {n|Verkostung|Verkostungen}',
 
   'dashboard.hidePrices': 'Preise ausblenden',
   'dashboard.hidePricesNote': 'Verbirgt alle Beträge in der App, etwa beim Vorzeigen vor Gästen.',
