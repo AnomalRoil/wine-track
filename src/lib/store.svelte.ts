@@ -60,6 +60,15 @@ export function restore(data: db.Data, photos: Photo[]): Promise<void> {
   })
 }
 
+/** Every record and photo as one consistent snapshot, once the pending writes are done. */
+export function backupSnapshot(): Promise<{ data: db.Data; photos: Photo[] }> {
+  return writes(async () => {
+    const { data, photos } = await db.snapshot()
+    const normalized = { ...data, wines: data.wines.map(withAging), tastings: data.tastings.map(normalizeTasting), cellars: data.cellars.map(normalizeCellar) }
+    return { data: normalized, photos }
+  })
+}
+
 async function load(): Promise<void> {
   const all = await db.loadAll(() => (store.blocked = true))
   if (all.cellars.length === 0) {

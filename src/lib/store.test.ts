@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
+import { encodeBackup, parseBackup } from './backup'
 import { parseImport } from './csvImport'
 import * as db from './db'
 import { place } from './racks'
@@ -6,6 +7,7 @@ import {
   addMovements,
   addWine,
   applyImport,
+  backupSnapshot,
   drink,
   moveBottle,
   patchCellar,
@@ -35,6 +37,7 @@ vi.mock('./db', () => ({
   putTasting: vi.fn(),
   putWine: vi.fn(),
   replaceAll: vi.fn(),
+  snapshot: vi.fn(),
   updatePlacements: vi.fn(),
 }))
 
@@ -265,4 +268,24 @@ it('keeps a wine and its tastings deleted while an edit waited', async () => {
   expect(db.putTasting).not.toHaveBeenCalled()
   expect(store.wines).toEqual([])
   expect(store.tastings).toEqual([])
+})
+
+it('exports the image of every photo its wines reference while a capture saves', async () => {
+  const data: db.Data = { wines: [makeWine({ photoId: 'p1' })], tastings: [], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
+  vi.mocked(db.snapshot).mockResolvedValue({ data, photos: [{ id: 'p1', blob: new Blob() }] })
+  store.wines = structuredClone(data.wines)
+  let encoded!: () => void
+  const encoding = new Promise<string>((resolve) => (encoded = () => resolve('data')))
+
+  const snapshot = await backupSnapshot()
+  const json = encodeBackup(snapshot.data, snapshot.photos, () => encoding, '')
+  const added = addWine(makeWine({ id: 'w2', photoId: 'p2' }), { id: 'p2', blob: new Blob() }, [], storeGeneration())
+  await release(added)
+  encoded()
+
+  const backup = parseBackup(await json)
+  const images = new Set(backup?.photos.map((p) => p.id))
+  expect(store.wines.map((w) => w.photoId)).toEqual(['p1', 'p2'])
+  expect(backup?.wines.map((w) => w.photoId)).toEqual(['p1'])
+  expect(backup?.wines.filter((w) => w.photoId && !images.has(w.photoId))).toEqual([])
 })
