@@ -151,7 +151,7 @@ export type ParsedImport =
  * A dot after a letter ends an abbreviation, so "Fr.50" is 50.
  */
 export function parseNumber(raw: string): number {
-  const number = /^[^\d-]*?(-?(?:\d(?:[\d.,'’\s]*\d)?|(?<![\p{L}.])[.,]\d+))(?:[.,]-)?[^\d-]*$/u.exec(raw)?.[1]
+  const number = /^[^\d-]*?(-?(?:\d(?:[\d.,'’\s]*\d)?|(?<![\p{L}.])\.\d+|,\d+))(?:[.,]-)?[^\d-]*$/u.exec(raw)?.[1]
   if (!number) return NaN
   let s = number.replace(/['’\s]/g, '')
   const lastComma = s.lastIndexOf(',')

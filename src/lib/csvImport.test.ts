@@ -36,6 +36,8 @@ describe('parseNumber', () => {
     ['Fr. 12.50', 12.5],
     ['Fr.50', 50],
     ['Fr.50.-', 50],
+    ['CHF,50', 0.5],
+    ['Fr.,50', 0.5],
     ['-.5', -0.5],
   ]
   for (const [raw, want] of cases) {
@@ -127,6 +129,8 @@ describe('parseImport', () => {
     { name: 'liters with a leading separator', fields: 'A,,,1,.5 l,,', want: { sizeCl: 50, errors: [] } },
     { name: 'below one centiliter', fields: 'A,,,1,5 ml,,', want: { errors: ['size'] } },
     { name: 'price with a leading separator', fields: 'A,,,1,,,.50', want: { price: 0.5, errors: [] } },
+    { name: 'price with a currency before a decimal comma', fields: 'A,,,1,,,"CHF,50"', want: { price: 0.5, errors: [] } },
+    { name: 'price with an abbreviated currency before a decimal comma', fields: 'A,,,1,,,"Fr.,50"', want: { price: 0.5, errors: [] } },
     { name: 'price with a trailing minus', fields: 'A,,,1,,,12-', want: { errors: ['price'] } },
   ]
   for (const c of cells) {
