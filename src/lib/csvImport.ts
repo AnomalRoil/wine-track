@@ -1,4 +1,4 @@
-import { isWindowOrdered, NO_AGING, WINDOW_KEYS } from './aging'
+import { isWindowOrdered, MAX_YEAR, MIN_YEAR, NO_AGING, WINDOW_KEYS } from './aging'
 import { parseCsv } from './csv'
 import type { WineDraft } from './extract'
 import * as core from './messages/core'
@@ -249,7 +249,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
       const raw = get(WINDOW_COLUMNS[key])
       if (raw === '') continue
       const year = Number(raw)
-      if (Number.isInteger(year) && year >= 1800 && year <= currentYear + 150) window[key] = year
+      if (Number.isInteger(year) && year >= MIN_YEAR && year <= MAX_YEAR) window[key] = year
       else if (!errors.includes('window')) errors.push('window')
     }
     if (!isWindowOrdered(window) && !errors.includes('window')) errors.push('window')

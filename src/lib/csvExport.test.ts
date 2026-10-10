@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_YEAR } from './aging'
 import { parseCsv } from './csv'
 import { exportCsv, templateCsv } from './csvExport'
 import { parseImport, planImport } from './csvImport'
@@ -69,6 +70,13 @@ it('reimports nonstandard sizes in centiliters', () => {
   const parsed = parseImport(exportCsv(odd, [], cellars, name), 2026)
   if (!parsed.ok) throw new Error(parsed.error)
   expect(parsed.rows.map((r) => r.draft.sizeCl)).toEqual([500, 5])
+})
+
+it('reimports drinking windows up to the last year the editor accepts', () => {
+  const late = [makeWine({ id: 'l', drinkFrom: 2150, drinkUntil: MAX_YEAR })]
+  const parsed = parseImport(exportCsv(late, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  expect(parsed.rows.map((r) => [r.window, r.errors])).toEqual([[{ drinkFrom: 2150, peakFrom: null, peakUntil: null, drinkUntil: MAX_YEAR }, []]])
 })
 
 describe('templateCsv', () => {
