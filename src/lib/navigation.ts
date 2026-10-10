@@ -20,6 +20,12 @@ if (typeof window !== 'undefined') {
   })
 }
 
+/** The entry a page load starts on: the entry's depth and mark, without the views it pointed at. */
+export function startEntry(state: unknown): Entry {
+  const entry = state as Entry | null
+  return { depth: entry?.depth ?? 0, next: entry?.next }
+}
+
 /** Pushes `entry`, which drops every entry ahead of the current one. */
 export function pushEntry<T extends Entry>(entry: T): void {
   history.replaceState({ ...history.state, next: true }, '')

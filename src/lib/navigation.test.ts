@@ -16,14 +16,16 @@ describe('staleStep', () => {
 })
 
 /** A browser history whose entries, unlike the page's module state, survive a reload. */
-function fakeHistory() {
+function fakeHistory(async = false) {
   const entries: unknown[] = [null]
   let index = 0
   const window = new EventTarget()
-  const go = (n: number) => {
+  const move = (n: number) => {
     index += n
     window.dispatchEvent(new Event('popstate'))
   }
+  // Browsers traverse history asynchronously; `async` makes each move land on a later task.
+  const go = (n: number) => (async ? setTimeout(() => move(n)) : move(n))
   const history = {
     get state() {
       return entries[index]
@@ -32,6 +34,7 @@ function fakeHistory() {
     pushState: (state: unknown) => entries.splice(++index, entries.length, structuredClone(state)),
     back: () => go(-1),
     forward: () => go(1),
+    go,
   }
   return { window, history, index: () => index }
 }
@@ -78,6 +81,26 @@ describe('skipStale', () => {
     fake.history.replaceState({ ...(fake.history.state as object), wine: null })
     fake.history.back()
     nav.skipStale()
+    expect(fake.index()).toBe(0)
+  })
+
+  it('unwinds to the root after a reload with an overlay open', async () => {
+    const fake = fakeHistory(true)
+    vi.stubGlobal('window', fake.window)
+    vi.stubGlobal('history', fake.history)
+
+    let nav = await import('./navigation')
+    fake.history.replaceState({ depth: 0 })
+    nav.pushEntry({ depth: 1, overlay: true })
+
+    vi.resetModules()
+    nav = await import('./navigation')
+    fake.history.replaceState({ ...nav.startEntry(fake.history.state), tab: 'wines' })
+    // Selecting a tab unwinds to the root, while the view it mounts checks its entry right away.
+    fake.history.go(-1)
+    if ((fake.history.state as { overlay?: boolean }).overlay) nav.skipStale()
+    await vi.waitFor(() => expect(fake.index()).toBe(0))
+    await new Promise((resolve) => setTimeout(resolve))
     expect(fake.index()).toBe(0)
   })
 })

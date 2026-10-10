@@ -5,7 +5,7 @@
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
-  import { pushEntry } from './lib/navigation'
+  import { pushEntry, startEntry } from './lib/navigation'
   import { MORE_SCREENS, type Screen } from './lib/screens'
   import { t } from './lib/i18n.svelte'
   import { initStore, store } from './lib/store.svelte'
@@ -30,7 +30,7 @@
 
   // Entries from an earlier page load point at views this load never opened. The entry keeps its
   // depth and mark, so back and forward still tell the entries around it apart.
-  history.replaceState({ ...history.state, tab: 'wines', wine: null, screen: null, depth: history.state?.depth ?? 0 } satisfies ViewState, '')
+  history.replaceState({ ...startEntry(history.state), tab: 'wines', wine: null, screen: null } satisfies ViewState, '')
 
   /** Tab to land on once a tab switch has unwound the pushed entries. */
   let unwindingTo: Tab | null = null
