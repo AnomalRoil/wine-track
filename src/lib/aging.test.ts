@@ -107,6 +107,14 @@ describe('timeline', () => {
       ],
     })
   })
+
+  it('builds an oversized window from its phase changes', () => {
+    expect(timeline(win(2024, null, null, 1_000_000_000), 2020, 2026)?.segments).toEqual([
+      { phase: 'youth', from: 2020, to: 2024 },
+      { phase: 'maturity', from: 2024, to: 1_000_000_001 },
+      { phase: 'decline', from: 1_000_000_001, to: 1_000_000_002 },
+    ])
+  })
 })
 
 describe('temperatures', () => {
@@ -159,6 +167,10 @@ describe('cleanAging', () => {
       decantMinutes: 0,
       profile: { body: 10, tannin: 8, sweetness: 0, acidity: 5, fizz: 0 },
     })
+  })
+
+  it('drops years outside the calendar range', () => {
+    expect(cleanAging(win(1799, 1800, 2200, 1_000_000_000))).toMatchObject(win(null, 1800, 2200, null))
   })
 })
 

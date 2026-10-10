@@ -4,7 +4,7 @@
   import { money } from '../lib/money'
   import { settings } from '../lib/settings.svelte'
   import { averageBuyPrice, bottlesOf } from '../lib/stock'
-  import { currentStock, saveWine, store } from '../lib/store.svelte'
+  import { currentStock, setWineValue, store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
 
   let { wine }: { wine: Wine } = $props()
@@ -20,11 +20,7 @@
   async function setValue(raw: string) {
     const value = raw === '' ? null : Number(raw)
     if (value !== null && !(value >= 0)) return
-    if (value === wine.value) return
-    // One point per day: a same-day correction replaces the earlier entry.
-    const date = today()
-    const history = [...wine.valueHistory.filter((p) => p.date !== date), { date, value }]
-    await saveWine({ ...wine, value, valueHistory: history })
+    await setWineValue(wine.id, value, today())
   }
 </script>
 
@@ -55,7 +51,7 @@
 {#if wine.valueHistory.length > 1}
   <details>
     <summary class="muted">{t('value.history')}</summary>
-    {#each [...wine.valueHistory].reverse() as p (p.date)}
+    {#each [...wine.valueHistory].sort((a, b) => b.date.localeCompare(a.date)) as p (p.date)}
       <div class="row"><span class="muted grow">{p.date}</span>{p.value === null ? '—' : money(p.value)}</div>
     {/each}
   </details>

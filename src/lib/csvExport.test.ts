@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_YEAR } from './aging'
 import { parseCsv } from './csv'
 import { exportCsv, templateCsv } from './csvExport'
 import { parseImport, planImport } from './csvImport'
@@ -50,11 +51,40 @@ describe('exportCsv', () => {
   })
 })
 
+it('reimports names that start with a formula sign or an apostrophe unchanged', () => {
+  const names = [makeWine({ id: 'f', name: '=Clos' }), makeWine({ id: 'q', name: "'=Clos" }), makeWine({ id: 'a', name: "'Twas" })]
+  const parsed = parseImport(exportCsv(names, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  const plan = planImport(parsed.rows, names, { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => 'new' })
+  const matched = parsed.rows.map((r, i) => [r.draft.name, plan.matches[i]])
+  expect(matched).toEqual(
+    expect.arrayContaining([
+      ['=Clos', { kind: 'existing', wineId: 'f' }],
+      ["'=Clos", { kind: 'existing', wineId: 'q' }],
+      ["'Twas", { kind: 'existing', wineId: 'a' }],
+    ]),
+  )
+})
+
 it('reimports nonstandard sizes in centiliters', () => {
   const odd = [makeWine({ id: 'w', name: 'Big', sizeCl: 500 }), makeWine({ id: 'm', name: 'Mini', sizeCl: 5 })]
   const parsed = parseImport(exportCsv(odd, [], cellars, name), 2026)
   if (!parsed.ok) throw new Error(parsed.error)
   expect(parsed.rows.map((r) => r.draft.sizeCl)).toEqual([500, 5])
+})
+
+it('reimports drinking windows up to the last year the editor accepts', () => {
+  const late = [makeWine({ id: 'l', drinkFrom: 2150, drinkUntil: MAX_YEAR })]
+  const parsed = parseImport(exportCsv(late, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  expect(parsed.rows.map((r) => [r.window, r.errors])).toEqual([[{ drinkFrom: 2150, peakFrom: null, peakUntil: null, drinkUntil: MAX_YEAR }, []]])
+})
+
+it('reimports drinking windows whose years are out of order', () => {
+  const unordered = [makeWine({ id: 'u', drinkFrom: 2030, drinkUntil: 2025 })]
+  const parsed = parseImport(exportCsv(unordered, [], cellars, name), 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  expect(parsed.rows.map((r) => [r.window, r.errors])).toEqual([[{ drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: 2025 }, []]])
 })
 
 describe('templateCsv', () => {

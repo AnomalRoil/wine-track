@@ -77,6 +77,11 @@ describe('composition', () => {
   }
 })
 
+it('counts a grape listed in two spellings once per wine', () => {
+  const wine = makeWine({ id: 'a', grapes: ['Merlot', 'merlot '] })
+  expect(composition([wine], computeStock([makeMovement({ wineId: 'a', quantity: 2 })]), 'grape')).toEqual([{ key: 'Merlot', count: 2, share: 1 }])
+})
+
 describe('flows', () => {
   it('counts additions, drinks and gifts per month over the last months', () => {
     const got = monthlyFlows(movements, '2026-03-31', 4)
@@ -169,6 +174,18 @@ describe('valueOverTime', () => {
     ]
     expect(valueOverTime([wine], moves, '2026-02-10')).toEqual(want)
     expect(valueOverTime([wine], moves, '2026-03-10')).toEqual([...want, { month: '2026-03', value: 40, invested: 40 }])
+  })
+
+  it('uses the latest-dated value of a shuffled history', () => {
+    const history = [
+      { date: '2026-03-04', value: null },
+      { date: '2026-02-20', value: 50 },
+      { date: '2026-01-10', value: 30 },
+      { date: '2026-02-05', value: 20 },
+    ]
+    const wine = makeWine({ id: 'w', value: null, valueHistory: history })
+    const moves = [makeMovement({ wineId: 'w', quantity: 1, unitPrice: 10, date: '2026-01-02' })]
+    expect(valueOverTime([wine], moves, '2026-04-10').map((p) => p.value)).toEqual([30, 50, 10, 10])
   })
 
   it('is empty without movements', () => {

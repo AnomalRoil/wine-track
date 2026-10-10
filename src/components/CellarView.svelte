@@ -5,20 +5,22 @@
 
 <script lang="ts">
   import { tick, untrack } from 'svelte'
-  import { thisYear, today } from '../lib/due'
+  import { thisYear } from '../lib/due'
   import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel, wineLabel } from '../lib/labels'
-  import { matchesPerLayer, place, planMove, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
-  import { serial } from '../lib/serial'
+  import { pushEntry, skipStale } from '../lib/navigation'
+  import { matchesPerLayer, racksOf, slotId, unplaced, type Slot } from '../lib/racks'
   import { averageBuyPrices, bottlesOf } from '../lib/stock'
   import {
-    addMovements,
     currentStock,
-    saveRacks,
+    drink as drinkBottle,
+    moveBottle,
+    placeBottle,
     sortedCellars,
     store,
-    updatePlacements,
+    swapRacks,
+    unplace as unplaceBottle,
   } from '../lib/store.svelte'
   import type { Placement, Rack, Wine } from '../lib/types'
   import BottleSheet from './BottleSheet.svelte'
@@ -63,26 +65,16 @@
   // An open sheet, rack form or capture owns a history entry, so the back button closes it
   // instead of leaving the app. Entries left behind by an unmounted view are popped on return.
   const overlay = $derived(selected !== null || capture !== null || editing !== null)
-  /** Depth of the entry shown, to tell back from forward on popstate. */
-  let depth = (history.state as { depth?: number } | null)?.depth ?? 0
   $effect(() => {
     const state = history.state as { depth?: number; overlay?: boolean } | null
-    if (overlay && !state?.overlay) {
-      depth = (state?.depth ?? 0) + 1
-      history.pushState({ ...state, depth, overlay: true }, '')
-    } else if (!overlay && state?.overlay) history.back()
+    if (overlay && !state?.overlay) pushEntry({ ...state, depth: (state?.depth ?? 0) + 1, overlay: true })
+    // Arrived on the entry of an overlay this view no longer shows, e.g. after a remount.
+    else if (!overlay && state?.overlay) skipStale()
   })
   $effect(() => {
     const onpop = () => {
-      const landed = (history.state as { depth?: number } | null)?.depth ?? 0
-      const forward = landed > depth
-      depth = landed
       if (history.state?.overlay) {
-        // Landed on an entry whose overlay closed while another view was on top: step over it.
-        if (!overlay) {
-          if (forward) history.forward()
-          else history.back()
-        }
+        if (!overlay) skipStale()
         return
       }
       selected = null
@@ -95,8 +87,6 @@
 
   const racks = $derived(racksOf(store.racks, cellarId))
   const placements = $derived(new Map(store.placements.map((p) => [p.id, p])))
-  /** Placement writes, queued so each one checks the slots the previous ones filled. */
-  const placing = serial()
 
   // A bottle that left its slot meanwhile (drunk, rack deleted or resized) has nothing to move.
   $effect(() => {
@@ -165,28 +155,14 @@
     else selected = slot
   }
 
-  // A move into another cellar's rack also records the transfers between the cellars.
-  function moveTo(slot: Slot) {
+  async function moveTo(slot: Slot) {
     const from = moving!
     moving = null
-    return placing(async () => {
-      const move = planMove(from, slot, store.racks, store.placements, today(), () => crypto.randomUUID())
-      if (!move) return
-      if (move.transfers.length > 0) await addMovements(move.transfers, move.freed, move.put)
-      else await updatePlacements(move.put, move.freed)
-      await showLanded(slot)
-    })
+    if (await moveBottle(from, slot)) await showLanded(slot)
   }
 
-  /** Puts a bottle of `wine` in `slot` unless the slot was filled or the bottle placed meanwhile. */
-  function placeIn(slot: Slot, wine: Wine) {
-    return placing(async () => {
-      const rack = store.racks.find((r) => r.id === slot.rackId)
-      if (!rack || placements.has(slotId(slot))) return
-      if (!unplaced(currentStock(), store.racks, store.placements, rack.cellarId).has(wine.id)) return
-      await updatePlacements([place(slot, wine.id)])
-      await showLanded(slot)
-    })
+  async function placeIn(slot: Slot, wine: Wine) {
+    if (await placeBottle(slot, wine.id)) await showLanded(slot)
   }
 
   function pick(wine: Wine) {
@@ -210,24 +186,13 @@
     const p = selectedPlacement!
     if (!confirm(t('rack.drinkConfirm', { name: wineLabel(selectedWine!) }))) return
     selected = null
-    const consume = {
-      id: crypto.randomUUID(),
-      wineId: p.wineId,
-      date: today(),
-      kind: 'consume' as const,
-      quantity: 1,
-      cellarId,
-      toCellarId: null,
-      unitPrice: null,
-      note: '',
-    }
-    await addMovements([consume], [p.id])
+    await drinkBottle(p)
   }
 
   async function unplace() {
     const p = selectedPlacement!
     selected = null
-    await updatePlacements([], [p.id])
+    await unplaceBottle(p)
   }
 
   function startMove() {
@@ -236,11 +201,7 @@
   }
 
   async function moveUp(i: number) {
-    const [a, b] = [racks[i - 1], racks[i]]
-    await saveRacks([
-      { ...a, position: b.position },
-      { ...b, position: a.position },
-    ])
+    await swapRacks(racks[i - 1].id, racks[i].id)
   }
 
   function selectCellar(id: string) {

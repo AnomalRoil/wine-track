@@ -81,9 +81,22 @@ export interface Data {
   placements: Placement[]
 }
 
+const DATA_STORES = ['wines', 'tastings', 'cellars', 'movements', 'racks', 'placements'] as const
+
 export async function loadAll(onblocked?: () => void): Promise<Data> {
   const d = await openDb(onblocked)
-  const tx = d.transaction(['wines', 'tastings', 'cellars', 'movements', 'racks', 'placements'])
+  return readData(d.transaction(DATA_STORES))
+}
+
+/** Reads every record and photo in one transaction, so the records match the photos they reference. */
+export async function snapshot(): Promise<{ data: Data; photos: Photo[] }> {
+  const d = await openDb()
+  const tx = d.transaction([...DATA_STORES, 'photos'])
+  const [data, photos] = await Promise.all([readData(tx), req(tx.objectStore('photos').getAll() as IDBRequest<Photo[]>)])
+  return { data, photos }
+}
+
+async function readData(tx: IDBTransaction): Promise<Data> {
   const [wines, tastings, cellars, movements, racks, placements] = await Promise.all([
     req(tx.objectStore('wines').getAll() as IDBRequest<Wine[]>),
     req(tx.objectStore('tastings').getAll() as IDBRequest<Tasting[]>),
@@ -95,10 +108,13 @@ export async function loadAll(onblocked?: () => void): Promise<Data> {
   return { wines, tastings, cellars, movements, racks, placements }
 }
 
-export async function putWine(wine: Wine): Promise<void> {
+/** Saves a wine and, for a new one, its label photo and stock additions, atomically. */
+export async function putWine(wine: Wine, photo: Photo | null = null, movements: Movement[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction('wines', 'readwrite')
+  const tx = d.transaction(['wines', 'photos', 'movements'], 'readwrite')
   tx.objectStore('wines').put(wine)
+  if (photo) tx.objectStore('photos').put(photo)
+  for (const m of movements) tx.objectStore('movements').put(m)
   await done(tx)
 }
 
@@ -228,12 +244,6 @@ export async function getPhoto(id: string): Promise<Photo | undefined> {
   const d = await openDb()
   const tx = d.transaction('photos')
   return req(tx.objectStore('photos').get(id) as IDBRequest<Photo | undefined>)
-}
-
-export async function getAllPhotos(): Promise<Photo[]> {
-  const d = await openDb()
-  const tx = d.transaction('photos')
-  return req(tx.objectStore('photos').getAll() as IDBRequest<Photo[]>)
 }
 
 /** Replaces the entire database content in one transaction (backup import). */

@@ -2,7 +2,7 @@
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
   import { assessStorage } from '../lib/storage'
-  import { currentStock, removeCellar, saveCellars, sortedCellars } from '../lib/store.svelte'
+  import { addCellar, currentStock, patchCellar, removeCellar, sortedCellars, swapCellars } from '../lib/store.svelte'
   import type { Cellar } from '../lib/types'
   import StorageBadge from './StorageBadge.svelte'
   import StorageChecklist from './StorageChecklist.svelte'
@@ -25,21 +25,17 @@
     const name = newName.trim()
     if (!name) return
     const position = Math.max(-1, ...cellars.map((c) => c.position)) + 1
-    await saveCellars([{ id: crypto.randomUUID(), name, position, storage: {} }])
+    await addCellar({ id: crypto.randomUUID(), name, position, storage: {} })
     newName = ''
   }
 
   async function rename(cellar: Cellar) {
     const name = prompt(t('cellar.rename'), cellarName(cellar.id))?.trim()
-    if (name) await saveCellars([{ ...cellar, name }])
+    if (name) await patchCellar(cellar.id, (c) => ({ ...c, name }))
   }
 
   async function moveUp(i: number) {
-    const [a, b] = [cellars[i - 1], cellars[i]]
-    await saveCellars([
-      { ...a, position: b.position },
-      { ...b, position: a.position },
-    ])
+    await swapCellars(cellars[i - 1].id, cellars[i].id)
   }
 
   async function startDelete(cellar: Cellar) {
@@ -52,13 +48,18 @@
       deleting = { cellar, bottles }
       return
     }
-    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await removeCellar(cellar.id, null)
+    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await remove(cellar.id, null)
   }
 
   async function finishDelete(targetId: string | null) {
     if (!deleting) return
-    await removeCellar(deleting.cellar.id, targetId)
+    const id = deleting.cellar.id
     deleting = null
+    await remove(id, targetId)
+  }
+
+  async function remove(id: string, targetId: string | null) {
+    if (!(await removeCellar(id, targetId))) alert(t('form.stale'))
   }
 </script>
 

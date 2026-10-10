@@ -70,6 +70,7 @@ export const en = {
   'form.color': 'Type',
   'form.save': 'Save',
   'form.cancel': 'Cancel',
+  'form.stale': 'Something changed in the meantime. Check and try again.',
 
   'detail.drinkBy': 'Drink before',
   'detail.tasteAgain': 'Taste again on',
@@ -162,6 +163,7 @@ export const en = {
   'stock.note': 'Note',
   'stock.save': 'Save',
   'stock.tooMany': 'Only {n} bottle(s) in this cellar.',
+  'stock.unbalanced': 'This entry can no longer be deleted: its bottles have left, or their cellar was deleted.',
   'stock.wish': 'Add to wishlist',
   'stock.wished': 'On my wishlist',
   'stock.history': 'History',
@@ -273,6 +275,7 @@ export const fr: Messages<typeof en> = {
   'form.color': 'Type',
   'form.save': 'Enregistrer',
   'form.cancel': 'Annuler',
+  'form.stale': 'Quelque chose a changé entre-temps. Vérifiez et réessayez.',
 
   'detail.drinkBy': 'À boire avant',
   'detail.tasteAgain': 'Regoûter le',
@@ -365,6 +368,7 @@ export const fr: Messages<typeof en> = {
   'stock.note': 'Note',
   'stock.save': 'Enregistrer',
   'stock.tooMany': 'Seulement {n} bouteille(s) dans cette cave.',
+  'stock.unbalanced': 'Cette entrée ne peut plus être supprimée : ses bouteilles sont sorties ou leur cave a été supprimée.',
   'stock.wish': 'Ajouter à mes envies',
   'stock.wished': 'Dans mes envies',
   'stock.history': 'Historique',
@@ -478,6 +482,7 @@ export const de: Messages<typeof en> = {
   'form.color': 'Weintyp',
   'form.save': 'Speichern',
   'form.cancel': 'Abbrechen',
+  'form.stale': 'Inzwischen hat sich etwas geändert. Bitte prüfen Sie und versuchen Sie es erneut.',
 
   'detail.drinkBy': 'Trinken vor',
   'detail.tasteAgain': 'Erneut verkosten am',
@@ -570,6 +575,7 @@ export const de: Messages<typeof en> = {
   'stock.note': 'Notiz',
   'stock.save': 'Speichern',
   'stock.tooMany': 'Nur {n} Flasche(n) in diesem Keller.',
+  'stock.unbalanced': 'Dieser Eintrag kann nicht mehr gelöscht werden: Seine Flaschen sind weg oder ihr Keller wurde gelöscht.',
   'stock.wish': 'Zur Wunschliste hinzufügen',
   'stock.wished': 'Auf meiner Wunschliste',
   'stock.history': 'Verlauf',

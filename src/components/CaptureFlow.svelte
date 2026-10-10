@@ -1,7 +1,6 @@
 <script lang="ts">
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
-  import { putPhoto } from '../lib/db'
   import { wineKey } from '../lib/csvImport'
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
@@ -11,8 +10,8 @@
   import { cellarName, wineLabel } from '../lib/labels'
   import { applyLwin, confidentMatch, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
-  import { addMovements, saveWine, sortedCellars, store } from '../lib/store.svelte'
-  import type { Aging, Wine } from '../lib/types'
+  import { addToWine, addWine, sortedCellars, store, storeGeneration } from '../lib/store.svelte'
+  import type { Aging, Photo, Wine } from '../lib/types'
   import AgingFields from './AgingFields.svelte'
   import WineForm from './WineForm.svelte'
 
@@ -62,6 +61,8 @@
     void identity
     untrack(() => (duplicate = null))
   })
+  /** A restore ran while saving, so the wine was dropped. */
+  let stale = $state(false)
 
   function reset() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
@@ -74,6 +75,7 @@
     lwinMatch = null
     duplicate = null
     allowedDuplicateId = null
+    stale = false
     quantity = 0
     unitPrice = null
     photoTask = null
@@ -154,36 +156,32 @@
     save()
   }
 
-  /** Stores the photo taken, once resized; null when there is none. */
-  async function storePhoto(): Promise<string | null> {
+  /** The photo taken, once resized; null when there is none. */
+  async function takenPhoto(): Promise<Photo | null> {
     const blob = photoTask ? await photoTask.catch(() => null) : photoBlob
-    if (!blob) return null
-    const photoId = crypto.randomUUID()
-    await putPhoto({ id: photoId, blob, thumb: await makeThumb(blob) })
-    return photoId
+    return blob && { id: crypto.randomUUID(), blob, thumb: await makeThumb(blob) }
   }
 
+  // Sends only the duplicate's id: the store applies the photo and bottles to the wine as
+  // it is when the write runs, so edits or a deletion made meanwhile are kept.
   async function addToDuplicate() {
     if (saving || !form!.validate()) return
-    let wine = duplicate!
+    const { id, photoId } = duplicate!
+    const since = storeGeneration()
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
+    const additions =
+      stock.quantity > 0 ? [{ id: crypto.randomUUID(), wineId: id, date: today(), kind: 'add' as const, ...stock, toCellarId: null, note: '' }] : []
     saving = true
     const current = session
+    let wine: Wine | null
     try {
-      const photoId = wine.photoId ? null : await storePhoto()
-      if (photoId) {
-        wine = { ...wine, photoId }
-        await saveWine(wine)
-      }
-      if (stock.quantity > 0) {
-        await addMovements([
-          { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', ...stock, toCellarId: null, note: '' },
-        ])
-      }
+      wine = await addToWine(id, photoId ? null : await takenPhoto(), additions, since)
     } finally {
       saving = false
     }
     if (current !== session) return
+    stale = !wine
+    if (!wine) return
     reset()
     onsaved(wine)
   }
@@ -212,28 +210,30 @@
   // Reads every input before the first await, so edits made while it writes stay out of the saved wine.
   async function write() {
     const current = session
+    const since = storeGeneration()
     const fields = { ...$state.snapshot(draft), ...cleanAging($state.snapshot(aging)) }
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
-    const photoId = await storePhoto()
+    const photo = await takenPhoto()
     const wine: Wine = {
       id: crypto.randomUUID(),
       ...fields,
       wished: false,
       value: null,
       valueHistory: [],
-      photoId,
+      photoId: photo?.id ?? null,
       drinkBy: null,
       tasteAgainOn: null,
       createdAt: Date.now(),
     }
-    await saveWine(wine)
-    if (stock.quantity > 0) {
-      await addMovements([
-        { id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add', ...stock, toCellarId: null, note: '' },
-      ])
-    }
+    const additions =
+      stock.quantity > 0
+        ? [{ id: crypto.randomUUID(), wineId: wine.id, date: today(), kind: 'add' as const, ...stock, toCellarId: null, note: '' }]
+        : []
+    const saved = await addWine(wine, photo, additions, since)
     // Left while writing: the wine is kept, the caller no longer expects it.
     if (current !== session) return
+    stale = !saved
+    if (!saved) return
     reset()
     onsaved(wine)
   }
@@ -260,6 +260,7 @@
   </div>
 {:else}
   {#if photoFailed}<p class="error card">{t('capture.photoFailed')}</p>{/if}
+  {#if stale}<p class="error card">{t('form.stale')}</p>{/if}
   {#if extractError}
     <p class="error card">
       {t(`extract.${extractError.kind}`, { detail: extractError.detail ?? '' })}

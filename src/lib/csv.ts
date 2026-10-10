@@ -1,13 +1,21 @@
 const DELIMITERS = [',', ';', '\t'] as const
 
-/** The delimiter used most often in the first line outside quotes; spreadsheets in many locales save with ";". */
+/**
+ * The delimiter used most often outside quotes in the first non-blank line;
+ * spreadsheets in many locales save with ";".
+ */
 function detectDelimiter(text: string): string {
   const counts = new Map<string, number>(DELIMITERS.map((d) => [d, 0]))
   let quoted = false
+  let blank = true
   for (const ch of text) {
     if (ch === '"') quoted = !quoted
-    else if (!quoted && (ch === '\n' || ch === '\r')) break
-    else if (!quoted && counts.has(ch)) counts.set(ch, counts.get(ch)! + 1)
+    else if (!quoted && (ch === '\n' || ch === '\r')) {
+      if (!blank) break
+      for (const d of DELIMITERS) counts.set(d, 0)
+      continue
+    } else if (!quoted && counts.has(ch)) counts.set(ch, counts.get(ch)! + 1)
+    if (ch.trim() !== '') blank = false
   }
   return [...counts].reduce((best, c) => (c[1] > best[1] ? c : best))[0]
 }
@@ -67,13 +75,14 @@ export function decodeText(bytes: ArrayBuffer | Uint8Array): string {
   }
 }
 
-// Spreadsheets run cells starting with these as formulas.
-const FORMULA_START = /^[=+\-@\t\r]/
+// Spreadsheets run cells starting with these as formulas. A leading apostrophe is
+// escaped too, so the import can strip exactly one.
+const ESCAPED_START = /^[=+\-@\t\r']/
 
 function quote(cell: string | number | null): string {
   if (cell === null) return ''
   if (typeof cell === 'number') return String(cell)
-  if (FORMULA_START.test(cell)) cell = `'${cell}`
+  if (ESCAPED_START.test(cell)) cell = `'${cell}`
   return /[",;\n\r]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell
 }
 

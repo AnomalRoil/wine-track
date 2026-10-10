@@ -1,7 +1,7 @@
 <script lang="ts">
   import { decodeText } from '../lib/csv'
   import { templateCsv } from '../lib/csvExport'
-  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type ImportRow, type RowMatch } from '../lib/csvImport'
+  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type ImportPlan, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
@@ -112,6 +112,7 @@
   }
 
   async function complete() {
+    if (committing) return
     const todo = incomplete
     const batches = Math.ceil(todo.length / COMPLETION_BATCH)
     if (!confirm(t('io.completeConfirm', { n: todo.length, batches }))) return
@@ -144,17 +145,22 @@
   }
 
   async function commit() {
-    if (!plan || committing) return
-    const { wines, cellars, movements } = plan
+    if (!rows || committing) return
     committing = true
+    let done: ImportPlan
     try {
-      await applyImport({ wines, cellars, movements })
+      done = await applyImport(rows, {
+        defaultCellarName: t('cellar.default'),
+        date: today(),
+        now: Date.now(),
+        newId: () => crypto.randomUUID(),
+      })
     } finally {
       committing = false
     }
-    const bottles = movements.reduce((n, m) => n + m.quantity, 0)
+    const bottles = done.movements.reduce((n, m) => n + m.quantity, 0)
     reset()
-    message = t('io.done', { wines: wines.length, bottles })
+    message = t('io.done', { wines: done.wines.length, bottles })
   }
 
   function downloadTemplate() {
@@ -203,7 +209,7 @@
         <p class="pulse">{t('io.completing', progress)}</p>
       {:else}
         <p class="muted">{t('io.completeHelp', { n: incomplete.length, size: COMPLETION_BATCH })}</p>
-        <button onclick={complete}>✨ {t('io.complete', { n: incomplete.length })}</button>
+        <button disabled={committing} onclick={complete}>✨ {t('io.complete', { n: incomplete.length })}</button>
       {/if}
       {#if completeError}
         <p class="error-text">{t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t, type MessageKey } from '../lib/i18n.svelte'
   import { assessStorage, STORAGE_QUESTIONS } from '../lib/storage'
-  import { patchStorage } from '../lib/store.svelte'
+  import { patchCellar } from '../lib/store.svelte'
   import type { Cellar } from '../lib/types'
   import StorageAdvice from './StorageAdvice.svelte'
 
@@ -20,7 +20,7 @@
             class="chip"
             class:active={cellar.storage[q.factor] === option.id}
             aria-pressed={cellar.storage[q.factor] === option.id}
-            onclick={() => patchStorage(cellar.id, (s) => ({ ...s, [q.factor]: option.id }))}
+            onclick={() => patchCellar(cellar.id, (c) => ({ ...c, storage: { ...c.storage, [q.factor]: option.id } }))}
           >
             {t(`storage.o.${q.factor}.${option.id}` as MessageKey)}
           </button>
@@ -31,7 +31,7 @@
   <p class="muted">{t('storage.answered', { n: assessment.answered, total: STORAGE_QUESTIONS.length })}</p>
   <StorageAdvice {assessment} />
   {#if assessment.answered > 0}
-    <button class="link danger" onclick={() => patchStorage(cellar.id, () => ({}))}>{t('storage.clear')}</button>
+    <button class="link danger" onclick={() => patchCellar(cellar.id, (c) => ({ ...c, storage: {} }))}>{t('storage.clear')}</button>
   {/if}
 </div>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
-  import { cellarName, placementLabel } from '../lib/labels'
+  import { cellarName, placementLabel, rackName, slotLabel } from '../lib/labels'
   import { cellarLosing, placementsOf, slotsFreed } from '../lib/racks'
   import { bottlesOf } from '../lib/stock'
   import { currentStock, movementsFor, removeMovement, sortedCellars, store } from '../lib/store.svelte'
@@ -18,15 +18,17 @@
   )
   const total = $derived(bottlesOf(currentStock(), wineId))
   const history = $derived(movementsFor(wineId))
+  /** "Home cellar · Left wall: A1, A2, B3" per rack, in cellar and rack order. */
   const placed = $derived(
-    store.placements
-      .filter((p) => p.wineId === wineId)
-      .map((p) => {
-        const rack = store.racks.find((r) => r.id === p.rackId)
-        const cellar = rack && store.cellars.length > 1 ? `${cellarName(rack.cellarId)} · ` : ''
-        return cellar + placementLabel(p)
+    sortedCellars().flatMap((c) => {
+      const byRack = new Map<string, Placement[]>()
+      for (const p of placementsOf(store.racks, store.placements, wineId, c.id)) byRack.set(p.rackId, [...(byRack.get(p.rackId) ?? []), p])
+      const cellar = store.cellars.length > 1 ? `${cellarName(c.id)} · ` : ''
+      return [...byRack].map(([rackId, slots]) => {
+        const rack = store.racks.find((r) => r.id === rackId)!
+        return `${cellar}${rackName(rack)}: ${slots.map(slotLabel).join(', ')}`
       })
-      .sort(),
+    }),
   )
 
   function describe(m: Movement): string {
@@ -54,7 +56,7 @@
       }
     }
     if (!confirm(t('journal.deleteMovement'))) return
-    await removeMovement(m.id)
+    await remove(m.id, [])
   }
 
   function toggle(id: string) {
@@ -64,7 +66,12 @@
   async function confirmDelete() {
     const { id } = deleting!
     deleting = null
-    await removeMovement(id, chosen)
+    await remove(id, chosen)
+  }
+
+  async function remove(id: string, freed: string[]) {
+    const result = await removeMovement(id, freed)
+    if (result !== 'removed') alert(t(result === 'stale' ? 'form.stale' : 'stock.unbalanced'))
   }
 </script>
 
@@ -81,7 +88,7 @@
 
 {#if placed.length > 0}
   <p class="muted placed">
-    📍 {t('rack.placedIn', { slots: placed.join(', ') })}
+    📍 {t('rack.placedIn', { slots: placed.join('; ') })}
     {#if onlocate}<button class="link" onclick={() => onlocate(wineId)}>{t('rack.locate')}</button>{/if}
   </p>
 {/if}

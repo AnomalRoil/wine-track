@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { parseBackup, serializeBackup, type BackupPhoto } from '../lib/backup'
-  import { getAllPhotos, replaceAll } from '../lib/db'
+  import { encodeBackup, parseBackup } from '../lib/backup'
   import { downloadFile } from '../lib/download'
   import { t } from '../lib/i18n.svelte'
   import { base64ToBlob, blobToBase64 } from '../lib/photo'
   import { CURRENCIES, MODELS, settings } from '../lib/settings.svelte'
   import type { ScreenProps } from '../lib/screens'
-  import { initStore, store } from '../lib/store.svelte'
+  import { backupSnapshot, restore, store } from '../lib/store.svelte'
   import CellarSettings from './CellarSettings.svelte'
   import LwinSettings from './LwinSettings.svelte'
 
@@ -23,15 +22,8 @@
   )
 
   async function exportBackup() {
-    const photos: BackupPhoto[] = await Promise.all(
-      (await getAllPhotos()).map(async (p) => ({
-        id: p.id,
-        mediaType: p.blob.type || 'image/jpeg',
-        data: await blobToBase64(p.blob),
-      })),
-    )
-    const { wines, tastings, cellars, movements, racks, placements } = $state.snapshot(store)
-    const json = serializeBackup({ wines, tastings, cellars, movements, racks, placements }, photos, new Date().toISOString())
+    const { data, photos } = await backupSnapshot()
+    const json = await encodeBackup(data, photos, blobToBase64, new Date().toISOString())
     const date = new Date().toISOString().slice(0, 10)
     downloadFile(`wine-track-backup-${date}.json`, new Blob([json], { type: 'application/json' }))
     settings.lastBackupAt = Date.now()
@@ -50,8 +42,7 @@
     }
     if (!confirm(t('settings.importConfirm', { n: store.wines.length }))) return
     const photos = backup.photos.map((p) => ({ id: p.id, blob: base64ToBlob(p.data, p.mediaType) }))
-    await replaceAll(backup, photos)
-    await initStore()
+    await restore(backup, photos)
     importMessage = t('settings.importDone', { n: backup.wines.length })
   }
 </script>

@@ -1,20 +1,22 @@
 import { z } from 'zod'
+import { MAX_YEAR, MIN_YEAR } from './aging'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
 import { normalizeTasting, SCALES, SHADES } from './tasting'
 import { MAX_COLUMNS, MAX_DEPTH, MAX_ROWS, slotId } from './racks'
-import { RACK_LAYOUTS } from './types'
+import { RACK_LAYOUTS, type Photo } from './types'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
-const year = z.number().int().nullable().default(null)
+const calendarYear = z.number().int().min(MIN_YEAR).max(MAX_YEAR)
+const year = calendarYear.nullable().default(null)
 const axis = z.number().min(0).max(10)
 
 const WineV1Schema = z.object({
   id: z.string(),
   name: z.string(),
   producer: z.string(),
-  vintage: z.number().int().nullable(),
+  vintage: calendarYear.nullable(),
   grapes: z.array(z.string()),
   region: z.string(),
   country: z.string(),
@@ -152,6 +154,12 @@ export type BackupPhoto = Backup['photos'][number]
 export function serializeBackup(data: Data, photos: BackupPhoto[], exportedAt: string): string {
   const backup: Backup = { app: 'wine-track', version: 2, exportedAt, ...data, photos }
   return JSON.stringify(backup)
+}
+
+/** Serializes a snapshot, encoding its photos with `encode`. */
+export async function encodeBackup(data: Data, photos: Photo[], encode: (blob: Blob) => Promise<string>, exportedAt: string): Promise<string> {
+  const encoded = await Promise.all(photos.map(async (p) => ({ id: p.id, mediaType: p.blob.type || 'image/jpeg', data: await encode(p.blob) })))
+  return serializeBackup(data, encoded, exportedAt)
 }
 
 /** Parses a backup of any known version, upgraded to the current format; null if invalid. */

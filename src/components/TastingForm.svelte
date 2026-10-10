@@ -2,7 +2,7 @@
   import { untrack } from 'svelte'
   import { today } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
-  import { saveTasting } from '../lib/store.svelte'
+  import { saveTasting, store, storeGeneration } from '../lib/store.svelte'
   import { emptySheet, isEmptySheet } from '../lib/tasting'
   import type { Photo, Tasting, WineColor } from '../lib/types'
   import RatingDial from './RatingDial.svelte'
@@ -17,6 +17,7 @@
 
   // The form edits a copy; the original is only needed to diff its photos on save.
   const initial = untrack(() => $state.snapshot(tasting))
+  const since = storeGeneration()
   let date = $state(initial?.date ?? today())
   let rating = $state(initial?.rating ?? 3.5)
   let notes = $state(initial?.notes ?? '')
@@ -25,11 +26,17 @@
   let pending = $state<Record<string, Photo>>({})
   let processing = $state(0)
   let saving = $state(false)
+  // Bumped when the form closes, so a write still pending then does not close the next form.
+  let session = 0
+  $effect(() => () => void session++)
+  /** The tasting or its wine changed while the form was open, so the save was dropped. */
+  let stale = $state(false)
   let sheetForm: TastingSheetForm | undefined = $state()
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
-    if (processing > 0 || saving) return
+    if (processing > 0 || saving || store.restoring) return
+    const current = session
     saving = true
     sheetForm?.commit()
     const filled = $state.snapshot(sheet)
@@ -38,16 +45,20 @@
     const kept = new Set(saved.sheet?.photoIds)
     const added = Object.values($state.snapshot(pending)).filter((p) => kept.has(p.id))
     const removed = (initial?.sheet?.photoIds ?? []).filter((id) => !kept.has(id))
+    let ok: boolean
     try {
-      await saveTasting(saved, added, removed)
+      ok = await saveTasting(saved, { since, edit: initial !== undefined, added, removedPhotoIds: removed })
     } finally {
       saving = false
     }
-    ondone()
+    if (current !== session) return
+    stale = !ok
+    if (ok) ondone()
   }
 </script>
 
 <form class="card" onsubmit={submit}>
+  {#if stale}<p class="error">{t('form.stale')}</p>{/if}
   <label for="tasting-date">{t('tasting.date')}</label>
   <input id="tasting-date" type="date" bind:value={date} required />
 
@@ -65,8 +76,8 @@
   {/if}
 
   <div class="row">
-    <button type="button" onclick={ondone}>{t('form.cancel')}</button>
-    <button type="submit" class="primary grow" disabled={processing > 0 || saving}>{t('tasting.save')}</button>
+    <button type="button" disabled={saving} onclick={ondone}>{t('form.cancel')}</button>
+    <button type="submit" class="primary grow" disabled={processing > 0 || saving || store.restoring}>{t('tasting.save')}</button>
   </div>
 </form>
 

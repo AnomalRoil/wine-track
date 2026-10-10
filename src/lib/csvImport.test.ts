@@ -27,6 +27,19 @@ describe('parseNumber', () => {
     ['12-15', NaN],
     ['1.00E+02', NaN],
     ['1,5 l', 1.5],
+    ['.50', 0.5],
+    ['0.50', 0.5],
+    ['€.50', 0.5],
+    ['.5 l', 0.5],
+    ['12-', NaN],
+    ['12.-', 12],
+    ['Fr. 12.50', 12.5],
+    ['Fr.50', 50],
+    ['Fr.50.-', 50],
+    ['CHF,50', 0.5],
+    ['Fr.,50', 0.5],
+    ['-.5', -0.5],
+    ['9'.repeat(400), NaN],
   ]
   for (const [raw, want] of cases) {
     it(JSON.stringify(raw), () => {
@@ -130,6 +143,14 @@ describe('parseImport', () => {
     { name: 'bad price', fields: 'A,,,1,,,cheap', want: { errors: ['price'], price: null } },
     { name: 'centiliters below 10 under a cl header', fields: 'A,,,1,5,,', want: { sizeCl: 5, errors: [] } },
     { name: 'known cl format under a cl header', fields: 'A,,,1,1500,,', want: { sizeCl: 1500, errors: [] } },
+    { name: 'liters below 1 under a cl header', fields: 'A,,,1,"0,75",,', want: { sizeCl: 75, errors: [] } },
+    { name: 'liters with a leading separator', fields: 'A,,,1,.5 l,,', want: { sizeCl: 50, errors: [] } },
+    { name: 'below one centiliter', fields: 'A,,,1,5 ml,,', want: { errors: ['size'] } },
+    { name: 'price with a leading separator', fields: 'A,,,1,,,.50', want: { price: 0.5, errors: [] } },
+    { name: 'price with a currency before a decimal comma', fields: 'A,,,1,,,"CHF,50"', want: { price: 0.5, errors: [] } },
+    { name: 'price with an abbreviated currency before a decimal comma', fields: 'A,,,1,,,"Fr.,50"', want: { price: 0.5, errors: [] } },
+    { name: 'price with a trailing minus', fields: 'A,,,1,,,12-', want: { errors: ['price'] } },
+    { name: 'overflowing price', fields: `A,,,1,,,${'9'.repeat(400)}`, want: { errors: ['price'], price: null } },
   ]
   for (const c of cells) {
     it(c.name, () => {
@@ -151,7 +172,7 @@ describe('parseImport drinking window', () => {
     { name: 'full window', fields: 'A,2024,2026,2030,2035', window: { drinkFrom: 2024, peakFrom: 2026, peakUntil: 2030, drinkUntil: 2035 }, errors: [] },
     { name: 'partial window', fields: 'A,,,2030,', window: { ...none, peakUntil: 2030 }, errors: [] },
     { name: 'not a year', fields: 'A,soon,,,', window: none, errors: ['window'] },
-    { name: 'years out of order', fields: 'A,2030,,,2025', window: none, errors: ['window'] },
+    { name: 'years out of order, as the editor allows', fields: 'A,2030,,,2025', window: { ...none, drinkFrom: 2030, drinkUntil: 2025 }, errors: [] },
   ]
   for (const c of cases) {
     it(c.name, () => {
@@ -163,6 +184,15 @@ describe('parseImport drinking window', () => {
   it('reads French and German headers', () => {
     expect(row('A,2025,2040', 'nom,à boire à partir de,trinken bis').window).toEqual({ ...none, drinkFrom: 2025, drinkUntil: 2040 })
   })
+})
+
+describe('parseImport size headers with a cl unit', () => {
+  for (const header of ['Contenance (cl)', 'Format (cl)', 'Volume (cl)', 'Taille (cl)', 'Größe (cl)']) {
+    it(header, () => {
+      const r = row('A,5', `name,${header}`)
+      expect([r.draft.sizeCl, r.errors]).toEqual([5, []])
+    })
+  }
 })
 
 describe('parseImport sizes without unit', () => {
@@ -178,6 +208,18 @@ describe('parseImport sizes without unit', () => {
   for (const [raw, want] of cases) {
     it(raw, () => {
       expect(row(`A,${raw}`, 'name,volume').draft.sizeCl).toBe(want)
+    })
+  }
+})
+
+describe('parseImport with a leading blank line', () => {
+  for (const [name, text] of [
+    ['semicolons', '\nname;quantity\nClos;2'],
+    ['tabs', '\nname\tquantity\nClos\t2'],
+  ]) {
+    it(name, () => {
+      const parsed = parseImport(text, 2026)
+      expect(parsed.ok && parsed.rows.map((r) => [r.line, r.draft.name, r.quantity])).toEqual([[3, 'Clos', 2]])
     })
   }
 })
@@ -322,4 +364,10 @@ describe('identity', () => {
       expect(identity(c.a) === identity(c.b), `identity(${c.a}) vs identity(${c.b})`).toBe(c.same)
     })
   }
+})
+
+it('does not import a row whose price overflows', () => {
+  const plan = planImport([row(`A,,,1,,,${'9'.repeat(400)}`)], [], { cellars: [], defaultCellarName: 'Home', date: '', now: 0, newId: () => 'id' })
+  expect(plan.matches).toEqual([{ kind: 'invalid' }])
+  expect(plan.movements).toEqual([])
 })
