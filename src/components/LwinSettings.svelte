@@ -3,7 +3,8 @@
   import { settings } from '../lib/settings.svelte'
   import { checkRemote, downloadLwin, initLwin, lwin, removeLwin, updateAvailable } from '../lib/lwinData.svelte'
 
-  initLwin()
+  // Unreadable, the copy shows as not installed; the next lookup reads it again.
+  initLwin().catch(() => {})
   checkRemote()
 
   async function remove() {

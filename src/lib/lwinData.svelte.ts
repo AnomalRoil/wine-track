@@ -47,13 +47,25 @@ function ask<K extends LwinRequest['kind']>(request: Extract<LwinRequest, { kind
 
 let started: Promise<void> | null = null
 
-/** Reads which copy is installed, once; the worker parses it in the background. */
+/** Reads which copy is installed, once it succeeds; the worker parses it in the background. */
 export function initLwin(): Promise<void> {
-  started ??= getLwin().then((cache) => {
-    lwin.installed = cache?.meta ?? null
-    if (cache) ask({ kind: 'load' }).catch(() => {})
-  })
+  started ??= getLwin().then(
+    (cache) => {
+      lwin.installed = cache?.meta ?? null
+      if (cache) ask({ kind: 'load' }).catch(() => {})
+    },
+    (error) => {
+      started = null
+      throw error
+    },
+  )
   return started
+}
+
+/** Whether a copy is installed; false when that cannot be read, which only means no suggestion. */
+async function installed(): Promise<boolean> {
+  await initLwin().catch(() => {})
+  return lwin.installed !== null
 }
 
 /** Fetches the description of the published copy. */
@@ -117,16 +129,14 @@ export async function removeLwin(): Promise<void> {
 
 /** Wines named like `query`, best first; none when the database is not installed. */
 export async function searchLwin(query: string, limit: number): Promise<Scored[]> {
-  await initLwin()
-  if (!lwin.installed) return []
+  if (!(await installed())) return []
   // A lookup that fails only means no suggestion.
   return ask({ kind: 'search', query, limit }).catch(() => [])
 }
 
 /** The best matches of each draft; empty lists when the database is not installed. */
 export async function matchLwin(drafts: WineDraft[], limit: number): Promise<Scored[][]> {
-  await initLwin()
   const none = drafts.map(() => [])
-  if (!lwin.installed) return none
+  if (!(await installed())) return none
   return ask({ kind: 'match', drafts: drafts.map((d) => $state.snapshot(d)), limit }).catch(() => none)
 }

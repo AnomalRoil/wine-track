@@ -1,7 +1,8 @@
 import { gzipSync } from 'node:zlib'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LwinCache } from './db'
-import { downloadLwin, lwin, removeLwin } from './lwinData.svelte'
+import { emptyDraft } from './extract'
+import { downloadLwin, initLwin, lwin, matchLwin, removeLwin, searchLwin } from './lwinData.svelte'
 
 let stored: LwinCache | undefined
 vi.mock('./db', () => ({
@@ -102,5 +103,17 @@ describe('removeLwin', () => {
     await expect(removeLwin()).rejects.toThrow('failed to load')
     crash = false
     await expect(removeLwin()).resolves.toBeUndefined()
+  })
+})
+
+describe('initLwin', () => {
+  it('reads the installed copy again after a failed read', async () => {
+    vi.mocked(db.getLwin).mockRejectedValueOnce(new Error('blocked')).mockRejectedValueOnce(new Error('blocked'))
+    await expect(searchLwin('Krug', 5)).resolves.toEqual([])
+    await expect(matchLwin([emptyDraft()], 5)).resolves.toEqual([[]])
+
+    stored = { meta: meta('2026-01-01'), data: new Blob([tsv]) }
+    await initLwin()
+    expect(lwin.installed).toEqual(meta('2026-01-01'))
   })
 })

@@ -37,7 +37,8 @@
   let suggestions = $state.raw<Scored[]>([])
   let searches = 0
 
-  initLwin()
+  // Unreadable, the copy shows as not installed; the next lookup reads it again.
+  initLwin().catch(() => {})
 
   async function suggest() {
     const query = `${draft.producer} ${draft.name}`.trim()
