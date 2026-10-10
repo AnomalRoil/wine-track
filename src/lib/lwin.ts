@@ -195,7 +195,8 @@ export function match(index: LwinIndex, draft: WineDraft, limit: number): Scored
   const mentioned = new Set([...named, ...words(draft.region)])
   const producerKey = meaningful(words(draft.producer)).join(' ')
   const name = words(draft.name).join(' ')
-  const ranks = named.filter((w) => RANKS.has(w))
+  // Only the name classifies the wine: "Gran" in a producer's name is no Gran Reserva.
+  const ranks = words(draft.name).filter((w) => RANKS.has(w))
   const candidates = new Set<number>()
   for (const w of named) for (const i of index.byProducerWord.get(w) ?? []) candidates.add(i)
 

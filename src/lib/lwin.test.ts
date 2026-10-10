@@ -139,6 +139,13 @@ describe('match', () => {
       expect((best?.score ?? 0) >= CONFIDENT).toBe(c.confident)
     })
   }
+
+  it('reads a classification from the name only', () => {
+    const labels = ['Cruor', 'Gran Cruor'].map((label, i) => [`120000${i}`, '0', 'Casa Gran del Siurana', label, '1', '1', '0', '2', '1', '', ''].join('\t'))
+    const siurana = parseLwin(`${header}\n${labels.join('\n')}\n`)
+    const [best, next] = match(siurana, draft({ producer: 'Casa Gran del Siurana', name: 'Priorat' }), 2)
+    expect(next.score).toBe(best.score)
+  })
 })
 
 describe('confidentMatch', () => {
