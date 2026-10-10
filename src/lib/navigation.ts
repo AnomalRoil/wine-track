@@ -8,6 +8,9 @@ export interface Entry {
 /** Depth of the entry shown, and whether the last move went forward. */
 const position = { depth: 0, forward: false }
 
+// A reload keeps the entry, so the page starts at its depth.
+if (typeof history !== 'undefined') position.depth = (history.state as Entry | null)?.depth ?? 0
+
 // Registered before any view's listener, so views read the direction of the move that just happened.
 if (typeof window !== 'undefined') {
   window.addEventListener('popstate', () => {

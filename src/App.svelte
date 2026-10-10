@@ -28,8 +28,9 @@
     depth: number
   }
 
-  // Entries from an earlier page load point at views this load never opened.
-  history.replaceState({ tab: 'wines', wine: null, screen: null, depth: 0 } satisfies ViewState, '')
+  // Entries from an earlier page load point at views this load never opened. The entry keeps its
+  // depth and mark, so back and forward still tell the entries around it apart.
+  history.replaceState({ ...history.state, tab: 'wines', wine: null, screen: null, depth: history.state?.depth ?? 0 } satisfies ViewState, '')
 
   /** Tab to land on once a tab switch has unwound the pushed entries. */
   let unwindingTo: Tab | null = null

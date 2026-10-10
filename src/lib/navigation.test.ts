@@ -62,4 +62,22 @@ describe('skipStale', () => {
     nav.skipStale()
     expect(fake.index()).toBe(2)
   })
+
+  it('goes back past a stale overlay entry after a reload at depth 2', async () => {
+    const fake = fakeHistory()
+    vi.stubGlobal('window', fake.window)
+    vi.stubGlobal('history', fake.history)
+
+    let nav = await import('./navigation')
+    fake.history.replaceState({ depth: 0 })
+    nav.pushEntry({ depth: 1, overlay: true })
+    nav.pushEntry({ depth: 2, wine: 'w1' })
+
+    vi.resetModules()
+    nav = await import('./navigation')
+    fake.history.replaceState({ ...(fake.history.state as object), wine: null })
+    fake.history.back()
+    nav.skipStale()
+    expect(fake.index()).toBe(0)
+  })
 })
