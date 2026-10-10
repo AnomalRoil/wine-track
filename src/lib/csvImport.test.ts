@@ -39,6 +39,7 @@ describe('parseNumber', () => {
     ['CHF,50', 0.5],
     ['Fr.,50', 0.5],
     ['-.5', -0.5],
+    ['9'.repeat(400), NaN],
   ]
   for (const [raw, want] of cases) {
     it(JSON.stringify(raw), () => {
@@ -132,6 +133,7 @@ describe('parseImport', () => {
     { name: 'price with a currency before a decimal comma', fields: 'A,,,1,,,"CHF,50"', want: { price: 0.5, errors: [] } },
     { name: 'price with an abbreviated currency before a decimal comma', fields: 'A,,,1,,,"Fr.,50"', want: { price: 0.5, errors: [] } },
     { name: 'price with a trailing minus', fields: 'A,,,1,,,12-', want: { errors: ['price'] } },
+    { name: 'overflowing price', fields: `A,,,1,,,${'9'.repeat(400)}`, want: { errors: ['price'], price: null } },
   ]
   for (const c of cells) {
     it(c.name, () => {
@@ -345,4 +347,10 @@ describe('identity', () => {
       expect(identity(c.a) === identity(c.b), `identity(${c.a}) vs identity(${c.b})`).toBe(c.same)
     })
   }
+})
+
+it('does not import a row whose price overflows', () => {
+  const plan = planImport([row(`A,,,1,,,${'9'.repeat(400)}`)], [], { cellars: [], defaultCellarName: 'Home', date: '', now: 0, newId: () => 'id' })
+  expect(plan.matches).toEqual([{ kind: 'invalid' }])
+  expect(plan.movements).toEqual([])
 })

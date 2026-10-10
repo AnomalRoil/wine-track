@@ -146,7 +146,7 @@ export type ParsedImport =
   | { ok: false; error: 'empty' | 'no-name-column' | 'too-many-rows' }
 
 /**
- * Parses "12,50", "€ 12.50", "1 234,5", "1,234.50", ".5 l", "12.-" or "75 cl"; NaN when not a number.
+ * Parses "12,50", "€ 12.50", "1 234,5", "1,234.50", ".5 l", "12.-" or "75 cl"; NaN when not a finite number.
  * Only a currency or unit around the number is dropped, so "1E+02", "12-15" or "12-" are rejected.
  * A dot after a letter ends an abbreviation, so "Fr.50" is 50.
  */
@@ -159,7 +159,8 @@ export function parseNumber(raw: string): number {
   if (lastComma > lastDot) s = s.replaceAll('.', '').replace(',', '.')
   else s = s.replaceAll(',', '')
   s = s.replace(/^(-?)\./, '$10.')
-  return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN
+  const n = /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN
+  return Number.isFinite(n) ? n : NaN
 }
 
 function parseVintage(raw: string, maxYear: number): number | null | undefined {
