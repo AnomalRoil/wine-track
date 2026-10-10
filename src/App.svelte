@@ -98,7 +98,9 @@
     locatedWineId = wineId
   }
 
-  const fab = $derived(store.loaded && !selectedWineId && (tab === 'wines' || tab === 'cellar'))
+  // A history entry can point at a wine deleted since; the view then falls through to the tab.
+  const detail = $derived(selectedWineId !== null && store.wines.some((w) => w.id === selectedWineId))
+  const fab = $derived(store.loaded && !detail && (tab === 'wines' || tab === 'cellar'))
 
   function onWineSaved(wine: Wine) {
     selectTab('wines')
@@ -109,8 +111,7 @@
 <main class:with-fab={fab}>
   {#if !store.loaded}
     <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
-  {:else if selectedWineId && store.wines.some((w) => w.id === selectedWineId)}
-    <!-- A history entry can point at a wine deleted since; it then falls through to the tab. -->
+  {:else if detail && selectedWineId}
     <WineDetail wineId={selectedWineId} onclose={closeWine} onlocate={locate} />
   {:else if tab === 'wines'}
     <WineList onopen={openWine} />
