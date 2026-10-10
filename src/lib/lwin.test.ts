@@ -155,6 +155,8 @@ describe('confidentMatch', () => {
     { name: 'alone', results: scored(0.8), want: '1066540' },
     { name: 'clearly ahead', results: scored(0.87, 0.78), want: '1066540' },
     { name: 'tied', results: scored(0.87, 0.87), want: null },
+    { name: 'exactly the margin ahead', results: scored(0.85, 0.8), want: '1066540' },
+    { name: 'just under the margin ahead', results: scored(0.85, 0.801), want: null },
     { name: 'too low', results: scored(0.7), want: null },
   ]
   for (const c of cases) {

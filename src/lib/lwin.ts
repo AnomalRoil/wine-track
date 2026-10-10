@@ -231,7 +231,7 @@ const MARGIN = 0.05
 /** The wine that `results` (best first) name with confidence: likely and clearly ahead of the next. */
 export function confidentMatch(results: Scored[]): LwinWine | null {
   const [best, next] = results
-  if (!best || best.score < CONFIDENT || (next && best.score - next.score < MARGIN)) return null
+  if (!best || best.score < CONFIDENT || (next && Math.round((best.score - next.score) * 1000) < MARGIN * 1000)) return null
   return best.wine
 }
 
