@@ -121,7 +121,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
     margin: 0.35rem 0;
   }
 
@@ -133,7 +133,7 @@
     position: relative;
     height: 4px;
     border-radius: 2px;
-    background: var(--border);
+    background: var(--outline-variant);
   }
 
   .knob {
@@ -143,7 +143,7 @@
     height: 12px;
     margin-left: -6px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--primary);
   }
 
   .actions {

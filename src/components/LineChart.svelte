@@ -99,23 +99,23 @@
   }
 
   .marker {
-    stroke: var(--surface);
+    stroke: var(--surface-container-low);
     stroke-width: 2;
   }
 
   .grid {
-    stroke: var(--border);
+    stroke: var(--outline-variant);
     stroke-dasharray: 2 3;
   }
 
   .axis,
   .cross {
-    stroke: var(--border);
+    stroke: var(--outline-variant);
   }
 
   .tick {
     font-size: 9px;
-    fill: var(--muted);
+    fill: var(--on-surface-variant);
   }
 
   .legend {

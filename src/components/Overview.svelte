@@ -257,12 +257,12 @@
   }
 
   .shortcut.decline {
-    border-left-color: var(--danger);
+    border-left-color: var(--error);
   }
 
   .shortcut.active {
-    background: var(--bg);
-    border-color: var(--accent);
+    background: var(--surface);
+    border-color: var(--primary);
   }
 
   .big {
@@ -317,12 +317,12 @@
   }
 
   .gain {
-    color: #2e7d32;
+    color: var(--gain);
     font-weight: 600;
   }
 
   .loss {
-    color: var(--danger);
+    color: var(--error);
     font-weight: 600;
   }
 

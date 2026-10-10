@@ -72,12 +72,12 @@
   }
 
   .date {
-    color: var(--muted);
+    color: var(--on-surface-variant);
     white-space: nowrap;
   }
 
   .overdue {
-    color: var(--danger);
+    color: var(--error);
     font-weight: 600;
   }
 

@@ -41,11 +41,11 @@
 
 <style>
   a {
-    color: var(--accent);
+    color: var(--primary);
   }
 
   .error-text {
-    color: var(--danger);
+    color: var(--error);
   }
 
   .pulse {

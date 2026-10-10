@@ -294,7 +294,7 @@
     top: 0.5rem;
     z-index: 5;
     margin-top: 0.5rem;
-    border-color: var(--accent);
+    border-color: var(--primary);
   }
 
   .grow {

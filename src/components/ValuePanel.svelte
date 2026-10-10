@@ -67,12 +67,12 @@
   }
 
   .gain {
-    color: #2e7d32;
+    color: var(--gain);
     font-weight: 600;
   }
 
   .loss {
-    color: var(--danger);
+    color: var(--error);
     font-weight: 600;
   }
 </style>

@@ -232,10 +232,10 @@
     background: none;
     text-align: left;
     padding: 0.45rem 0.5rem;
-    color: var(--text);
+    color: var(--on-surface);
   }
 
   .suggestions li + li {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--outline-variant);
   }
 </style>

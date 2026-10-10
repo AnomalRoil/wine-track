@@ -37,7 +37,7 @@
     margin: 0 auto;
     overflow-y: auto;
     padding: 0.75rem 0.9rem calc(1rem + env(safe-area-inset-bottom));
-    background: var(--surface);
+    background: var(--surface-container-low);
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 20px rgb(0 0 0 / 20%);
   }

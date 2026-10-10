@@ -161,7 +161,7 @@
     display: block;
     margin-bottom: 0.25rem;
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   .grow {
@@ -181,7 +181,7 @@
   }
 
   .error {
-    color: var(--danger);
+    color: var(--error);
     font-size: 0.85rem;
     margin: 0.4rem 0 0;
   }

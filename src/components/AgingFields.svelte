@@ -136,7 +136,7 @@
   }
 
   .warn {
-    color: var(--danger);
+    color: var(--error);
     font-size: 0.85rem;
     margin: 0.4rem 0 0;
   }
@@ -147,7 +147,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
     margin: 0.35rem 0;
   }
 
@@ -157,6 +157,6 @@
 
   .axis input {
     width: 100%;
-    accent-color: var(--accent);
+    accent-color: var(--primary);
   }
 </style>

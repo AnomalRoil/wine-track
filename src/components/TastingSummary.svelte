@@ -75,7 +75,7 @@
   }
 
   dt {
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   dd {
@@ -89,7 +89,7 @@
     height: 0.75rem;
     margin-right: 0.3rem;
     border-radius: 50%;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     vertical-align: -0.1rem;
   }
 
@@ -101,14 +101,14 @@
   }
 
   .aroma {
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     border-radius: 999px;
     padding: 0 0.5rem;
   }
 
   .fault {
-    color: var(--danger);
-    border-color: var(--danger);
+    color: var(--error);
+    border-color: var(--error);
   }
 
   .conclusion {

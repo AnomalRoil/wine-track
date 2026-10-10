@@ -111,11 +111,11 @@
 
 <style>
   .error {
-    color: var(--danger);
+    color: var(--error);
   }
 
   section {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--outline-variant);
     margin-top: 0.9rem;
     padding-top: 0.2rem;
   }
@@ -129,18 +129,18 @@
     display: block;
     margin: 0.6rem 0 0.1rem;
     font-size: 0.85rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   .take {
     display: inline-block;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     border-radius: 10px;
-    background: var(--surface);
+    background: var(--surface-container-low);
     padding: 0.45rem 0.8rem;
     margin: 0.2rem 0 0;
     font-size: 0.9rem;
-    color: var(--text);
+    color: var(--on-surface);
     cursor: pointer;
   }
 

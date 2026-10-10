@@ -88,7 +88,7 @@
     align-items: center;
     justify-content: center;
     font-size: 1.6rem;
-    background: var(--bg);
+    background: var(--surface);
   }
 
   .thumb img {
@@ -120,23 +120,23 @@
   }
 
   .badge {
-    background: var(--bg);
-    border: 1px solid var(--border);
+    background: var(--surface);
+    border: 1px solid var(--outline-variant);
     border-radius: 999px;
     padding: 0 0.5rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
     white-space: nowrap;
   }
 
   .wish {
-    color: var(--accent);
+    color: var(--primary);
   }
 
   .dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     flex-shrink: 0;
   }
 
@@ -147,5 +147,5 @@
   .dot.sparkling { background: #f7e7a8; }
   .dot.sweet { background: #d9a441; }
   .dot.fortified { background: #5e2b1e; }
-  .dot.other { background: var(--muted); }
+  .dot.other { background: var(--on-surface-variant); }
 </style>

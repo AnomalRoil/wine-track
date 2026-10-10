@@ -114,14 +114,14 @@
 
 <style>
   .import {
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     border-radius: 10px;
-    background: var(--surface);
+    background: var(--surface-container-low);
     padding: 0.55rem 0.9rem;
     cursor: pointer;
     margin: 0;
     font-size: 1rem;
-    color: var(--text);
+    color: var(--on-surface);
   }
 
   .import input {
@@ -137,6 +137,6 @@
     gap: 0.5rem;
     align-items: center;
     font-size: 1rem;
-    color: var(--text);
+    color: var(--on-surface);
   }
 </style>

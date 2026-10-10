@@ -73,10 +73,10 @@
     display: block;
     margin: 0.5rem 0 0;
     padding: 0.8rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     border-radius: 12px;
-    background: var(--surface);
-    color: var(--text);
+    background: var(--surface-container-low);
+    color: var(--on-surface);
     font-size: 0.95rem;
     text-align: center;
     cursor: pointer;
@@ -84,9 +84,9 @@
 
   .capture.primary {
     padding: 1rem;
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text);
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
     font-size: 1.05rem;
   }
 
@@ -125,7 +125,7 @@
   }
 
   .badge {
-    color: var(--muted);
+    color: var(--on-surface-variant);
     font-size: 0.85rem;
   }
 
@@ -133,7 +133,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     flex-shrink: 0;
   }
 
@@ -144,5 +144,5 @@
   .dot.sparkling { background: #f7e7a8; }
   .dot.sweet { background: #d9a441; }
   .dot.fortified { background: #5e2b1e; }
-  .dot.other { background: var(--muted); }
+  .dot.other { background: var(--on-surface-variant); }
 </style>

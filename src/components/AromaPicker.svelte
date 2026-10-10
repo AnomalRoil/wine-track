@@ -53,8 +53,8 @@
   }
 
   .current {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--primary);
+    color: var(--primary);
     font-weight: 600;
   }
 
@@ -62,8 +62,8 @@
     margin-left: 0.35rem;
     padding: 0 0.4rem;
     border-radius: 999px;
-    background: var(--accent);
-    color: var(--accent-text);
+    background: var(--primary);
+    color: var(--on-primary);
     font-size: 0.75rem;
   }
 
@@ -75,6 +75,6 @@
     display: block;
     margin-top: 0.3rem;
     font-size: 0.8rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 </style>

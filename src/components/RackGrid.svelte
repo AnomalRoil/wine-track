@@ -3,7 +3,7 @@
   import { rackName, slotLabel, wineLabel } from '../lib/labels'
   import { matchesPerLayer, slotId, type Slot } from '../lib/racks'
   import type { Placement, Rack, Wine } from '../lib/types'
-  import BottleGlyph from './BottleGlyph.svelte'
+  import SlotBottle from './SlotBottle.svelte'
 
   let {
     rack,
@@ -83,7 +83,7 @@
               aria-label={c.wine ? `${slotLabel(c.slot)}: ${wineLabel(c.wine)}` : t('rack.emptySlot', { slot: slotLabel(c.slot) })}
               onclick={() => onslot(c.slot)}
             >
-              <BottleGlyph color={c.wine?.color ?? null} layout={rack.layout} />
+              <SlotBottle color={c.wine?.color ?? null} layout={rack.layout} />
             </button>
           {/each}
         </div>
@@ -132,7 +132,7 @@
     margin: 0 auto;
     padding: 4px;
     border-radius: 8px;
-    background: color-mix(in srgb, var(--border) 45%, transparent);
+    background: color-mix(in srgb, var(--outline-variant) 45%, transparent);
   }
 
   .line {
@@ -153,7 +153,7 @@
     width: 1.1rem;
     flex-shrink: 0;
     font-size: 0.7rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
     text-align: center;
   }
 
@@ -167,7 +167,7 @@
     padding: 3px;
     border: 1px solid transparent;
     border-radius: 6px;
-    background: var(--surface);
+    background: var(--surface-container-low);
     display: flex;
     transition: opacity 0.15s;
   }
@@ -178,8 +178,8 @@
   }
 
   .slot.selected {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary);
   }
 
   .slot.match {

@@ -29,8 +29,8 @@
     left: 0;
     right: 0;
     display: flex;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
+    background: var(--surface-container-low);
+    border-top: 1px solid var(--outline-variant);
     padding-bottom: env(safe-area-inset-bottom);
     z-index: 10;
   }
@@ -46,11 +46,11 @@
     background: none;
     padding: 0.5rem 0 0.4rem;
     font-size: 0.7rem;
-    color: var(--muted);
+    color: var(--on-surface-variant);
   }
 
   button.active {
-    color: var(--accent);
+    color: var(--primary);
     font-weight: 600;
   }
 

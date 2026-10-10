@@ -87,21 +87,21 @@
   }
 
   .grid {
-    stroke: var(--border);
+    stroke: var(--outline-variant);
     stroke-dasharray: 2 3;
   }
 
   .axis {
-    stroke: var(--border);
+    stroke: var(--outline-variant);
   }
 
   .tick {
     font-size: 9px;
-    fill: var(--muted);
+    fill: var(--on-surface-variant);
   }
 
   .highlight {
-    fill: var(--border);
+    fill: var(--outline-variant);
     opacity: 0.5;
   }
 

@@ -99,7 +99,7 @@
   }
 
   svg:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--primary);
     outline-offset: 4px;
     border-radius: 50%;
   }
@@ -112,28 +112,28 @@
   }
 
   .track {
-    stroke: var(--border);
+    stroke: var(--outline-variant);
   }
 
   .fill {
-    stroke: var(--accent);
+    stroke: var(--primary);
   }
 
   .knob {
-    fill: var(--surface);
-    stroke: var(--accent);
+    fill: var(--surface-container-low);
+    stroke: var(--primary);
     stroke-width: 4;
   }
 
   .tick {
-    fill: var(--muted);
+    fill: var(--on-surface-variant);
     font-size: 13px;
     text-anchor: middle;
     dominant-baseline: middle;
   }
 
   .value {
-    fill: var(--text);
+    fill: var(--on-surface);
     font-size: 40px;
     font-weight: 700;
     text-anchor: middle;

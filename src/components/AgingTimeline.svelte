@@ -40,8 +40,8 @@
     bottom: 0;
     width: 3px;
     margin-left: -1.5px;
-    background: var(--text);
-    box-shadow: 0 0 0 1px var(--surface);
+    background: var(--on-surface);
+    box-shadow: 0 0 0 1px var(--surface-container-low);
   }
 
   .legend {

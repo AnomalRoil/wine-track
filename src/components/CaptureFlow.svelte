@@ -337,7 +337,7 @@
 
   .duplicate {
     margin-top: 1rem;
-    border-color: var(--accent);
+    border-color: var(--primary);
   }
 
   .wrap {
@@ -360,9 +360,9 @@
 
   .capture {
     display: block;
-    border: 1px solid var(--border);
+    border: 1px solid var(--outline-variant);
     border-radius: 14px;
-    background: var(--surface);
+    background: var(--surface-container-low);
     padding: 1.1rem;
     font-size: 1.05rem;
     cursor: pointer;
@@ -370,9 +370,9 @@
   }
 
   .capture.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text);
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
   }
 
   .capture input {
@@ -394,7 +394,7 @@
   }
 
   .error {
-    border-color: var(--danger);
+    border-color: var(--error);
   }
 
   @keyframes pulse {

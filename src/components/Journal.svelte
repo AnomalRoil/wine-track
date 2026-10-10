@@ -91,7 +91,7 @@
   }
 
   .fault {
-    color: var(--danger);
+    color: var(--error);
   }
 
   .center {
