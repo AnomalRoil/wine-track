@@ -160,13 +160,26 @@ export function removeWine(wine: Wine): Promise<void> {
   })
 }
 
+/** How a tasting form's save relates to the stored tastings. */
+export interface TastingSave {
+  /** A storeGeneration() read when the form opened. */
+  since: number
+  /** The form edits a stored tasting rather than creating one. */
+  edit?: boolean
+  /** Photos the tasting gained. */
+  added?: Photo[]
+  /** Photos it no longer shows. */
+  removedPhotoIds?: string[]
+}
+
 /**
- * Saves a tasting with the photos it gained; `removedPhotoIds` are photos it no longer shows.
- * False when its wine is gone.
+ * Saves a tasting with its photo changes. False when its wine is gone, a restore ran
+ * since the form opened, or the tasting it edits was deleted.
  */
-export function saveTasting(tasting: Tasting, added: Photo[] = [], removedPhotoIds: string[] = []): Promise<boolean> {
+export function saveTasting(tasting: Tasting, { since, edit = false, added = [], removedPhotoIds = [] }: TastingSave): Promise<boolean> {
   return writes(async () => {
-    if (!store.wines.some((w) => w.id === tasting.wineId)) return false
+    if (since !== generation || !store.wines.some((w) => w.id === tasting.wineId)) return false
+    if (edit && !store.tastings.some((t) => t.id === tasting.id)) return false
     await db.putTasting($state.snapshot(tasting), added, removedPhotoIds)
     const i = store.tastings.findIndex((t) => t.id === tasting.id)
     if (i >= 0) store.tastings[i] = tasting

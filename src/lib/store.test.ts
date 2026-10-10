@@ -3,6 +3,7 @@ import { encodeBackup, parseBackup } from './backup'
 import { parseImport } from './csvImport'
 import * as db from './db'
 import { place } from './racks'
+import { emptySheet } from './tasting'
 import {
   addMovements,
   addWine,
@@ -14,6 +15,7 @@ import {
   placeBottle,
   removeCellar,
   removeMovement,
+  removeTasting,
   removeWine,
   restore,
   patchWine,
@@ -263,7 +265,7 @@ it('keeps a wine and its tastings deleted while an edit waited', async () => {
   const wine = makeWine()
   const removed = removeWine(wine)
   const edited = patchWine(wine.id, () => ({ name: 'Renamed' }))
-  const tasted = saveTasting({ id: 't', wineId: wine.id, date: '2026-01-01', rating: 4, notes: '' })
+  const tasted = saveTasting({ id: 't', wineId: wine.id, date: '2026-01-01', rating: 4, notes: '' }, { since: storeGeneration() })
   await release(removed, edited, tasted)
 
   expect([await edited, await tasted]).toEqual([false, false])
@@ -352,4 +354,34 @@ it('refuses to return bottles to a deleted cellar', async () => {
 
   expect(await removed).toBe('unbalanced')
   expect(store.movements).toContainEqual(transfer)
+})
+
+it('keeps a tasting deleted while an edit of it waited', async () => {
+  const tasting = { id: 't', wineId: 'w1', date: '2026-01-01', rating: 4, notes: '', sheet: { ...emptySheet(), photoIds: ['p1'] } }
+  store.tastings = [tasting]
+  const since = storeGeneration()
+
+  const removed = removeTasting(tasting)
+  const edited = saveTasting({ ...tasting, notes: 'Edited' }, { since, edit: true })
+  await release(removed, edited)
+
+  expect(await edited).toBe(false)
+  expect(db.putTasting).not.toHaveBeenCalled()
+  expect(store.tastings).toEqual([])
+})
+
+it('drops a tasting edit started before a restore', async () => {
+  const tasting = { id: 't', wineId: 'w1', date: '2026-01-01', rating: 4, notes: '' }
+  const backup: db.Data = { wines: [makeWine()], tastings: [], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
+  vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
+  store.tastings = [tasting]
+  const since = storeGeneration()
+
+  const restored = restore(backup, [])
+  const edited = saveTasting({ ...tasting, notes: 'Edited' }, { since, edit: true })
+  await release(restored, edited)
+
+  expect(await edited).toBe(false)
+  expect(db.putTasting).not.toHaveBeenCalled()
+  expect(store.tastings).toEqual([])
 })

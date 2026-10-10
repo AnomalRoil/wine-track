@@ -2,7 +2,7 @@
   import { untrack } from 'svelte'
   import { today } from '../lib/due'
   import { t } from '../lib/i18n.svelte'
-  import { saveTasting } from '../lib/store.svelte'
+  import { saveTasting, storeGeneration } from '../lib/store.svelte'
   import { emptySheet, isEmptySheet } from '../lib/tasting'
   import type { Photo, Tasting, WineColor } from '../lib/types'
   import RatingDial from './RatingDial.svelte'
@@ -17,6 +17,7 @@
 
   // The form edits a copy; the original is only needed to diff its photos on save.
   const initial = untrack(() => $state.snapshot(tasting))
+  const since = storeGeneration()
   let date = $state(initial?.date ?? today())
   let rating = $state(initial?.rating ?? 3.5)
   let notes = $state(initial?.notes ?? '')
@@ -25,6 +26,8 @@
   let pending = $state<Record<string, Photo>>({})
   let processing = $state(0)
   let saving = $state(false)
+  /** The tasting or its wine changed while the form was open, so the save was dropped. */
+  let stale = $state(false)
   let sheetForm: TastingSheetForm | undefined = $state()
 
   async function submit(e: SubmitEvent) {
@@ -39,15 +42,16 @@
     const added = Object.values($state.snapshot(pending)).filter((p) => kept.has(p.id))
     const removed = (initial?.sheet?.photoIds ?? []).filter((id) => !kept.has(id))
     try {
-      await saveTasting(saved, added, removed)
+      stale = !(await saveTasting(saved, { since, edit: initial !== undefined, added, removedPhotoIds: removed }))
     } finally {
       saving = false
     }
-    ondone()
+    if (!stale) ondone()
   }
 </script>
 
 <form class="card" onsubmit={submit}>
+  {#if stale}<p class="error">{t('form.stale')}</p>{/if}
   <label for="tasting-date">{t('tasting.date')}</label>
   <input id="tasting-date" type="date" bind:value={date} required />
 
