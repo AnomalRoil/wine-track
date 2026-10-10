@@ -5,6 +5,7 @@
   import { cellarName } from '../lib/labels'
   import { sortedCellars } from '../lib/store.svelte'
   import { WINE_COLORS, type WineColor } from '../lib/types'
+  import Icon from './Icon.svelte'
 
   let {
     filter = $bindable(),
@@ -14,6 +15,10 @@
   }: { filter: WineFilter; sort?: SortKey; grapes: string[]; tags: string[] } = $props()
 
   let expanded = $state(false)
+
+  /** Phases the "Drink now" chip selects. */
+  const DRINK_NOW: Phase[] = ['maturity', 'peak', 'decline']
+  const drinkNow = $derived(filter.phases.length === DRINK_NOW.length && DRINK_NOW.every((p) => filter.phases.includes(p)))
 
   function toggleColor(color: WineColor) {
     filter.colors = filter.colors.includes(color)
@@ -30,43 +35,49 @@
   function sortLabel(key: SortKey): string {
     return key === 'urgency' ? t('aging.sort') : t(`sort.${key}`)
   }
-
-  function colorLabel(color: WineColor): string {
-    return t(`color.${color}`)
-  }
 </script>
 
-<input type="search" placeholder={t('list.search')} bind:value={filter.search} />
+<div class="search">
+  <Icon name="search" size={22} />
+  <input type="search" placeholder={t('list.search')} aria-label={t('list.search')} bind:value={filter.search} />
+  <button
+    class="icon"
+    class:on={expanded}
+    aria-label={t('list.filters')}
+    aria-expanded={expanded}
+    onclick={() => (expanded = !expanded)}
+  >
+    <Icon name="filter" size={22} />
+  </button>
+</div>
 
 <div class="chips">
   <button class="chip" class:active={filter.ownedOnly} onclick={() => (filter.ownedOnly = !filter.ownedOnly)}>
     {t('list.owned')}
   </button>
+  <button class="chip" class:active={drinkNow} onclick={() => (filter.phases = drinkNow ? [] : [...DRINK_NOW])}>
+    {t('list.drinkNow')}
+  </button>
   <button class="chip" class:active={filter.wishedOnly} onclick={() => (filter.wishedOnly = !filter.wishedOnly)}>
-    ♥ {t('list.wished')}
+    {t('list.wished')}
   </button>
   {#each WINE_COLORS as color (color)}
     <button class="chip" class:active={filter.colors.includes(color)} onclick={() => toggleColor(color)}>
-      {colorLabel(color)}
+      {t(`color.${color}`)}
     </button>
   {/each}
 </div>
 
-<div class="row controls">
-  <button class="link" onclick={() => (expanded = !expanded)}>
-    {t('list.filters')} {expanded ? '▴' : '▾'}
-  </button>
-  {#if sort !== undefined}
-    <select bind:value={sort} aria-label="sort">
-      {#each SORT_KEYS as key (key)}
-        <option value={key}>{sortLabel(key)}</option>
-      {/each}
-    </select>
-  {/if}
-</div>
-
 {#if expanded}
-  <div class="card">
+  <div class="card panel">
+    {#if sort !== undefined}
+      <label for="sort">{t('list.sort')}</label>
+      <select id="sort" bind:value={sort}>
+        {#each SORT_KEYS as key (key)}
+          <option value={key}>{sortLabel(key)}</option>
+        {/each}
+      </select>
+    {/if}
     <div class="row">
       <div class="grow">
         <label for="vmin">{t('list.vintageMin')}</label>
@@ -127,14 +138,43 @@
 {/if}
 
 <style>
-  .controls {
-    justify-content: space-between;
-    margin: 0.25rem 0;
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 4px 0 18px;
+    border-radius: 28px;
+    background: var(--surface-container-high);
+    color: var(--on-surface-variant);
   }
 
-  .controls select {
-    width: auto;
-    padding: 0.3rem 0.5rem;
+  .search input {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1rem;
+  }
+
+  .search:focus-within {
+    outline: 2px solid var(--primary);
+  }
+
+  .search .on {
+    background: var(--secondary-container);
+    color: var(--on-secondary-container);
+  }
+
+  .chips {
+    margin: 0.5rem 0;
+  }
+
+  .panel {
+    margin-bottom: 0.75rem;
   }
 
   .grow {

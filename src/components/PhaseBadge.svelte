@@ -5,17 +5,17 @@
   let { phase }: { phase: Phase } = $props()
 </script>
 
-<span class="badge" style:--c="var(--phase-{phase})">{t(`aging.phase.${phase}`)}</span>
+<span class="badge" style:background="var(--phase-{phase})" style:color="var(--on-phase-{phase})">{t(`aging.phase.${phase}`)}</span>
 
 <style>
   .badge {
-    color: var(--c);
-    background: color-mix(in srgb, var(--c) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
-    border-radius: 999px;
-    padding: 0 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 650;
     white-space: nowrap;
   }
 </style>

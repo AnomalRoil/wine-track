@@ -4,6 +4,7 @@
   import { bottlesOf } from '../lib/stock'
   import { currentStock, tastingsFor } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
+  import Icon from './Icon.svelte'
   import Sheet from './Sheet.svelte'
   import WineCard from './WineCard.svelte'
 
@@ -27,12 +28,14 @@
 </script>
 
 <Sheet {title} {onclose}>
-  <WineCard {wine} rating={avgRating(tastingsFor(wine.id))} bottles={bottlesOf(currentStock(), wine.id)} {onopen} />
+  <div class="group">
+    <WineCard {wine} rating={avgRating(tastingsFor(wine.id))} bottles={bottlesOf(currentStock(), wine.id)} {onopen} />
+  </div>
   <div class="actions">
-    <button onclick={() => onopen(wine)}>{t('rack.open')}</button>
-    <button class="primary" onclick={ondrink}>🥂 {t('rack.drink')}</button>
-    <button onclick={onmove}>⇄ {t('rack.move')}</button>
-    <button onclick={onunplace}>{t('rack.unplace')}</button>
+    <button class="primary" onclick={ondrink}><Icon name="wine" size={20} />{t('rack.drink')}</button>
+    <button class="tonal" onclick={onmove}><Icon name="move" size={20} />{t('rack.move')}</button>
+    <button class="tonal" onclick={onunplace}>{t('rack.unplace')}</button>
+    <button class="tonal" onclick={() => onopen(wine)}>{t('rack.open')}</button>
   </div>
 </Sheet>
 
