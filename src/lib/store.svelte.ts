@@ -122,15 +122,23 @@ export function patchWine(id: string, patch: (wine: Wine) => Partial<Wine>): Pro
 }
 
 /**
- * Adds a new wine with its label photo and stock additions. False when a restore ran
- * since `since`, a storeGeneration() read when the save started.
+ * Adds a new wine with its label photo and stock additions, all or nothing. False when a
+ * restore ran since `since`, a storeGeneration() read when the save started, when an
+ * addition's cellar is gone, or when the write fails.
  */
 export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], since: number): Promise<boolean> {
   return writes(async () => {
     if (since !== generation) return false
-    await db.putWine($state.snapshot(wine), photo)
+    const wineIds = new Set([...store.wines.map((w) => w.id), wine.id])
+    if (!canRecord(stock, movements, wineIds, new Set(store.cellars.map((c) => c.id)))) return false
+    try {
+      await db.putWine($state.snapshot(wine), photo, movements)
+    } catch {
+      // The transaction rolled back, so the caller keeps the draft and can retry without a duplicate.
+      return false
+    }
     store.wines.push(wine)
-    if (movements.length > 0) await recordMovements(movements, [], [])
+    store.movements.push(...movements)
     return true
   })
 }

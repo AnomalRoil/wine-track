@@ -289,3 +289,26 @@ it('exports the image of every photo its wines reference while a capture saves',
   expect(backup?.wines.map((w) => w.photoId)).toEqual(['p1'])
   expect(backup?.wines.filter((w) => w.photoId && !images.has(w.photoId))).toEqual([])
 })
+
+it('keeps nothing of a capture whose cellar was deleted while it waited', async () => {
+  store.cellars = [cellar('home'), cellar('cave', 1)]
+  const removed = removeCellar('cave', null)
+  const added = addWine(makeWine({ id: 'new', photoId: 'p' }), { id: 'p', blob: new Blob() }, [mv({ wineId: 'new', cellarId: 'cave', quantity: 2 })], storeGeneration())
+  await release(removed, added)
+
+  expect(await added).toBe(false)
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(store.wines.map((w) => w.id)).toEqual(['w1'])
+  expect(store.movements).toEqual([])
+})
+
+it('keeps nothing of a capture whose write fails', async () => {
+  vi.mocked(db.putWine).mockRejectedValueOnce(new Error('quota'))
+  const additions = [mv({ wineId: 'new', cellarId: 'home', quantity: 2 })]
+  const added = addWine(makeWine({ id: 'new' }), null, additions, storeGeneration())
+
+  expect(await added).toBe(false)
+  expect(vi.mocked(db.putWine).mock.calls[0][2]).toEqual(additions)
+  expect(store.wines.map((w) => w.id)).toEqual(['w1'])
+  expect(store.movements).toEqual([])
+})

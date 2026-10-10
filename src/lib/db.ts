@@ -103,12 +103,13 @@ async function readData(tx: IDBTransaction): Promise<Data> {
   return { wines, tastings, cellars, movements, racks, placements }
 }
 
-/** Saves a wine and, for a new one, its label photo, atomically. */
-export async function putWine(wine: Wine, photo: Photo | null = null): Promise<void> {
+/** Saves a wine and, for a new one, its label photo and stock additions, atomically. */
+export async function putWine(wine: Wine, photo: Photo | null = null, movements: Movement[] = []): Promise<void> {
   const d = await openDb()
-  const tx = d.transaction(['wines', 'photos'], 'readwrite')
+  const tx = d.transaction(['wines', 'photos', 'movements'], 'readwrite')
   tx.objectStore('wines').put(wine)
   if (photo) tx.objectStore('photos').put(photo)
+  for (const m of movements) tx.objectStore('movements').put(m)
   await done(tx)
 }
 
