@@ -20,6 +20,7 @@ import {
   restore,
   patchWine,
   saveTasting,
+  setWineValue,
   store,
   storeGeneration,
   swapCellars,
@@ -384,4 +385,14 @@ it('drops a tasting edit started before a restore', async () => {
   expect(await edited).toBe(false)
   expect(db.putTasting).not.toHaveBeenCalled()
   expect(store.tastings).toEqual([])
+})
+
+it('keeps a value corrected back while the first change waited', async () => {
+  store.wines = [makeWine({ value: 10 })]
+  const raised = setWineValue('w1', 20, '2026-01-01')
+  const corrected = setWineValue('w1', 10, '2026-01-01')
+  await release(raised, corrected)
+
+  expect(store.wines[0]).toMatchObject({ value: 10, valueHistory: [{ date: '2026-01-01', value: 10 }] })
+  expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[0]).toEqual(store.wines[0])
 })

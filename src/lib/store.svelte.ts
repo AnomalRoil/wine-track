@@ -122,6 +122,16 @@ export function patchWine(id: string, patch: (wine: Wine) => Partial<Wine>): Pro
 }
 
 /**
+ * Sets a wine's current value, recording it in the history once per `date`. Compares against
+ * the value the previous writes left, so a correction queued behind an edit still lands.
+ */
+export function setWineValue(id: string, value: number | null, date: string): Promise<boolean> {
+  return patchWine(id, (w) =>
+    value === w.value ? {} : { value, valueHistory: [...w.valueHistory.filter((p) => p.date !== date), { date, value }] },
+  )
+}
+
+/**
  * Adds a new wine with its label photo and stock additions, all or nothing. False when a
  * restore ran since `since`, a storeGeneration() read when the save started, when an
  * addition's cellar is gone, or when the write fails.
