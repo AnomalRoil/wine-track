@@ -22,15 +22,18 @@
   let since = 0
   let section: HTMLElement
 
-  /** Opens the editor and scrolls to it. */
+  /** Opens the editor, keeping any unsaved edits when it is already open, and scrolls to it. */
   export async function edit() {
     if (store.restoring) return
-    // A snapshot, so sliders never mutate the stored wine before saving.
-    draft = mergeAging(NO_AGING, $state.snapshot(wine))
-    since = storeGeneration()
-    editing = true
-    await tick()
-    section.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    if (!editing) {
+      // A snapshot, so sliders never mutate the stored wine before saving.
+      draft = mergeAging(NO_AGING, $state.snapshot(wine))
+      since = storeGeneration()
+      editing = true
+      await tick()
+    }
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+    section.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' })
   }
 
   async function save(e: SubmitEvent) {

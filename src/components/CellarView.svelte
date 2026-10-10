@@ -31,8 +31,12 @@
   import RackGrid from './RackGrid.svelte'
   import SlotSheet from './SlotSheet.svelte'
 
-  /** `focus` is a wine whose slots to highlight on opening. */
-  let { onopen, focus = null }: { onopen: (wine: Wine) => void; focus?: string | null } = $props()
+  /** `focus` is a wine whose slots to highlight on opening; `onoverlay` reports a sheet, rack form or capture opening or closing. */
+  let {
+    onopen,
+    focus = null,
+    onoverlay,
+  }: { onopen: (wine: Wine) => void; focus?: string | null; onoverlay?: (open: boolean) => void } = $props()
 
   let cellarId = $state(untrack(initialCellar))
   let filter = $state(emptyFilter())
@@ -66,6 +70,10 @@
   // An open sheet, rack form or capture owns a history entry, so the back button closes it
   // instead of leaving the app. Entries left behind by an unmounted view are popped on return.
   const overlay = $derived(selected !== null || capture !== null || editing !== null)
+  $effect(() => {
+    onoverlay?.(overlay)
+    return () => onoverlay?.(false)
+  })
   $effect(() => {
     const state = history.state as { depth?: number; overlay?: boolean } | null
     if (overlay && !state?.overlay) pushEntry({ ...state, depth: (state?.depth ?? 0) + 1, overlay: true })

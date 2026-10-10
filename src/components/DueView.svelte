@@ -37,7 +37,7 @@
       <button class="card item" onclick={() => onopen(item.wine)}>
         <span class="name">{wineLabel(item.wine)}</span>
         {#if item.entering}
-          <span class="date" style:color="var(--phase-{item.entering})">{t(`aging.entering.${item.entering}`)}</span>
+          <span class="date" style:color="var(--on-phase-{item.entering})">{t(`aging.entering.${item.entering}`)}</span>
         {:else}
           <span class="date" class:overdue={item.overdue}>
             {item.date}{item.overdue ? ` · ${t('due.overdue')}` : ''}
