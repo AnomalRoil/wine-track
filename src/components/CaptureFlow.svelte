@@ -5,7 +5,7 @@
   import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
-  import { settings } from '../lib/settings.svelte'
+  import { hasApiKey, settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
   import { cellarName, wineLabel } from '../lib/labels'
   import { applyLwin, confidentMatch, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
@@ -16,6 +16,7 @@
   import BottleGlyph from './BottleGlyph.svelte'
   import WineForm from './WineForm.svelte'
   import Icon from './Icon.svelte'
+  import NeedsKey from './NeedsKey.svelte'
 
   let {
     onsaved,
@@ -94,7 +95,7 @@
   }
 
   async function usePhoto(file: File) {
-    step = 'extracting'
+    step = hasApiKey() ? 'extracting' : 'form'
     const current = session
     const task = (photoTask = processPhoto(file))
     const blob = await task.catch(() => null)
@@ -121,11 +122,6 @@
 
   async function extract() {
     if (!photoBlob) return
-    if (!settings.apiKey) {
-      extractError = { kind: 'no-key' }
-      step = 'form'
-      return
-    }
     extractError = null
     step = 'extracting'
     const gen = ++generation
@@ -268,10 +264,13 @@
   {#if extractError}
     <p class="error card">
       {t(`extract.${extractError.kind}`, { detail: extractError.detail ?? '' })}
-      {#if extractError.kind !== 'no-key' && photoBlob}
+      {#if photoBlob && hasApiKey()}
         <button class="link" onclick={extract}>{t('extract.retry')}</button>
       {/if}
     </p>
+  {/if}
+  {#if photoBlob && !hasApiKey()}
+    <NeedsKey label={t('capture.readLabel')} icon="sparkle" />
   {/if}
   {#if lwinMatch}
     <div class="card match">

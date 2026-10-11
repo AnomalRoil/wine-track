@@ -9,9 +9,10 @@
   import { cellarName } from '../lib/labels'
   import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
-  import { settings } from '../lib/settings.svelte'
+  import { hasApiKey, settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
   import Icon from './Icon.svelte'
+  import NeedsKey from './NeedsKey.svelte'
 
   let rows = $state.raw<ImportRow[] | null>(null)
   let ignored = $state.raw<string[]>([])
@@ -210,7 +211,11 @@
         <p class="pulse">{t('io.completing', progress)}</p>
       {:else}
         <p class="muted">{t('io.completeHelp', { n: incomplete.length, size: COMPLETION_BATCH })}</p>
-        <button disabled={committing} onclick={complete}><Icon name="sparkle" size={20} />{t('io.complete', { n: incomplete.length })}</button>
+        {#if hasApiKey()}
+          <button disabled={committing} onclick={complete}><Icon name="sparkle" size={20} />{t('io.complete', { n: incomplete.length })}</button>
+        {:else}
+          <NeedsKey label={t('io.complete', { n: incomplete.length })} icon="sparkle" />
+        {/if}
       {/if}
       {#if completeError}
         <p class="error-text">{t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>

@@ -6,10 +6,11 @@
   import { sizeLabel } from '../lib/labels'
   import { applyLwin, displayName, type LwinWine, type Scored } from '../lib/lwin'
   import { initLwin, searchLwin } from '../lib/lwinData.svelte'
-  import { settings } from '../lib/settings.svelte'
+  import { hasApiKey, settings } from '../lib/settings.svelte'
   import { store } from '../lib/store.svelte'
   import { BOTTLE_SIZES, WINE_COLORS } from '../lib/types'
   import ChipInput from './ChipInput.svelte'
+  import NeedsKey from './NeedsKey.svelte'
 
   let {
     draft = $bindable(),
@@ -150,9 +151,13 @@
     placeholder={t('form.addGrape')}
     suggestions={distinctGrapes(store.wines)}
   />
-  <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(draft)} onclick={doLookup}>
-    {lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
-  </button>
+  {#if hasApiKey()}
+    <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(draft)} onclick={doLookup}>
+      {lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
+    </button>
+  {:else}
+    <NeedsKey label={t('form.lookupGrapes')} link />
+  {/if}
   {#if lookupNote}
     <p class="muted">{lookupNote}</p>
   {/if}
