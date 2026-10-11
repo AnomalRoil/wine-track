@@ -39,6 +39,7 @@
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
+  let labelRead = $state(false)
   let photoFailed = $state(false)
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
@@ -74,6 +75,7 @@
     draft = emptyDraft()
     aging = { ...NO_AGING }
     extractError = null
+    labelRead = false
     photoFailed = false
     lwinMatch = null
     duplicate = null
@@ -131,6 +133,7 @@
     if (gen !== generation) return
     if (result.ok) {
       draft = toWineDraft(result.data)
+      labelRead = true
     } else {
       extractError = result
     }
@@ -282,6 +285,8 @@
     {#snippet photoNote()}
       {#if photoBlob && !hasApiKey()}
         <div class="read-label"><NeedsKey label={t('capture.readLabel')} icon="sparkle" /></div>
+      {:else if photoBlob && !labelRead && !extractError}
+        <div class="read-label"><button type="button" onclick={extract}><Icon name="sparkle" size={20} />{t('capture.readLabel')}</button></div>
       {/if}
     {/snippet}
     {#snippet extra()}

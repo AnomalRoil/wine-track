@@ -9,10 +9,17 @@ import { store } from '../lib/store.svelte'
 import AgingFields from './AgingFields.svelte'
 import CaptureFlow from './CaptureFlow.svelte'
 import NeedsKey from './NeedsKey.svelte'
+import CaptureInLayer from '../test/CaptureInLayer.svelte'
 import WineForm from './WineForm.svelte'
 
 vi.mock('../lib/db')
-vi.mock('../lib/lwinData.svelte', () => ({ initLwin: vi.fn(async () => {}), searchLwin: vi.fn(async () => []), matchLwin: vi.fn(async () => [[]]) }))
+vi.mock('../lib/lwinData.svelte', async (original) => ({
+  ...(await original<typeof import('../lib/lwinData.svelte')>()),
+  initLwin: vi.fn(async () => {}),
+  checkRemote: vi.fn(async () => {}),
+  searchLwin: vi.fn(async () => []),
+  matchLwin: vi.fn(async () => [[]]),
+}))
 vi.mock('../lib/photo', async (original) => ({ ...(await original<typeof import('../lib/photo')>()), processPhoto: vi.fn() }))
 vi.mock('../lib/extract', async (original) => ({
   ...(await original<typeof import('../lib/extract')>()),
@@ -40,7 +47,7 @@ it('NeedsKey shows the action unavailable and requests the Settings screen', asy
   const action = screen.getByRole('button', { name: 'Look up grapes online' })
   expect(action.getAttribute('aria-disabled')).toBe('true')
   expect(action.getAttribute('aria-describedby')).toBe(screen.getByText(/Needs an Anthropic API key/).id)
-  await fireEvent.click(screen.getByRole('button', { name: 'Add it in Settings' }))
+  await fireEvent.click(screen.getAllByRole('button', { name: 'Add it in Settings' })[0])
   stop()
 
   expect(requested).toEqual(['settings'])
@@ -79,4 +86,21 @@ it('CaptureFlow goes from a photo straight to the form without a key', async () 
   expect(screen.queryByText('Reading the label…')).toBeNull()
   expect(document.querySelector('.error')).toBeNull()
   expect(extractFromLabel).not.toHaveBeenCalled()
+})
+
+it('Settings opened from the capture form returns to the same form', async () => {
+  vi.mocked(processPhoto).mockResolvedValue(new Blob(['jpeg'], { type: 'image/jpeg' }))
+  render(CaptureInLayer, { photo: new File(['jpeg'], 'label.jpg') })
+  await screen.findByRole('button', { name: 'Read the label' })
+  await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
+
+  await fireEvent.click(screen.getAllByRole('button', { name: 'Add it in Settings' })[0])
+  const layer = await screen.findByRole('dialog', { name: 'Settings' })
+  await fireEvent.input(layer.querySelector('#apikey')!, { target: { value: 'key' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(document.querySelector<HTMLImageElement>('img.preview')?.src).toBe('blob:photo')
+  expect(document.querySelector<HTMLInputElement>('#name')!.value).toBe('Les Clos')
+  expect(screen.getByRole('button', { name: 'Read the label' }).getAttribute('aria-disabled')).toBeNull()
 })
