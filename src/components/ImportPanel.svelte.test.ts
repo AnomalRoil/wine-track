@@ -7,6 +7,7 @@ import type { LwinWine } from '../lib/lwin'
 import { findLwin, matchLwin } from '../lib/lwinData.svelte'
 import { settings } from '../lib/settings.svelte'
 import { applyImport, store } from '../lib/store.svelte'
+import { makeWine } from '../lib/testing'
 import ImportPanel from './ImportPanel.svelte'
 
 vi.mock('../lib/db')
@@ -80,6 +81,22 @@ it('matches by name a coded row whose code is unknown', async () => {
   expect(await screen.findByLabelText('Fill in from LWIN: Vincent Dauvissat, Chablis Grand Cru, Les Clos')).toBeTruthy()
   expect(findLwin).toHaveBeenCalledWith(['1066540'])
   expect(vi.mocked(matchLwin).mock.calls.map(([drafts]) => drafts.map((d) => d.lwin))).toEqual([['1066540']])
+})
+
+it('keeps the undo of a code that matched the row to a stored wine', async () => {
+  store.wines = [makeWine({ name: 'Chablis Grand Cru, Les Clos', producer: 'Vincent Dauvissat', vintage: 2019, lwin: '1066553' })]
+  vi.mocked(matchLwin).mockImplementation(async (drafts) => drafts.map(() => [{ wine: lesClos, score: 1 }]))
+  render(ImportPanel)
+
+  await load('name,producer,vintage\nLes Clos,Dauvissat,2019')
+  const fill = () => screen.getByLabelText('Fill in from LWIN: Vincent Dauvissat, Chablis Grand Cru, Les Clos')
+  const status = () => document.querySelector('.line .status')?.textContent?.trim()
+  await vi.waitFor(fill)
+  await fireEvent.click(fill())
+  expect(status()).toBe('Adds bottles to a wine you have')
+
+  await fireEvent.click(fill())
+  expect(status()).toBe('New wine')
 })
 
 it('shows only the newer file when two reads finish in reverse order', async () => {

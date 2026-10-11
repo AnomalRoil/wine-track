@@ -250,7 +250,7 @@
           {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
           {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
         </div>
-        {#if lwinMatches.has(row.line) && match.kind === 'new'}
+        {#if lwinMatches.has(row.line) && (match.kind === 'new' || unfilled.has(row.line))}
           <label class="lwin">
             <input
               type="checkbox"
