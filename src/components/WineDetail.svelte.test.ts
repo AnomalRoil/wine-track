@@ -52,6 +52,26 @@ it('keeps the draft after a restore and saves it on retry', async () => {
   expect(store.wines[0].name).toBe('Renamed')
 })
 
+it('shows the restored values after a stale save and keeps them on retry', async () => {
+  await openEditor()
+  await fireEvent.input(name(), { target: { value: 'Renamed' } })
+  const wines = [makeWine({ vintage: 2019 })]
+  vi.mocked(db.loadAll).mockResolvedValue({ wines, tastings: [], cellars: [home], movements: [], racks: [], placements: [] })
+  await restore({ wines, tastings: [], cellars: [home], movements: [], racks: [], placements: [] }, [])
+
+  await fireEvent.click(button('Save'))
+  expect(await screen.findByText('Something changed in the meantime. Check and try again.')).toBeTruthy()
+  expect(name().value).toBe('Renamed')
+  expect(screen.getByLabelText<HTMLInputElement>('Vintage').value).toBe('2019')
+
+  await fireEvent.click(button('Save'))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
+  expect(store.wines[0]).toMatchObject({ name: 'Renamed', vintage: 2019 })
+})
+
 it('closes the tasting editor when a restore removes the tasting', async () => {
   store.tastings = [makeTasting()]
   render(WineDetail, { wineId: 'w1', onclose: () => {} })

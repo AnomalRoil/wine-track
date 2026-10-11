@@ -123,12 +123,16 @@
     open = open === row ? null : row
   }
 
+  function editable(w: Wine): WineDraft {
+    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
+    return { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin }
+  }
+
   function startEdit() {
     menu = false
     if (!wine) return
-    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = wine
-    draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags], lwin }
-    opened = $state.snapshot(draft)
+    opened = editable(wine)
+    draft = editable(wine)
     since = storeGeneration()
     session++
     stale = false
@@ -153,9 +157,16 @@
     }
     if (current !== session) return
     stale = !saved
-    if (saved) editing = false
-    // The next Save applies the kept changes to the wine as it is now.
-    else since = storeGeneration()
+    if (saved) {
+      editing = false
+      return
+    }
+    // Rebase the kept changes onto the wine as it is now, so the next Save writes what the form shows.
+    since = storeGeneration()
+    if (!wine) return
+    const kept = changedFields($state.snapshot(draft), opened)
+    opened = editable(wine)
+    draft = { ...editable(wine), ...kept }
   }
 
   async function update(patch: Partial<Wine>) {
