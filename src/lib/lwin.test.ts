@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, findCodes, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -222,6 +222,16 @@ describe('completeFromLwin', () => {
       lwin: '1066553',
     })
   })
+
+  it('keeps the code a file gave', () => {
+    expect(completeFromLwin({ ...emptyDraft(), lwin: '1066540' }, byCode('1066553')).lwin).toBe('1066540')
+  })
+})
+
+describe('findCodes', () => {
+  it('finds each code in order, null for an unknown one', () => {
+    expect(findCodes(index, ['1100002', '9999999', '1066540']).map((w) => w?.label ?? null)).toEqual(['Rose', null, 'Chablis'])
+  })
 })
 
 describe('undoLwinCompletion', () => {
@@ -248,6 +258,9 @@ describe('duplicateOf', () => {
     { name: 'same code, other vintage', draft: { name: 'other', lwin: '1066553', vintage: 2020 }, want: undefined },
     { name: 'same code, other size', draft: { name: 'other', lwin: '1066553', vintage: 2019, sizeCl: 150 }, want: undefined },
     { name: 'same name ignoring accents', draft: { name: 'chateau  margaux', vintage: 2010 }, want: 'b' },
+    { name: 'same name, other code', draft: { name: 'Les Clos', producer: 'Dauvissat', lwin: '1066540', vintage: 2019 }, want: undefined },
+    { name: 'same name, no code', draft: { name: 'Les Clos', producer: 'Dauvissat', vintage: 2019 }, want: 'a' },
+    { name: 'same name as a wine without code', draft: { name: 'Château Margaux', lwin: '1012361', vintage: 2010 }, want: 'b' },
     { name: 'nothing alike', draft: { name: 'Krug', vintage: 2010 }, want: undefined },
   ]
   for (const c of cases) {
@@ -255,4 +268,22 @@ describe('duplicateOf', () => {
       expect(duplicateOf({ ...emptyDraft(), sizeCl: 75, ...c.draft }, wines)?.id).toBe(c.want)
     })
   }
+
+  it('prefers an uncoded wine for a draft without code', () => {
+    const both = [
+      makeWine({ id: 'coded', name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: '1066553' }),
+      makeWine({ id: 'uncoded', name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: null }),
+    ]
+    const draft = { ...emptyDraft(), name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, sizeCl: 75 }
+    expect(duplicateOf(draft, both)?.id).toBe('uncoded')
+  })
+
+  it('prefers the same code over an earlier uncoded name match', () => {
+    const both = [
+      makeWine({ id: 'uncoded', name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: null }),
+      makeWine({ id: 'coded', name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: '1066553' }),
+    ]
+    const draft = { ...emptyDraft(), name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, sizeCl: 75, lwin: '1066553' }
+    expect(duplicateOf(draft, both)?.id).toBe('coded')
+  })
 })

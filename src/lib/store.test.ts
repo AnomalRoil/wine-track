@@ -28,7 +28,7 @@ import {
   unplace,
   updateRack,
 } from './store.svelte'
-import { makeMovement as mv, makeWine } from './testing'
+import { makeMovement as mv, makeTasting, makeWine } from './testing'
 import type { Cellar, Rack } from './types'
 
 vi.mock('./db', () => ({
@@ -114,8 +114,8 @@ it('keeps a cellar when both are deleted behind a pending write', async () => {
   store.cellars = [cellar('a'), cellar('b', 1)]
 
   const rename = patchCellar('a', (c) => ({ ...c, name: 'Home' }))
-  const first = removeCellar('a', null)
-  const second = removeCellar('b', null)
+  const first = removeCellar('a', null, 0)
+  const second = removeCellar('b', null, 0)
   await release(rename, first, second)
 
   expect([await first, await second]).toEqual([true, false])
@@ -123,12 +123,25 @@ it('keeps a cellar when both are deleted behind a pending write', async () => {
   expect(db.deleteCellar).toHaveBeenCalledTimes(1)
 })
 
+it('keeps a cellar approved as empty when bottles arrive before its deletion', async () => {
+  store.cellars = [cellar('a'), cellar('b', 1)]
+
+  const arrival = addMovements([mv({ id: 'm', quantity: 2, cellarId: 'b' })])
+  const removed = removeCellar('b', null, 0)
+  await release(arrival, removed)
+
+  expect(await removed).toBe(false)
+  expect(store.cellars.map((c) => c.id)).toEqual(['a', 'b'])
+  expect(store.movements.map((m) => m.id)).toEqual(['m'])
+  expect(db.deleteCellar).not.toHaveBeenCalled()
+})
+
 it('refuses to move bottles into a cellar deleted earlier in the queue', async () => {
   store.cellars = [cellar('a'), cellar('b', 1), cellar('c', 2)]
   store.movements = [mv({ id: 'm', quantity: 2, cellarId: 'c' })]
 
-  const first = removeCellar('b', null)
-  const second = removeCellar('c', 'b')
+  const first = removeCellar('b', null, 0)
+  const second = removeCellar('c', 'b', 2)
   await release(first, second)
 
   expect([await first, await second]).toEqual([true, false])
@@ -160,6 +173,23 @@ it('restores a backup after the writes queued before it', async () => {
   expect(store.racks).toEqual([rack])
   expect(store.placements).toEqual([kept])
   expect(store.movements.map((m) => m.id)).toEqual(['b'])
+})
+
+it('drops the photo references a restored backup has no image for', async () => {
+  const backup: db.Data = {
+    wines: [makeWine({ photoId: 'gone' }), makeWine({ id: 'w2', photoId: 'kept' })],
+    tastings: [makeTasting({ sheet: { ...emptySheet(), photoIds: ['gone', 'kept'] } })],
+    cellars: [cellar('home')],
+    movements: [],
+    racks: [],
+    placements: [],
+  }
+  vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
+  await release(restore(backup, [{ id: 'kept', blob: new Blob() }]))
+
+  const [restored] = vi.mocked(db.replaceAll).mock.calls[0]
+  expect(restored.wines.map((w) => w.photoId)).toEqual([null, 'kept'])
+  expect(restored.tastings[0].sheet?.photoIds).toEqual(['kept'])
 })
 
 it('empties the last slot when two queued removals take both bottles', async () => {
@@ -230,6 +260,26 @@ it('adds to the wines of an import already committed instead of duplicating them
   expect(store.movements).toHaveLength(2)
 })
 
+it('stores the code an import gives to an uncoded wine', async () => {
+  store.wines = [makeWine({ id: 'old', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: null })]
+  const ctx = { defaultCellarName: 'Home', date: '2026-01-01', now: 0, newId: () => crypto.randomUUID() }
+  const rows = (lwin: string) => {
+    const parsed = parseImport(`name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,${lwin},1`, 2026)
+    if (!parsed.ok) throw new Error(parsed.error)
+    return parsed.rows
+  }
+
+  const first = applyImport(rows('1066553'), ctx)
+  const second = applyImport(rows('1066540'), ctx)
+  await release(first, second)
+
+  expect(store.wines.map((w) => [w.id === 'old', w.lwin])).toEqual([
+    [true, '1066553'],
+    [false, '1066540'],
+  ])
+  expect(vi.mocked(db.putImport).mock.calls.at(-2)?.[0].wines).toEqual([store.wines[0]])
+})
+
 it('keeps every field of overlapping wine edits', async () => {
   const aging = patchWine('w1', () => ({ drinkFrom: 2028, drinkUntil: 2040 }))
   const value = patchWine('w1', (w) => ({ value: 30, valueHistory: [...w.valueHistory, { date: '2026-01-01', value: 30 }] }))
@@ -265,7 +315,7 @@ it('drops a capture whose photo was still processing when a backup was restored'
 
 it('keeps a wine and its tastings deleted while an edit waited', async () => {
   const wine = makeWine()
-  const removed = removeWine(wine)
+  const removed = removeWine(wine.id)
   const edited = patchWine(wine.id, () => ({ name: 'Renamed' }))
   const tasted = saveTasting({ id: 't', wineId: wine.id, date: '2026-01-01', rating: 4, notes: '' }, { since: storeGeneration() })
   await release(removed, edited, tasted)
@@ -299,7 +349,7 @@ it('exports the image of every photo its wines reference while a capture saves',
 
 it('keeps nothing of a capture whose cellar was deleted while it waited', async () => {
   store.cellars = [cellar('home'), cellar('cave', 1)]
-  const removed = removeCellar('cave', null)
+  const removed = removeCellar('cave', null, 0)
   const added = addWine(makeWine({ id: 'new', photoId: 'p' }), { id: 'p', blob: new Blob() }, [mv({ wineId: 'new', cellarId: 'cave', quantity: 2 })], storeGeneration())
   await release(removed, added)
 
@@ -316,7 +366,7 @@ function addToDuplicate(quantity: number) {
   const added = (async () => {
     const since = storeGeneration()
     const blob = await processing
-    return addToWine('w1', { id: 'p', blob }, [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity })], since)
+    return addToWine('w1', { id: 'p', blob }, null, [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity })], since)
   })()
   return { added, processed: () => processed(new Blob()) }
 }
@@ -336,7 +386,7 @@ it('keeps edits made to a duplicate while its photo was processing', async () =>
 
 it('keeps a duplicate deleted while its photo was processing', async () => {
   const { added, processed } = addToDuplicate(2)
-  await release(removeWine(makeWine()))
+  await release(removeWine('w1'))
   processed()
   await release(added)
 
@@ -344,6 +394,15 @@ it('keeps a duplicate deleted while its photo was processing', async () => {
   expect(db.putWine).not.toHaveBeenCalled()
   expect(store.wines).toEqual([])
   expect(store.movements).toEqual([])
+})
+
+it('deletes the photo a duplicate gained while its deletion waited', async () => {
+  const added = addToWine('w1', { id: 'p', blob: new Blob() }, null, [], storeGeneration())
+  const removed = removeWine('w1')
+  await release(added, removed)
+
+  expect(vi.mocked(db.deleteWine).mock.calls[0][0].photoId).toBe('p')
+  expect(store.wines).toEqual([])
 })
 
 it('drops bottles added to a duplicate when a backup was restored meanwhile', async () => {
@@ -368,6 +427,31 @@ it('keeps the photo a duplicate gained meanwhile', async () => {
   expect(await added).toMatchObject({ photoId: 'mine' })
   expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[1]).toBeNull()
   expect(store.movements.map((m) => m.id)).toEqual(['m'])
+})
+
+it('gives an uncoded duplicate the code of the capture added to it', async () => {
+  store.wines = [makeWine({ lwin: null }), makeWine({ id: 'w2', lwin: '1066553' })]
+  const coded = addToWine('w1', null, '1066540', [], storeGeneration())
+  const kept = addToWine('w2', null, '1066540', [], storeGeneration())
+  await release(coded, kept)
+
+  expect(await kept).toBeNull()
+  expect(store.wines.map((w) => w.lwin)).toEqual(['1066540', '1066553'])
+  expect(vi.mocked(db.putWine).mock.calls.map(([w]) => [w.id, w.lwin])).toEqual([['w1', '1066540']])
+})
+
+it('adds nothing to a duplicate an earlier import gave another code', async () => {
+  store.wines = [makeWine({ lwin: null })]
+  const parsed = parseImport('name,producer,vintage,lwin\nWine,Producer,2020,1066553\n', 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  const imported = applyImport(parsed.rows, { defaultCellarName: 'Home', date: '2026-01-01', now: 0, newId: () => crypto.randomUUID() })
+  const added = addToWine('w1', null, '1066540', [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity: 2 })], storeGeneration())
+  await release(imported, added)
+
+  expect(await added).toBeNull()
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(store.wines.map((w) => w.lwin)).toEqual(['1066553'])
+  expect(store.movements.map((m) => m.id)).not.toContain('m')
 })
 
 it('keeps nothing of a capture whose write fails', async () => {
@@ -408,7 +492,7 @@ it('refuses to delete a transfer whose bottles were drunk at its destination', a
 it('refuses to return bottles to a deleted cellar', async () => {
   store.cellars = [cellar('home'), cellar('cave', 1)]
   store.movements = [mv({ id: 'a', quantity: 2, cellarId: 'cave' })]
-  const deleted = removeCellar('cave', 'home')
+  const deleted = removeCellar('cave', 'home', 2)
   await release(deleted)
   const transfer = store.movements.find((m) => m.kind === 'transfer')!
 

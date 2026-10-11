@@ -83,6 +83,12 @@ export function emptyDraft(): WineDraft {
   }
 }
 
+/** The fields of `draft` that differ from `opened`, the draft as an editor opened it. */
+export function changedFields(draft: WineDraft, opened: WineDraft): Partial<WineDraft> {
+  const keys = Object.keys(draft) as (keyof WineDraft)[]
+  return Object.fromEntries(keys.filter((k) => JSON.stringify(draft[k]) !== JSON.stringify(opened[k])).map((k) => [k, draft[k]]))
+}
+
 export function toWineDraft(e: WineExtraction | null): WineDraft {
   if (!e) return emptyDraft()
   return {

@@ -37,6 +37,13 @@ export function bottlesOf(stock: Stock, wineId: string, cellarId?: string): numb
   return total
 }
 
+/** Bottles in `cellarId`, all wines together; wines below zero there count as none. */
+export function cellarBottles(stock: Stock, cellarId: string): number {
+  let n = 0
+  for (const cellars of stock.values()) n += Math.max(0, cellars.get(cellarId) ?? 0)
+  return n
+}
+
 /** Whether recording `movements` leaves every cellar they take bottles from at zero or more. */
 export function withinStock(stock: Stock, movements: Movement[]): boolean {
   const taken = new Map<string, Map<string, number>>()

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
+  import { cellarBottles } from '../lib/stock'
   import { assessStorage } from '../lib/storage'
-  import { addCellar, currentStock, patchCellar, removeCellar, sortedCellars, swapCellars } from '../lib/store.svelte'
+  import { addCellar, currentStock, patchCellar, removeCellar, sortedCellars, store, swapCellars } from '../lib/store.svelte'
   import type { Cellar } from '../lib/types'
   import StorageBadge from './StorageBadge.svelte'
   import StorageChecklist from './StorageChecklist.svelte'
@@ -16,9 +17,7 @@
   const cellars = $derived(sortedCellars())
 
   function bottlesIn(id: string): number {
-    let n = 0
-    for (const cellars of currentStock().values()) n += Math.max(0, cellars.get(id) ?? 0)
-    return n
+    return cellarBottles(currentStock(), id)
   }
 
   async function add(e: SubmitEvent) {
@@ -49,18 +48,22 @@
       deleting = { cellar, bottles }
       return
     }
-    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await remove(cellar.id, null)
+    if (confirm(t('cellar.deleteConfirm', { name: cellarName(cellar.id) }))) await remove(cellar.id, null, 0)
   }
 
   async function finishDelete(targetId: string | null) {
     if (!deleting) return
-    const id = deleting.cellar.id
+    const { cellar, bottles } = deleting
     deleting = null
-    await remove(id, targetId)
+    await remove(cellar.id, targetId, bottles)
   }
 
-  async function remove(id: string, targetId: string | null) {
-    if (!(await removeCellar(id, targetId))) alert(t('form.stale'))
+  async function remove(id: string, targetId: string | null, bottles: number) {
+    if (await removeCellar(id, targetId, bottles)) return
+    // Bottles that arrived meanwhile need a decision of their own.
+    const cellar = store.cellars.find((c) => c.id === id)
+    if (cellar && bottlesIn(id) !== bottles) await startDelete(cellar)
+    else alert(t('form.stale'))
   }
 </script>
 

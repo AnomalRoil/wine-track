@@ -8,7 +8,7 @@
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
   import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
-  import { matchLwin } from '../lib/lwinData.svelte'
+  import { findLwin, matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
   import Icon from './Icon.svelte'
@@ -20,7 +20,7 @@
   let progress = $state<{ done: number; total: number } | null>(null)
   let completeError = $state<{ kind: FailureKind; detail?: string } | null>(null)
   let committing = $state(false)
-  /** Database wines that rows lacking a region or country look like, by line. */
+  /** Database wines of the rows lacking a region or country, by line: by code, or else by name. */
   let lwinMatches = $state.raw(new Map<number, LwinWine>())
   /** Drafts as read from the file, for the rows filled in from the database. */
   let unfilled = $state.raw(new Map<number, ImportRow['draft']>())
@@ -88,14 +88,20 @@
   async function suggestMatches(gen: number) {
     const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
     if (todo.length === 0) return
-    const results = await matchLwin(todo.map((r) => r.draft), 2)
+    const coded = todo.filter((r) => r.draft.lwin !== null)
+    const byCode = coded.length > 0 ? await findLwin(coded.map((r) => r.draft.lwin!)) : []
     if (gen !== generation) return
-    lwinMatches = new Map(
-      todo.flatMap((r, i) => {
-        const wine = confidentMatch(results[i])
-        return wine ? [[r.line, wine] as const] : []
-      }),
-    )
+    const found = new Map<number, LwinWine>()
+    coded.forEach((r, i) => byCode[i] && found.set(r.line, byCode[i]))
+    // A code missing from the installed database still gets a match by name.
+    const named = todo.filter((r) => !found.has(r.line))
+    const results = named.length > 0 ? await matchLwin(named.map((r) => r.draft), 2) : []
+    if (gen !== generation) return
+    named.forEach((r, i) => {
+      const wine = confidentMatch(results[i])
+      if (wine) found.set(r.line, wine)
+    })
+    lwinMatches = found
   }
 
   function toggleMatch(line: number, on: boolean) {
@@ -244,7 +250,7 @@
           {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
           {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
         </div>
-        {#if lwinMatches.has(row.line) && match.kind === 'new'}
+        {#if lwinMatches.has(row.line) && (match.kind === 'new' || unfilled.has(row.line))}
           <label class="lwin">
             <input
               type="checkbox"

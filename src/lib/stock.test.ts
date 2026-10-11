@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageBuyPrice, averageBuyPrices, bottlesOf, canRecord, canRemoveCellar, computeStock, emptyCellar, withinStock } from './stock'
+import { averageBuyPrice, averageBuyPrices, bottlesOf, canRecord, canRemoveCellar, cellarBottles, computeStock, emptyCellar, withinStock } from './stock'
 import { makeMovement as mv } from './testing'
 
 const movements = [
@@ -58,6 +58,19 @@ describe('emptyCellar', () => {
   it('adjusts stock away without a target', () => {
     const out = emptyCellar(stock, 'cave', null, '2026-10-09', id)
     expect(out).toEqual([mv({ id: 'new2', date: '2026-10-09', kind: 'adjust', quantity: 2, cellarId: 'cave' })])
+  })
+})
+
+describe('cellarBottles', () => {
+  it('sums the wines of one cellar, counting a wine below zero as none', () => {
+    const stock = computeStock([
+      mv({ id: 'a', wineId: 'w1', quantity: 2, cellarId: 'c' }),
+      mv({ id: 'b', wineId: 'w2', quantity: 3, cellarId: 'c' }),
+      mv({ id: 'c', wineId: 'w3', kind: 'consume', quantity: 1, cellarId: 'c' }),
+      mv({ id: 'd', wineId: 'w1', quantity: 5, cellarId: 'other' }),
+    ])
+    expect(cellarBottles(stock, 'c')).toBe(5)
+    expect(cellarBottles(stock, 'none')).toBe(0)
   })
 })
 
