@@ -57,7 +57,12 @@
     // The next Save applies the kept draft to the tasting as it is now.
     since = storeGeneration()
     const latest = initial && store.tastings.find((t) => t.id === initial?.id)
-    if (latest) initial = $state.snapshot(latest)
+    if (!latest) return
+    initial = $state.snapshot(latest)
+    // A restore may have dropped stored photos the draft still points at: keep only photos that
+    // still exist or were added in this form.
+    const stored = new Set(latest.sheet?.photoIds)
+    sheet.photoIds = sheet.photoIds.filter((id) => stored.has(id) || id in pending)
   }
 </script>
 
