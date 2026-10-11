@@ -2,9 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { extractFromLabel, lookupAging, lookupGrapes, type AgingLookup, type GrapeLookup, type Result, type WineExtraction } from '../lib/extract'
 import { matchLwin, searchLwin } from '../lib/lwinData.svelte'
+import * as db from '../lib/db'
 import { blobToBase64, processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
 import { store } from '../lib/store.svelte'
+import { makeWine } from '../lib/testing'
 import type { Wine } from '../lib/types'
 import CaptureFlow from './CaptureFlow.svelte'
 
@@ -244,4 +246,45 @@ it('A photo that cannot be read before extraction opens the form with an error',
 
   await screen.findByText('Extraction failed: NotReadableError')
   expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false)
+})
+
+/** Types a wine the collection has, with one bottle, and saves to get the duplicate offered. */
+async function offerDuplicate() {
+  store.wines = [makeWine({ name: 'Les Clos', producer: 'Dauvissat', vintage: null })]
+  await fireEvent.input(name(), { target: { value: 'Les Clos' } })
+  await fireEvent.input(document.querySelector('#producer')!, { target: { value: 'Dauvissat' } })
+  await fireEvent.input(document.querySelector('#qty')!, { target: { value: '1' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  return screen.getByRole('button', { name: 'Add the bottles to it' }) as HTMLButtonElement
+}
+
+it('The duplicate waits for the label read, which keeps the typed wine', async () => {
+  const { answer } = await formWithPhoto()
+  const addTo = await offerDuplicate()
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  expect(addTo.disabled).toBe(true)
+  expect((screen.getByRole('button', { name: 'Save as a new wine' }) as HTMLButtonElement).disabled).toBe(true)
+
+  answer({ ok: true, data: { ...label, name: 'Other', producer: 'Other', vintage: null, volumeCl: null } })
+  await waitFor(() => expect(addTo.disabled).toBe(false))
+  expect(addTo.isConnected).toBe(true)
+  expect(name().value).toBe('Les Clos')
+})
+
+it('The label read waits for adding to the duplicate', async () => {
+  const onsaved = vi.fn()
+  await formWithPhoto(onsaved)
+  const addTo = await offerDuplicate()
+  let written: () => void = () => {}
+  vi.mocked(db.putWine).mockReturnValue(new Promise((resolve) => (written = resolve)))
+  await fireEvent.click(addTo)
+
+  const readLabel = screen.getByRole('button', { name: 'Read the label' }) as HTMLButtonElement
+  await waitFor(() => expect(readLabel.disabled).toBe(true))
+  await fireEvent.click(readLabel)
+  expect(extractFromLabel).not.toHaveBeenCalled()
+
+  written()
+  await waitFor(() => expect(onsaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1', photoId: expect.any(String) })))
+  expect(store.movements).toHaveLength(1)
 })
