@@ -3,7 +3,7 @@ import { svelteTesting } from '@testing-library/svelte/vite'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  base: '/wine-track/',
+  base: '/',
   plugins: [svelte()],
   test: {
     projects: [

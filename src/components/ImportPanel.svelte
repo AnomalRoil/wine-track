@@ -171,7 +171,7 @@
   }
 
   function downloadTemplate() {
-    downloadFile('wine-track-template.csv', new Blob([templateCsv()], { type: 'text/csv' }))
+    downloadFile('cave-man-template.csv', new Blob([templateCsv()], { type: 'text/csv' }))
   }
 
   /** The stored wine's label when the row adds to it, so the user sees what it matched. */

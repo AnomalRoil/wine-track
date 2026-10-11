@@ -1,9 +1,9 @@
 {
-  "name": "Wine Track",
-  "short_name": "Wine Track",
+  "name": "Cave Man",
+  "short_name": "Cave Man",
   "description": "Track wines you've tasted and your cellar",
-  "start_url": "/wine-track/",
-  "scope": "/wine-track/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fff8f7",
   "theme_color": "#fff8f7",

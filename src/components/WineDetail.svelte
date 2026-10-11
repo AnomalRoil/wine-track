@@ -187,7 +187,7 @@
   function exportIcs(w: Wine) {
     menu = false
     const ics = buildIcs(calendarItems(w), icsTimestamp(new Date()))
-    downloadFile('wine-track.ics', new Blob([ics], { type: 'text/calendar' }))
+    downloadFile('cave-man.ics', new Blob([ics], { type: 'text/calendar' }))
   }
 </script>
 

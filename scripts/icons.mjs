@@ -94,12 +94,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   writeFileSync(new URL('icons/icon-512.png', dir), png(512, true))
   writeFileSync(new URL('icons/icon-maskable-512.png', dir), png(512, false))
   writeFileSync(new URL('icons/apple-touch-icon.png', dir), png(180, false))
-  writeFileSync(
-    new URL('favicon.svg', dir),
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="${CORNER * 512}" fill="${BACKGROUND}"/>
-${CIRCLES.map((c) => `  <circle cx="256" cy="256" r="${c.r * 512}" fill="${c.color}"/>`).join('\n')}
-</svg>
-`,
-  )
 }
