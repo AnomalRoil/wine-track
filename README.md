@@ -33,7 +33,7 @@ Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-trac
 npm ci
 npm run dev      # local dev server
 npm run check    # svelte-check + tsc
-npm test         # vitest
+npm test         # vitest: unit tests in node, *.svelte.test.ts component tests in jsdom
 npm run build && npm run preview   # production build under /wine-track/
 npm run lwin     # downloads LWIN into public/lwin/; pass a local .xlsx path to skip the download
 ```
