@@ -3,9 +3,8 @@
   import { cleanAging, fromUnit, isWindowOrdered, mergeAging, neutralProfile, profileAxes, toUnit, WINDOW_KEYS } from '../lib/aging'
   import { canLookupGrapes, lookupAging, lookupKey, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
-  import { hasApiKey, settings } from '../lib/settings.svelte'
+  import { settings } from '../lib/settings.svelte'
   import type { Aging } from '../lib/types'
-  import Icon from './Icon.svelte'
   import NeedsKey from './NeedsKey.svelte'
 
   let {
@@ -76,13 +75,14 @@
   }
 </script>
 
-{#if hasApiKey() || !canLookupGrapes(wine)}
-  <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(wine)} onclick={lookup}>
-    <Icon name="search" size={20} />{lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
-  </button>
-{:else}
-  <NeedsKey label={t('aging.lookup')} icon="search" link hint={keyHint} />
-{/if}
+<NeedsKey
+  label={lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
+  icon="search"
+  link
+  disabled={lookingUp || !canLookupGrapes(wine)}
+  hint={keyHint}
+  onclick={lookup}
+/>
 {#if lookupNote}<p class="muted">{lookupNote}</p>{/if}
 
 <div class="grid">

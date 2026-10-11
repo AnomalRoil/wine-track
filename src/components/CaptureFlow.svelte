@@ -288,13 +288,12 @@
   {/if}
   <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet photoNote()}
-      {#if keyless}
+      {@const readable = photoBlob && !labelRead && !extractError}
+      {#if readable || keyless}
         <div class="read-label">
-          {#if photoBlob}<NeedsKey label={t('capture.readLabel')} icon="sparkle" hint={keyHint} />{/if}
-          <KeyHint id={keyHint} />
+          {#if readable}<NeedsKey label={t('capture.readLabel')} icon="sparkle" hint={keyHint} onclick={extract} />{/if}
+          {#if keyless}<KeyHint id={keyHint} />{/if}
         </div>
-      {:else if photoBlob && !labelRead && !extractError}
-        <div class="read-label"><button type="button" onclick={extract}><Icon name="sparkle" size={20} />{t('capture.readLabel')}</button></div>
       {/if}
     {/snippet}
     {#snippet extra()}
