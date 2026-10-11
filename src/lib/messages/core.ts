@@ -1,8 +1,8 @@
 import type { Messages } from './types'
 
 export const en = {
-  'app.name': 'Wine Track',
-  'app.blocked': 'Wine Track is updating. Close its other tabs or windows to continue.',
+  'app.name': 'Cave Man',
+  'app.blocked': 'Cave Man is updating. Close its other tabs or windows to continue.',
 
   'tab.wines': 'Wines',
   'tab.due': 'Due',
@@ -122,7 +122,7 @@ export const en = {
   'settings.export': 'Export backup',
   'settings.import': 'Import backup',
   'settings.importConfirm': 'This replaces ALL current data ({n} {n|wine|wines}). Continue?',
-  'settings.importInvalid': 'Not a valid wine-track backup file.',
+  'settings.importInvalid': 'Not a valid Cave Man backup file.',
   'settings.importDone': 'Backup restored: {n} {n|wine|wines}.',
   'settings.backupHint': 'No recent backup — consider exporting one.',
   'settings.persisted': 'Storage is protected against automatic cleanup.',
@@ -219,8 +219,8 @@ export const en = {
 } as const
 
 export const fr: Messages<typeof en> = {
-  'app.name': 'Wine Track',
-  'app.blocked': 'Wine Track se met à jour. Fermez ses autres onglets ou fenêtres pour continuer.',
+  'app.name': 'Cave Man',
+  'app.blocked': 'Cave Man se met à jour. Fermez ses autres onglets ou fenêtres pour continuer.',
 
   'tab.wines': 'Vins',
   'tab.due': 'À boire',
@@ -340,7 +340,7 @@ export const fr: Messages<typeof en> = {
   'settings.export': 'Exporter la sauvegarde',
   'settings.import': 'Importer une sauvegarde',
   'settings.importConfirm': 'Ceci remplace TOUTES les données actuelles ({n} {n|vin|vins}). Continuer ?',
-  'settings.importInvalid': 'Fichier de sauvegarde wine-track invalide.',
+  'settings.importInvalid': 'Fichier de sauvegarde Cave Man invalide.',
   'settings.importDone': 'Sauvegarde restaurée : {n} {n|vin|vins}.',
   'settings.backupHint': 'Aucune sauvegarde récente — pensez à en exporter une.',
   'settings.persisted': 'Le stockage est protégé contre le nettoyage automatique.',
@@ -437,8 +437,8 @@ export const fr: Messages<typeof en> = {
 }
 
 export const de: Messages<typeof en> = {
-  'app.name': 'Wine Track',
-  'app.blocked': 'Wine Track wird aktualisiert. Die anderen Tabs oder Fenster schließen, um fortzufahren.',
+  'app.name': 'Cave Man',
+  'app.blocked': 'Cave Man wird aktualisiert. Die anderen Tabs oder Fenster schließen, um fortzufahren.',
 
   'tab.wines': 'Weine',
   'tab.due': 'Fällig',
@@ -560,7 +560,7 @@ export const de: Messages<typeof en> = {
   'settings.export': 'Sicherung exportieren',
   'settings.import': 'Sicherung importieren',
   'settings.importConfirm': 'Dies ersetzt ALLE aktuellen Daten ({n} {n|Wein|Weine}). Fortfahren?',
-  'settings.importInvalid': 'Keine gültige Wine-Track-Sicherungsdatei.',
+  'settings.importInvalid': 'Keine gültige Cave-Man-Sicherungsdatei.',
   'settings.importDone': 'Sicherung wiederhergestellt: {n} {n|Wein|Weine}.',
   'settings.backupHint': 'Keine aktuelle Sicherung — bitte eine exportieren.',
   'settings.persisted': 'Der Speicher ist vor automatischer Bereinigung geschützt.',

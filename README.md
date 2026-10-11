@@ -1,4 +1,4 @@
-# wine-track
+# Cave Man
 
 Mobile-first wine-tasting tracker. Photograph a bottle, let Claude read the label, keep your notes and cellar on your device.
 
