@@ -63,3 +63,8 @@ $effect.root(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
   })
 })
+
+/** Whether an API key is set, which the label reading and online lookups need. */
+export function hasApiKey(): boolean {
+  return settings.apiKey.trim() !== ''
+}

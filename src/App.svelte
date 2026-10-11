@@ -7,7 +7,7 @@
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
-  import { pushEntry, startEntry } from './lib/navigation'
+  import { onScreenRequest, pushEntry, startEntry } from './lib/navigation'
   import { MORE_SCREENS, type Screen } from './lib/screens'
   import { t } from './lib/i18n.svelte'
   import { initStore, store } from './lib/store.svelte'
@@ -58,6 +58,18 @@
     screen = next
     push({ wine: null, screen: next.id })
   }
+
+  // Opened over the current view, so back returns to it.
+  $effect(() =>
+    onScreenRequest((id) => {
+      const next = MORE_SCREENS.find((s) => s.id === id)
+      if (!next) return
+      tab = 'more'
+      selectedWineId = null
+      openScreen(next)
+      window.scrollTo(0, 0)
+    }),
+  )
 
   $effect(() => {
     const onpop = () => {

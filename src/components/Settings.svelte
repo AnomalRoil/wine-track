@@ -52,6 +52,7 @@
 
 <label for="apikey">{t('settings.apiKey')}</label>
 <input id="apikey" type="password" autocomplete="off" bind:value={settings.apiKey} />
+<p class="muted">{t('settings.apiKeyUses')}</p>
 <p class="muted">{t('settings.apiKeyNote')}</p>
 
 <label for="workspace">{t('settings.workspaceId')}</label>

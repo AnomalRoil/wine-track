@@ -47,3 +47,17 @@ export function skipStale(): void {
   if (staleStep(position.forward, ahead) === 'forward') history.forward()
   else history.back()
 }
+
+const SCREEN_REQUEST = 'cave-man:open-screen'
+
+/** Asks the app to open the More screen `id`, from any view. */
+export function requestScreen(id: string): void {
+  window.dispatchEvent(new CustomEvent(SCREEN_REQUEST, { detail: id }))
+}
+
+/** Calls `open` with the id of each screen requested; returns the function that stops listening. */
+export function onScreenRequest(open: (id: string) => void): () => void {
+  const listener = (e: Event) => open((e as CustomEvent<string>).detail)
+  window.addEventListener(SCREEN_REQUEST, listener)
+  return () => window.removeEventListener(SCREEN_REQUEST, listener)
+}
