@@ -312,6 +312,20 @@ describe('planImport', () => {
   })
 })
 
+it('keeps wines with the same name apart when their codes differ', () => {
+  const p = parseImport('name,producer,vintage,lwin\nChablis,Dauvissat,2019,1066540\nChablis,Dauvissat,2019,1066553\nChablis,Dauvissat,2019,\nChablis,Dauvissat,2019,1066553', 2026)
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const existing = [makeWine({ id: 'old', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: '1066540' })]
+  const plan = planImport(p.rows, existing, { cellars: [], defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.matches).toEqual([
+    { kind: 'existing', wineId: 'old' },
+    { kind: 'new' },
+    { kind: 'existing', wineId: 'old' },
+    { kind: 'repeat', line: 3 },
+  ])
+})
+
 it('keeps names apart when one ends where the other starts', () => {
   const p = parseImport('name,producer\nA|B,C\nA,B|C', 2026)
   if (!p.ok) throw new Error(p.error)

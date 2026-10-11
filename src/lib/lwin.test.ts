@@ -248,6 +248,9 @@ describe('duplicateOf', () => {
     { name: 'same code, other vintage', draft: { name: 'other', lwin: '1066553', vintage: 2020 }, want: undefined },
     { name: 'same code, other size', draft: { name: 'other', lwin: '1066553', vintage: 2019, sizeCl: 150 }, want: undefined },
     { name: 'same name ignoring accents', draft: { name: 'chateau  margaux', vintage: 2010 }, want: 'b' },
+    { name: 'same name, other code', draft: { name: 'Les Clos', producer: 'Dauvissat', lwin: '1066540', vintage: 2019 }, want: undefined },
+    { name: 'same name, no code', draft: { name: 'Les Clos', producer: 'Dauvissat', vintage: 2019 }, want: 'a' },
+    { name: 'same name as a wine without code', draft: { name: 'Château Margaux', lwin: '1012361', vintage: 2010 }, want: 'b' },
     { name: 'nothing alike', draft: { name: 'Krug', vintage: 2010 }, want: undefined },
   ]
   for (const c of cases) {

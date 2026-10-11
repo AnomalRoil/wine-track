@@ -285,14 +285,14 @@ export function undoLwinCompletion(draft: WineDraft, original: WineDraft, wine: 
 }
 
 /**
- * A wine of the collection that `draft` repeats: same LWIN, vintage and size,
- * or same name, producer, vintage and size.
+ * A wine of the collection that `draft` repeats: same LWIN, vintage and size when
+ * both have a code, otherwise same name, producer, vintage and size.
  */
 export function duplicateOf(draft: WineDraft, wines: Wine[]): Wine | undefined {
   const key = wineKey(draft)
-  return wines.find(
-    (w) =>
-      (draft.lwin !== null && w.lwin === draft.lwin && w.vintage === draft.vintage && w.sizeCl === draft.sizeCl) ||
-      wineKey(w) === key,
+  return wines.find((w) =>
+    draft.lwin !== null && w.lwin !== null
+      ? w.lwin === draft.lwin && w.vintage === draft.vintage && w.sizeCl === draft.sizeCl
+      : wineKey(w) === key,
   )
 }

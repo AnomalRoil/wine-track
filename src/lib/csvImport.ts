@@ -345,8 +345,11 @@ export interface PlanContext {
  * matching an existing wine, or an earlier row, adds stock to that wine.
  */
 export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext): ImportPlan {
-  const byKey = new Map(existing.map((w) => [wineKey(w), w.id]))
-  const firstLine = new Map<string, number>()
+  // Wines with the same key stay apart when both have a code and the codes differ.
+  const known = new Map<string, { wineId: string; lwin: string | null; line?: number }[]>()
+  const remember = (key: string, entry: { wineId: string; lwin: string | null; line?: number }) =>
+    known.set(key, [...(known.get(key) ?? []), entry])
+  for (const w of existing) remember(wineKey(w), { wineId: w.id, lwin: w.lwin })
   const sorted = [...ctx.cellars].sort((a, b) => a.position - b.position)
   const cellarIds = new Map(sorted.map((c) => [identity(c.name || ctx.defaultCellarName), c.id]))
   let position = Math.max(-1, ...sorted.map((c) => c.position))
@@ -358,15 +361,15 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       continue
     }
     const key = wineKey(row.draft)
-    let wineId = byKey.get(key)
-    if (wineId && firstLine.has(key)) {
-      plan.matches.push({ kind: 'repeat', line: firstLine.get(key)! })
-    } else if (wineId) {
-      plan.matches.push({ kind: 'existing', wineId })
+    const { lwin } = row.draft
+    const same = known.get(key)?.find((k) => k.lwin === null || lwin === null || k.lwin === lwin)
+    let wineId: string
+    if (same) {
+      wineId = same.wineId
+      plan.matches.push(same.line === undefined ? { kind: 'existing', wineId } : { kind: 'repeat', line: same.line })
     } else {
       wineId = ctx.newId()
-      byKey.set(key, wineId)
-      firstLine.set(key, row.line)
+      remember(key, { wineId, lwin, line: row.line })
       plan.matches.push({ kind: 'new' })
       plan.wines.push({
         id: wineId,
