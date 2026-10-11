@@ -268,4 +268,13 @@ describe('duplicateOf', () => {
       expect(duplicateOf({ ...emptyDraft(), sizeCl: 75, ...c.draft }, wines)?.id).toBe(c.want)
     })
   }
+
+  it('prefers the same code over an earlier uncoded name match', () => {
+    const both = [
+      makeWine({ id: 'uncoded', name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: null }),
+      makeWine({ id: 'coded', name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: '1066553' }),
+    ]
+    const draft = { ...emptyDraft(), name: 'Les Clos', producer: 'Dauvissat', vintage: 2019, sizeCl: 75, lwin: '1066553' }
+    expect(duplicateOf(draft, both)?.id).toBe('coded')
+  })
 })
