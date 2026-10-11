@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignCompletions, emptyDraft, lookupKey, toWineDraft, wineQuery } from './extract'
+import { alignCompletions, emptyDraft, lookupKey, mergeExtraction, toWineDraft, wineQuery, type WineExtraction } from './extract'
 import { makeWine } from './testing'
 
 describe('toWineDraft', () => {
@@ -47,6 +47,57 @@ describe('toWineDraft', () => {
   it('returns an empty draft for null', () => {
     expect(toWineDraft(null)).toEqual(emptyDraft())
   })
+})
+
+describe('mergeExtraction', () => {
+  const label: WineExtraction = {
+    name: 'Chablis',
+    producer: 'Dauvissat',
+    vintage: 2020,
+    grapes: ['Chardonnay'],
+    region: 'Chablis',
+    country: 'France',
+    color: 'white',
+    volumeCl: 150,
+  }
+  const cases = [
+    { name: 'empty draft', draft: emptyDraft(), extraction: label, want: toWineDraft(label) },
+    {
+      name: 'unknown color on an empty draft',
+      draft: emptyDraft(),
+      extraction: { ...label, color: 'unknown' as const },
+      want: { ...toWineDraft(label), color: 'other' as const },
+    },
+    {
+      name: 'tags and LWIN kept',
+      draft: { ...emptyDraft(), tags: ['gift'], lwin: '1012345' },
+      extraction: label,
+      want: { ...toWineDraft(label), tags: ['gift'], lwin: '1012345' },
+    },
+    {
+      name: 'typed fields win',
+      draft: { ...emptyDraft(), name: 'Les Clos', vintage: 2019, grapes: ['Pinot'], color: 'rose' as const, sizeCl: 37.5 },
+      extraction: label,
+      want: { ...toWineDraft(label), name: 'Les Clos', vintage: 2019, grapes: ['Pinot'], color: 'rose' as const, sizeCl: 37.5 },
+    },
+    {
+      name: 'size kept when the label has none',
+      draft: { ...emptyDraft(), sizeCl: 50 },
+      extraction: { ...label, volumeCl: null },
+      want: { ...toWineDraft(label), sizeCl: 50 },
+    },
+    {
+      name: 'blank field filled',
+      draft: { ...emptyDraft(), producer: '  ' },
+      extraction: label,
+      want: toWineDraft(label),
+    },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(mergeExtraction(c.draft, c.extraction)).toEqual(c.want)
+    })
+  }
 })
 
 describe('wineQuery', () => {

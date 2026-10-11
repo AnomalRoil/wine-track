@@ -2,7 +2,7 @@
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
   import { wineKey } from '../lib/csvImport'
-  import { canLookupGrapes, emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, emptyDraft, extractFromLabel, mergeExtraction, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { hasApiKey, settings } from '../lib/settings.svelte'
@@ -137,7 +137,7 @@
     const result = await extractFromLabel(settings, settings.model, image)
     if (gen !== generation) return
     if (result.ok) {
-      draft = toWineDraft(result.data)
+      draft = mergeExtraction($state.snapshot(draft), result.data)
       labelRead = true
     } else {
       extractError = result

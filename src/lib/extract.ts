@@ -99,6 +99,26 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
   }
 }
 
+/**
+ * Fills the fields of `draft` still at their empty value with what the label reads.
+ * Fields the user set, and those a label never supplies (tags, LWIN), are kept.
+ */
+export function mergeExtraction(draft: WineDraft, e: WineExtraction): WineDraft {
+  const empty = emptyDraft()
+  const label = toWineDraft(e)
+  return {
+    ...draft,
+    name: draft.name.trim() ? draft.name : label.name,
+    producer: draft.producer.trim() ? draft.producer : label.producer,
+    vintage: draft.vintage ?? label.vintage,
+    grapes: draft.grapes.length ? draft.grapes : label.grapes,
+    region: draft.region.trim() ? draft.region : label.region,
+    country: draft.country.trim() ? draft.country : label.country,
+    color: draft.color === empty.color ? label.color : draft.color,
+    sizeCl: draft.sizeCl === empty.sizeCl ? label.sizeCl : draft.sizeCl,
+  }
+}
+
 const EXTRACT_PROMPT = `This photo shows a wine bottle label (front and/or back).
 Extract the wine's details. Use null for any field that is not legible or not present.
 - vintage: the year printed on the label (millésime); null for non-vintage wines.
