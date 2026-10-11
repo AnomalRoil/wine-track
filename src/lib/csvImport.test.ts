@@ -3,6 +3,9 @@ import {
   identity,
   applyCompletion,
   incompleteRows,
+  matchWine,
+  type MatchCandidate,
+  type MatchRow,
   MAX_IMPORT_ROWS,
   parseImport,
   parseNumber,
@@ -312,6 +315,62 @@ describe('planImport', () => {
   })
 })
 
+describe('matchWine', () => {
+  const row: MatchRow = { lwin: null, name: 'clos', vintage: 2019, sizeCl: 75 }
+  const wine = (id: string, c: Partial<MatchCandidate> = {}) => ({ id, lwin: null, names: ['clos'], vintage: 2019, sizeCl: 75, ...c })
+
+  // Each case also runs with the candidate's vintage or size changed, which must give a new wine.
+  const single: { name: string; row: Partial<MatchRow>; candidate: Partial<MatchCandidate>; match: boolean }[] = [
+    { name: 'code, same code and name', row: { lwin: '1' }, candidate: { lwin: '1' }, match: true },
+    { name: 'code, same code, other name', row: { lwin: '1' }, candidate: { lwin: '1', names: ['other'] }, match: true },
+    { name: 'code, other code, same name', row: { lwin: '1' }, candidate: { lwin: '2' }, match: false },
+    { name: 'code, other code and name', row: { lwin: '1' }, candidate: { lwin: '2', names: ['other'] }, match: false },
+    { name: 'code, uncoded with same name', row: { lwin: '1' }, candidate: {}, match: true },
+    { name: 'code, uncoded with other name', row: { lwin: '1' }, candidate: { names: ['other'] }, match: false },
+    { name: 'code, uncoded known by the name too', row: { lwin: '1' }, candidate: { names: ['other', 'clos'] }, match: true },
+    { name: 'no code, coded with same name', row: {}, candidate: { lwin: '2' }, match: true },
+    { name: 'no code, coded with other name', row: {}, candidate: { lwin: '2', names: ['other'] }, match: false },
+    { name: 'no code, coded known by the name too', row: {}, candidate: { lwin: '2', names: ['other', 'clos'] }, match: true },
+    { name: 'no code, uncoded with same name', row: {}, candidate: {}, match: true },
+    { name: 'no code, uncoded with other name', row: {}, candidate: { names: ['other'] }, match: false },
+    { name: 'no vintage on both', row: { vintage: null }, candidate: { vintage: null }, match: true },
+  ]
+  for (const c of single) {
+    const candidate = wine('a', c.candidate)
+    it(c.name, () => {
+      expect(matchWine({ ...row, ...c.row }, [candidate])?.id).toBe(c.match ? 'a' : undefined)
+    })
+    for (const [what, change] of [
+      ['other vintage', { vintage: candidate.vintage === null ? 2019 : null }],
+      ['other size', { sizeCl: 150 }],
+    ] as const) {
+      it(`${c.name}, ${what}`, () => {
+        expect(matchWine({ ...row, ...c.row }, [{ ...candidate, ...change }])).toBeUndefined()
+      })
+    }
+  }
+
+  const ties: { name: string; row: Partial<MatchRow>; candidates: ReturnType<typeof wine>[]; want: string }[] = [
+    { name: 'code: same code beats an earlier uncoded same name', row: { lwin: '1' }, candidates: [wine('a'), wine('b', { lwin: '1' })], want: 'b' },
+    { name: 'code: same code under another name beats an uncoded same name', row: { lwin: '1' }, candidates: [wine('a'), wine('b', { lwin: '1', names: ['other'] })], want: 'b' },
+    { name: 'code: earliest of two with the code', row: { lwin: '1' }, candidates: [wine('a', { lwin: '1' }), wine('b', { lwin: '1' })], want: 'a' },
+    { name: 'code: earliest of two uncoded', row: { lwin: '1' }, candidates: [wine('a', { lwin: '2' }), wine('b'), wine('c')], want: 'b' },
+    { name: 'no code: uncoded beats an earlier coded', row: {}, candidates: [wine('a', { lwin: '2' }), wine('b')], want: 'b' },
+    { name: 'no code: earliest of two coded', row: {}, candidates: [wine('a', { lwin: '2' }), wine('b', { lwin: '3' })], want: 'a' },
+    { name: 'no code: earliest of two uncoded', row: {}, candidates: [wine('a'), wine('b')], want: 'a' },
+    { name: 'skips candidates of another vintage or size', row: {}, candidates: [wine('a', { vintage: 2020 }), wine('b', { sizeCl: 150 }), wine('c', { lwin: '2' })], want: 'c' },
+  ]
+  for (const c of ties) {
+    it(c.name, () => {
+      expect(matchWine({ ...row, ...c.row }, c.candidates)?.id).toBe(c.want)
+    })
+  }
+
+  it('finds nothing among no candidates', () => {
+    expect(matchWine(row, [])).toBeUndefined()
+  })
+})
+
 it('keeps wines with the same name apart when their codes differ', () => {
   const p = parseImport('name,producer,vintage,lwin\nChablis,Dauvissat,2019,1066540\nChablis,Dauvissat,2019,1066553\nChablis,Dauvissat,2019,\nChablis,Dauvissat,2019,1066553', 2026)
   if (!p.ok) throw new Error(p.error)
@@ -394,6 +453,51 @@ it('keeps codes apart after an uncoded row of the same wine', () => {
     ['id4', '1066553'],
   ])
   expect(plan.movements.map((m) => m.wineId)).toEqual(['id1', 'id1', 'id4'])
+})
+
+it('applies a code claimed for a stored wine to the later rows', () => {
+  const p = parseImport(
+    'name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,1066553,1\nChablis,Dauvissat,2019,1066540,1\nChablis,Dauvissat,2019,1066553,1\nChablis,Dauvissat,2019,,1',
+    2026,
+  )
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const existing = [makeWine({ id: 'old', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: null })]
+  const cellars = [{ id: 'c', name: '', position: 0, storage: {} }]
+  const plan = planImport(p.rows, existing, { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.matches).toEqual([
+    { kind: 'existing', wineId: 'old' },
+    { kind: 'new' },
+    { kind: 'existing', wineId: 'old' },
+    { kind: 'existing', wineId: 'old' },
+  ])
+  expect(plan.codes).toEqual(new Map([['old', '1066553']]))
+  expect(existing[0].lwin).toBeNull()
+})
+
+it('applies a code claimed for a planned wine to the later rows', () => {
+  const p = parseImport(
+    'name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,,1\nChablis,Dauvissat,2019,1066553,1\nChablis,Dauvissat,2019,1066540,1\nChablis Les Clos,Dauvissat,2019,1066553,1\nChablis Les Clos,Dauvissat,2019,,1',
+    2026,
+  )
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const cellars = [{ id: 'c', name: '', position: 0, storage: {} }]
+  const plan = planImport(p.rows, [], { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.matches).toEqual([{ kind: 'new' }, { kind: 'repeat', line: 2 }, { kind: 'new' }, { kind: 'repeat', line: 2 }, { kind: 'repeat', line: 2 }])
+  expect(plan.wines.map((w) => w.lwin)).toEqual(['1066553', '1066540'])
+  expect(plan.codes).toEqual(new Map())
+})
+
+it('adds an uncoded row to the uncoded stored wine of that name', () => {
+  const p = parseImport('name,producer,vintage,quantity\nChablis,Dauvissat,2019,1', 2026)
+  if (!p.ok) throw new Error(p.error)
+  const existing = [
+    makeWine({ id: 'coded', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: '1066553' }),
+    makeWine({ id: 'uncoded', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: null }),
+  ]
+  const plan = planImport(p.rows, existing, { cellars: [], defaultCellarName: 'My cellar', date: '', now: 0, newId: () => 'new' })
+  expect(plan.matches).toEqual([{ kind: 'existing', wineId: 'uncoded' }])
 })
 
 it('keeps names apart when one ends where the other starts', () => {
