@@ -369,6 +369,12 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
     let wineId: string
     if (same) {
       wineId = same.wineId
+      // A coded row claims an uncoded wine for its code, so a row with another code stays apart.
+      if (same.lwin === null && lwin !== null) {
+        same.lwin = lwin
+        const planned = plan.wines.find((w) => w.id === wineId)
+        if (planned) planned.lwin = lwin
+      }
       plan.matches.push(same.line === undefined ? { kind: 'existing', wineId } : { kind: 'repeat', line: same.line })
     } else {
       wineId = ctx.newId()
