@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import * as db from '../lib/db'
 import { settings } from '../lib/settings.svelte'
 import { restore, store } from '../lib/store.svelte'
-import { makeWine } from '../lib/testing'
+import { makeTasting, makeWine } from '../lib/testing'
 import WineDetail from './WineDetail.svelte'
 
 vi.mock('../lib/db')
@@ -49,6 +49,19 @@ it('keeps the draft after a restore and saves it on retry', async () => {
 
   await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
   expect(store.wines[0].name).toBe('Renamed')
+})
+
+it('closes the tasting editor when a restore removes the tasting', async () => {
+  store.tastings = [makeTasting()]
+  render(WineDetail, { wineId: 'w1', onclose: () => {} })
+  await fireEvent.click(button('Edit tasting'))
+  expect(screen.getByLabelText('Notes')).toBeTruthy()
+
+  const wines = $state.snapshot(store.wines)
+  vi.mocked(db.loadAll).mockResolvedValue({ wines, tastings: [], cellars: [home], movements: [], racks: [], placements: [] })
+  await restore({ wines, tastings: [], cellars: [home], movements: [], racks: [], placements: [] }, [])
+
+  await vi.waitFor(() => expect(screen.queryByLabelText('Notes')).toBeNull())
 })
 
 it('keeps the editor and its actions locked until the save lands', async () => {

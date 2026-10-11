@@ -56,14 +56,8 @@
     if (ok) return ondone()
     // The next Save applies the kept draft to the tasting as it is now.
     since = storeGeneration()
-    if (!initial) return
-    const latest = store.tastings.find((t) => t.id === initial?.id)
-    if (!latest) {
-      // A restore removed the tasting along with its stored photos: save the draft as a new tasting.
-      initial = undefined
-      sheet.photoIds = sheet.photoIds.filter((id) => id in pending)
-      return
-    }
+    const latest = initial && store.tastings.find((t) => t.id === initial?.id)
+    if (!latest) return
     const before = new Set(initial?.sheet?.photoIds)
     initial = $state.snapshot(latest)
     // A restore may have dropped stored photos the draft still points at, or brought new ones:
