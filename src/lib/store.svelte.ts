@@ -1,6 +1,6 @@
 import * as db from './db'
 import { defaultCellar, normalizeCellar, normalizeWine } from './migrate'
-import { canRecord, canRemoveCellar, computeStock, emptyCellar, withinStock } from './stock'
+import { canRecord, canRemoveCellar, cellarBottles, computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
 import { planImport, type ImportPlan, type ImportRow, type PlanContext } from './csvImport'
 import { approvedDrops, canPlace, cellarLosing, freedSlots, holds, outside, place, planMove, stalePlacements, type Slot } from './racks'
@@ -379,11 +379,13 @@ export function swapCellars(a: string, b: string): Promise<void> {
 
 /**
  * Deletes a cellar, moving its bottles to `targetId` or, when null, out of stock.
- * False when it is the last cellar or either cellar is gone.
+ * `bottles` is the count the user approved. False when it is the last cellar, either
+ * cellar is gone, or the cellar no longer holds `bottles`.
  */
-export function removeCellar(id: string, targetId: string | null): Promise<boolean> {
+export function removeCellar(id: string, targetId: string | null, bottles: number): Promise<boolean> {
   return writes(async () => {
     if (!canRemoveCellar(store.cellars.map((c) => c.id), id, targetId)) return false
+    if (cellarBottles(stock, id) !== bottles) return false
     const emptying = emptyCellar(stock, id, targetId, today(), () => crypto.randomUUID())
     await db.deleteCellar(id, emptying)
     store.movements.push(...emptying)

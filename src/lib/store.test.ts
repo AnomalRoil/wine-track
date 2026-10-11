@@ -114,8 +114,8 @@ it('keeps a cellar when both are deleted behind a pending write', async () => {
   store.cellars = [cellar('a'), cellar('b', 1)]
 
   const rename = patchCellar('a', (c) => ({ ...c, name: 'Home' }))
-  const first = removeCellar('a', null)
-  const second = removeCellar('b', null)
+  const first = removeCellar('a', null, 0)
+  const second = removeCellar('b', null, 0)
   await release(rename, first, second)
 
   expect([await first, await second]).toEqual([true, false])
@@ -123,12 +123,25 @@ it('keeps a cellar when both are deleted behind a pending write', async () => {
   expect(db.deleteCellar).toHaveBeenCalledTimes(1)
 })
 
+it('keeps a cellar approved as empty when bottles arrive before its deletion', async () => {
+  store.cellars = [cellar('a'), cellar('b', 1)]
+
+  const arrival = addMovements([mv({ id: 'm', quantity: 2, cellarId: 'b' })])
+  const removed = removeCellar('b', null, 0)
+  await release(arrival, removed)
+
+  expect(await removed).toBe(false)
+  expect(store.cellars.map((c) => c.id)).toEqual(['a', 'b'])
+  expect(store.movements.map((m) => m.id)).toEqual(['m'])
+  expect(db.deleteCellar).not.toHaveBeenCalled()
+})
+
 it('refuses to move bottles into a cellar deleted earlier in the queue', async () => {
   store.cellars = [cellar('a'), cellar('b', 1), cellar('c', 2)]
   store.movements = [mv({ id: 'm', quantity: 2, cellarId: 'c' })]
 
-  const first = removeCellar('b', null)
-  const second = removeCellar('c', 'b')
+  const first = removeCellar('b', null, 0)
+  const second = removeCellar('c', 'b', 2)
   await release(first, second)
 
   expect([await first, await second]).toEqual([true, false])
@@ -299,7 +312,7 @@ it('exports the image of every photo its wines reference while a capture saves',
 
 it('keeps nothing of a capture whose cellar was deleted while it waited', async () => {
   store.cellars = [cellar('home'), cellar('cave', 1)]
-  const removed = removeCellar('cave', null)
+  const removed = removeCellar('cave', null, 0)
   const added = addWine(makeWine({ id: 'new', photoId: 'p' }), { id: 'p', blob: new Blob() }, [mv({ wineId: 'new', cellarId: 'cave', quantity: 2 })], storeGeneration())
   await release(removed, added)
 
@@ -408,7 +421,7 @@ it('refuses to delete a transfer whose bottles were drunk at its destination', a
 it('refuses to return bottles to a deleted cellar', async () => {
   store.cellars = [cellar('home'), cellar('cave', 1)]
   store.movements = [mv({ id: 'a', quantity: 2, cellarId: 'cave' })]
-  const deleted = removeCellar('cave', 'home')
+  const deleted = removeCellar('cave', 'home', 2)
   await release(deleted)
   const transfer = store.movements.find((m) => m.kind === 'transfer')!
 
