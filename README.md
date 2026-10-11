@@ -33,7 +33,7 @@ Live at [cave-man.wouaib.ch](https://cave-man.wouaib.ch/).
 npm ci
 npm run dev      # local dev server
 npm run check    # svelte-check + tsc
-npm test         # vitest
+npm test         # vitest: unit tests in node, *.svelte.test.ts component tests in jsdom
 npm run build && npm run preview   # production build
 npm run lwin     # downloads LWIN into public/lwin/; pass a local .xlsx path to skip the download
 ```
