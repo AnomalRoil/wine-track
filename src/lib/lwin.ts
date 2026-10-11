@@ -248,6 +248,9 @@ export function displayName(wine: Pick<LwinWine, 'producer' | 'label'>): string 
   return wine.producer ? `${wine.producer}, ${wine.label}` : wine.label
 }
 
+/** Draft fields an applied LWIN match sets, which a label read then keeps. */
+export const LWIN_FIELDS = ['name', 'producer', 'region', 'country', 'color', 'lwin'] as const
+
 /**
  * The draft named after `wine`: its producer, label, place and code. The colour
  * changes only when the draft's does not fit the wine (a sweet white stays sweet).

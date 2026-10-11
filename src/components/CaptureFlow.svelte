@@ -8,7 +8,7 @@
   import { hasApiKey, settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
   import { cellarName, wineLabel } from '../lib/labels'
-  import { applyLwin, confidentMatch, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
+  import { applyLwin, confidentMatch, displayName, duplicateOf, LWIN_FIELDS, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
   import { addToWine, addWine, sortedCellars, store, storeGeneration } from '../lib/store.svelte'
   import type { Aging, Photo, Wine } from '../lib/types'
@@ -36,6 +36,8 @@
 
   let step = $state<'idle' | 'extracting' | 'form'>(untrack(() => (intoCellar ? 'form' : 'idle')))
   let draft = $state<WineDraft>(emptyDraft())
+  /** Fields the user or an applied LWIN match set, which a label read keeps. */
+  const touched = new Set<keyof WineDraft>()
   let aging = $state<Aging>({ ...NO_AGING })
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
@@ -78,6 +80,7 @@
     photoUrl = null
     photoBlob = null
     draft = emptyDraft()
+    touched.clear()
     aging = { ...NO_AGING }
     extractError = null
     labelRead = false
@@ -137,7 +140,7 @@
     const result = await extractFromLabel(settings, settings.model, image)
     if (gen !== generation) return
     if (result.ok) {
-      draft = mergeExtraction($state.snapshot(draft), result.data)
+      draft = mergeExtraction($state.snapshot(draft), result.data, touched)
       labelRead = true
     } else {
       extractError = result
@@ -153,6 +156,7 @@
 
   function applyMatch() {
     draft = applyLwin($state.snapshot(draft), lwinMatch!)
+    for (const field of LWIN_FIELDS) touched.add(field)
     lwinMatch = null
   }
 
@@ -286,7 +290,7 @@
       </div>
     </div>
   {/if}
-  <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:this={form} bind:draft {touched} title={t('form.newWine')} {photoUrl} {saving} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet photoNote()}
       {@const readable = photoBlob && !labelRead && !extractError}
       {#if readable || keyless}

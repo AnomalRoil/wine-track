@@ -99,24 +99,16 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
   }
 }
 
+/** Draft fields a label can supply. */
+const LABEL_FIELDS = ['name', 'producer', 'vintage', 'grapes', 'region', 'country', 'color', 'sizeCl'] as const
+
 /**
- * Fills the fields of `draft` still at their empty value with what the label reads.
- * Fields the user set, and those a label never supplies (tags, LWIN), are kept.
+ * Fills the fields of `draft` not in `touched` with what the label reads.
+ * Touched fields, and those a label never supplies (tags, LWIN), are kept.
  */
-export function mergeExtraction(draft: WineDraft, e: WineExtraction): WineDraft {
-  const empty = emptyDraft()
+export function mergeExtraction(draft: WineDraft, e: WineExtraction, touched: ReadonlySet<keyof WineDraft>): WineDraft {
   const label = toWineDraft(e)
-  return {
-    ...draft,
-    name: draft.name.trim() ? draft.name : label.name,
-    producer: draft.producer.trim() ? draft.producer : label.producer,
-    vintage: draft.vintage ?? label.vintage,
-    grapes: draft.grapes.length ? draft.grapes : label.grapes,
-    region: draft.region.trim() ? draft.region : label.region,
-    country: draft.country.trim() ? draft.country : label.country,
-    color: draft.color === empty.color ? label.color : draft.color,
-    sizeCl: draft.sizeCl === empty.sizeCl ? label.sizeCl : draft.sizeCl,
-  }
+  return { ...draft, ...Object.fromEntries(LABEL_FIELDS.filter((f) => !touched.has(f)).map((f) => [f, label[f]])) }
 }
 
 const EXTRACT_PROMPT = `This photo shows a wine bottle label (front and/or back).

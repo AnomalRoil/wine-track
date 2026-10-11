@@ -4,7 +4,7 @@
   import { distinctGrapes, distinctTags } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
-  import { applyLwin, displayName, type LwinWine, type Scored } from '../lib/lwin'
+  import { applyLwin, displayName, LWIN_FIELDS, type LwinWine, type Scored } from '../lib/lwin'
   import { initLwin, searchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { store } from '../lib/store.svelte'
@@ -14,6 +14,7 @@
 
   let {
     draft = $bindable(),
+    touched = new Set(),
     title,
     photoUrl = null,
     onsave,
@@ -24,6 +25,8 @@
     extra,
   }: {
     draft: WineDraft
+    /** Fields the user or an applied LWIN match set; the form adds to it. */
+    touched?: Set<keyof WineDraft>
     title: string
     photoUrl?: string | null
     onsave: () => void
@@ -47,6 +50,10 @@
   // Unreadable, the copy shows as not installed; the next lookup reads it again.
   initLwin().catch(() => {})
 
+  function touch(...fields: (keyof WineDraft)[]) {
+    for (const field of fields) touched.add(field)
+  }
+
   async function suggest() {
     const query = `${draft.producer} ${draft.name}`.trim()
     const current = ++searches
@@ -58,6 +65,7 @@
     searches++
     suggestions = []
     draft = applyLwin($state.snapshot(draft), wine)
+    touch(...LWIN_FIELDS)
   }
 
   function place(wine: LwinWine): string {
@@ -89,6 +97,7 @@
       return
     }
     draft.grapes = result.data.grapes
+    touch('grapes')
     if (result.data.confidence === 'typical-blend') lookupNote = t('form.lookupTypical')
   }
 
@@ -116,10 +125,10 @@
   {@render photoNote?.()}
 
   <label for="name">{t('form.name')}</label>
-  <input id="name" type="text" autocomplete="off" bind:value={draft.name} oninput={suggest} />
+  <input id="name" type="text" autocomplete="off" bind:value={draft.name} oninput={() => { touch('name'); suggest() }} />
 
   <label for="producer">{t('form.producer')}</label>
-  <input id="producer" type="text" autocomplete="off" bind:value={draft.producer} oninput={suggest} />
+  <input id="producer" type="text" autocomplete="off" bind:value={draft.producer} oninput={() => { touch('producer'); suggest() }} />
   {#if suggestions.length > 0}
     <ul class="suggestions group" aria-label={t('lwin.suggestions')}>
       {#each suggestions as { wine } (wine.lwin)}
@@ -135,7 +144,7 @@
   {#if draft.lwin}
     <p class="muted lwin">
       {t('lwin.code', { code: draft.lwin })}
-      <button type="button" class="link" onclick={() => (draft.lwin = null)}>{t('lwin.unlink')}</button>
+      <button type="button" class="link" onclick={() => { draft.lwin = null; touch('lwin') }}>{t('lwin.unlink')}</button>
     </p>
   {/if}
 
@@ -148,6 +157,7 @@
     min="1800"
     max="2100"
     bind:value={draft.vintage}
+    oninput={() => touch('vintage')}
   />
 
   <label for="grape-input">{t('form.grapes')}</label>
@@ -155,6 +165,7 @@
     bind:this={grapeInput}
     bind:values={draft.grapes}
     id="grape-input"
+    onchange={() => touch('grapes')}
     placeholder={t('form.addGrape')}
     suggestions={distinctGrapes(store.wines)}
   />
@@ -170,10 +181,10 @@
   {/if}
 
   <label for="region">{t('form.region')}</label>
-  <input id="region" type="text" bind:value={draft.region} />
+  <input id="region" type="text" bind:value={draft.region} oninput={() => touch('region')} />
 
   <label for="country">{t('form.country')}</label>
-  <input id="country" type="text" bind:value={draft.country} />
+  <input id="country" type="text" bind:value={draft.country} oninput={() => touch('country')} />
 
   <label for="color-chips">{t('form.color')}</label>
   <div class="chips" id="color-chips">
@@ -182,7 +193,7 @@
         type="button"
         class="chip"
         class:active={draft.color === color}
-        onclick={() => (draft.color = color)}
+        onclick={() => { draft.color = color; touch('color') }}
       >
         {t(`color.${color}`)}
       </button>
@@ -190,7 +201,7 @@
   </div>
 
   <label for="size">{t('form.size')}</label>
-  <select id="size" bind:value={draft.sizeCl}>
+  <select id="size" bind:value={draft.sizeCl} onchange={() => touch('sizeCl')}>
     {#each sizes as cl (cl)}
       <option value={cl}>{sizeLabel(cl)}</option>
     {/each}
@@ -201,6 +212,7 @@
     bind:this={tagInput}
     bind:values={draft.tags}
     id="tag-input"
+    onchange={() => touch('tags')}
     placeholder={t('form.addTag')}
     suggestions={distinctTags(store.wines)}
   />

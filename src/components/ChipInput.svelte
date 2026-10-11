@@ -6,7 +6,8 @@
     id,
     placeholder,
     suggestions = [],
-  }: { values: string[]; id: string; placeholder: string; suggestions?: string[] } = $props()
+    onchange,
+  }: { values: string[]; id: string; placeholder: string; suggestions?: string[]; onchange?: () => void } = $props()
 
   let input = $state('')
 
@@ -15,12 +16,14 @@
     const value = input.trim()
     if (value && !values.some((v) => v.toLowerCase() === value.toLowerCase())) {
       values = [...values, value]
+      onchange?.()
     }
     input = ''
   }
 
   function remove(value: string) {
     values = values.filter((v) => v !== value)
+    onchange?.()
   }
 </script>
 
