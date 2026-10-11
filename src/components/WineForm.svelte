@@ -103,10 +103,15 @@
 
   let form: HTMLFormElement
 
-  /** Commits the chips being typed and shows invalid fields; true when the draft can be saved. */
-  export function validate(): boolean {
+  /** Commits the grapes and tags being typed. */
+  export function commitChips() {
     grapeInput.commit()
     tagInput.commit()
+  }
+
+  /** Commits the chips being typed and shows invalid fields; true when the draft can be saved. */
+  export function validate(): boolean {
+    commitChips()
     return form.reportValidity()
   }
 

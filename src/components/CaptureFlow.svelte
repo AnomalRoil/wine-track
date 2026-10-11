@@ -43,6 +43,8 @@
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
   let labelRead = $state(false)
+  /** A label read started from the form, which stays mounted meanwhile. */
+  let reading = $state(false)
   let photoFailed = $state(false)
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
@@ -84,6 +86,7 @@
     aging = { ...NO_AGING }
     extractError = null
     labelRead = false
+    reading = false
     photoFailed = false
     lwinMatch = null
     duplicate = null
@@ -133,12 +136,18 @@
   async function extract() {
     if (!photoBlob) return
     extractError = null
-    step = 'extracting'
+    if (step === 'form') {
+      form!.commitChips()
+      reading = true
+    } else {
+      step = 'extracting'
+    }
     const gen = ++generation
     const image = await blobToBase64(photoBlob)
     if (gen !== generation) return
     const result = await extractFromLabel(settings, settings.model, image)
     if (gen !== generation) return
+    reading = false
     if (result.ok) {
       draft = mergeExtraction($state.snapshot(draft), result.data, touched)
       labelRead = true
@@ -294,8 +303,16 @@
     {#snippet photoNote()}
       {@const readable = photoBlob && !labelRead && !extractError}
       {#if readable || keyless}
-        <div class="read-label">
-          {#if readable}<NeedsKey label={t('capture.readLabel')} icon="sparkle" hint={keyHint} onclick={extract} />{/if}
+        <div class="read-label" class:pulse={reading}>
+          {#if readable}
+            <NeedsKey
+              label={reading ? t('capture.extracting') : t('capture.readLabel')}
+              icon="sparkle"
+              disabled={reading}
+              hint={keyHint}
+              onclick={extract}
+            />
+          {/if}
           {#if keyless}<KeyHint id={keyHint} />{/if}
         </div>
       {/if}
