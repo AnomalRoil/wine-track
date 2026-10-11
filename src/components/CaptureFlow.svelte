@@ -299,7 +299,7 @@
       </div>
     </div>
   {/if}
-  <WineForm bind:this={form} bind:draft {touched} title={t('form.newWine')} {photoUrl} {saving} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:this={form} bind:draft {touched} title={t('form.newWine')} {photoUrl} {saving} busy={reading} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet photoNote()}
       {@const readable = photoBlob && !labelRead && !extractError}
       {#if readable || keyless}

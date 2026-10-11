@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
-import { extractFromLabel, type Result, type WineExtraction } from '../lib/extract'
+import { extractFromLabel, lookupGrapes, type GrapeLookup, type Result, type WineExtraction } from '../lib/extract'
 import { searchLwin } from '../lib/lwinData.svelte'
 import { processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
@@ -20,7 +20,11 @@ vi.mock('../lib/photo', async (original) => ({
   processPhoto: vi.fn(),
   blobToBase64: vi.fn(async () => 'jpeg'),
 }))
-vi.mock('../lib/extract', async (original) => ({ ...(await original<typeof import('../lib/extract')>()), extractFromLabel: vi.fn() }))
+vi.mock('../lib/extract', async (original) => ({
+  ...(await original<typeof import('../lib/extract')>()),
+  extractFromLabel: vi.fn(),
+  lookupGrapes: vi.fn(),
+}))
 
 const label: WineExtraction = {
   name: 'Chablis',
@@ -104,4 +108,31 @@ it('Reading the label fills the fields a picked LWIN wine left empty', async () 
   expect(name().value).toBe('Chablis')
   expect(document.querySelector<HTMLInputElement>('#producer')!.value).toBe('Dauvissat')
   expect(document.querySelector<HTMLInputElement>('#country')!.value).toBe('France')
+})
+
+it('A grape lookup answering after the label read changed the wine is dropped', async () => {
+  const { answer } = await formWithPhoto()
+  let found: (result: Result<GrapeLookup>) => void = () => {}
+  vi.mocked(lookupGrapes).mockReturnValue(new Promise((resolve) => (found = resolve)))
+  await fireEvent.input(document.querySelector('#producer')!, { target: { value: 'Dauvissat' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  answer({ ok: true, data: label })
+  await waitFor(() => expect(name().value).toBe('Chablis'))
+  found({ ok: true, data: { grapes: ['Merlot'], confidence: 'printed-source' } })
+  await new Promise((resolve) => setTimeout(resolve))
+
+  expect((screen.getByRole('button', { name: 'Look up grapes online' }) as HTMLButtonElement).disabled).toBe(false)
+  screen.getByRole('button', { name: 'Remove Chardonnay' })
+  expect(screen.queryByRole('button', { name: 'Remove Merlot' })).toBeNull()
+})
+
+it('The grape lookup waits for the label read', async () => {
+  await formWithPhoto()
+  await fireEvent.input(name(), { target: { value: 'Les Clos' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+
+  const lookup = screen.getByRole('button', { name: 'Look up grapes online' }) as HTMLButtonElement
+  expect(lookup.disabled).toBe(true)
 })

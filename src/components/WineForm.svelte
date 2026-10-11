@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import { canLookupGrapes, lookupGrapes, type FailureKind, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, lookupGrapes, lookupKey, type FailureKind, type WineDraft } from '../lib/extract'
   import { distinctGrapes, distinctTags } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
@@ -20,6 +20,7 @@
     onsave,
     oncancel,
     saving = false,
+    busy = false,
     photoNote,
     keyHint,
     extra,
@@ -33,6 +34,8 @@
     oncancel: () => void
     /** Disables the actions while the caller writes. */
     saving?: boolean
+    /** Another request is filling the draft, so the grape lookup waits for it. */
+    busy?: boolean
     /** Shown under the photo. */
     photoNote?: Snippet
     /** Id of the key hint the screen shows, so the grape lookup does not repeat it. */
@@ -83,10 +86,23 @@
     return t(`extract.${kind}`, { detail: detail ?? '' })
   }
 
+  // A pending lookup is dropped when the wine it asks about or its grapes change meanwhile.
+  let lookups = 0
+  const asked = $derived(`${lookupKey(draft)}\n${draft.grapes.join('\n')}`)
+  $effect(() => {
+    void asked
+    return () => {
+      lookups++
+      lookingUp = false
+    }
+  })
+
   async function doLookup() {
     lookingUp = true
     lookupNote = null
+    const current = lookups
     const result = await lookupGrapes(settings, settings.model, $state.snapshot(draft))
+    if (current !== lookups) return
     lookingUp = false
     if (!result.ok) {
       lookupNote = failureText(result.kind, result.detail)
@@ -177,7 +193,7 @@
   <NeedsKey
     label={lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
     link
-    disabled={lookingUp || !canLookupGrapes(draft)}
+    disabled={lookingUp || busy || !canLookupGrapes(draft)}
     hint={keyHint}
     onclick={doLookup}
   />
