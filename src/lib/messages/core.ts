@@ -43,6 +43,12 @@ export const en = {
   'capture.manual': 'Enter manually',
   'capture.extracting': 'Reading the label…',
   'capture.skip': 'Skip extraction',
+  'capture.readLabel': 'Read the label',
+
+  'key.needed': 'Needs an Anthropic API key.',
+  'key.add': 'Add an API key',
+  'key.uses':
+    'Used to read labels, look up grapes and drinking windows, and complete imports. Stored only on this device.',
   'capture.photoFailed': 'The photo could not be read. The wine is saved without it; cancel to take another.',
 
   'extract.no-key': 'No API key configured. Add one in Settings, or fill the form manually.',
@@ -112,7 +118,9 @@ export const en = {
   'settings.title': 'Settings',
   'settings.apiKey': 'Anthropic API key',
   'settings.apiKeyNote':
-    'Stored only on this device. It is sent only to api.anthropic.com when reading a label.',
+    'Stored only on this device and sent only to api.anthropic.com.',
+  'settings.apiKeyUses':
+    'It enables label reading, grape and drinking-window lookups, and import completion. Everything else works without it.',
   'settings.workspaceId': 'Workspace ID (optional)',
   'settings.workspaceIdNote':
     'Only needed for identity-linked API keys: the id of the Console workspace the key acts in.',
@@ -261,6 +269,12 @@ export const fr: Messages<typeof en> = {
   'capture.manual': 'Saisie manuelle',
   'capture.extracting': 'Lecture de l’étiquette…',
   'capture.skip': 'Passer l’extraction',
+  'capture.readLabel': 'Lire l’étiquette',
+
+  'key.needed': 'Nécessite une clé API Anthropic.',
+  'key.add': 'Ajouter une clé API',
+  'key.uses':
+    'Sert à lire les étiquettes, rechercher cépages et fenêtres de dégustation, et compléter les imports. Stockée uniquement sur cet appareil.',
   'capture.photoFailed': 'Photo illisible. Le vin sera enregistré sans elle ; annulez pour en prendre une autre.',
 
   'extract.no-key': 'Aucune clé API configurée. Ajoutez-en une dans Réglages, ou remplissez le formulaire.',
@@ -330,7 +344,9 @@ export const fr: Messages<typeof en> = {
   'settings.title': 'Réglages',
   'settings.apiKey': 'Clé API Anthropic',
   'settings.apiKeyNote':
-    'Stockée uniquement sur cet appareil. Envoyée seulement à api.anthropic.com pour lire une étiquette.',
+    'Stockée uniquement sur cet appareil et envoyée seulement à api.anthropic.com.',
+  'settings.apiKeyUses':
+    'Elle sert à lire les étiquettes, à rechercher les cépages et la fenêtre de dégustation, et à compléter les imports. Tout le reste fonctionne sans.',
   'settings.workspaceId': 'ID d’espace de travail (optionnel)',
   'settings.workspaceIdNote':
     'Requis seulement pour les clés API liées à une identité : l’id de l’espace de travail Console utilisé par la clé.',
@@ -479,6 +495,12 @@ export const de: Messages<typeof en> = {
   'capture.manual': 'Manuell eingeben',
   'capture.extracting': 'Etikett wird gelesen…',
   'capture.skip': 'Auslesen überspringen',
+  'capture.readLabel': 'Etikett lesen',
+
+  'key.needed': 'Benötigt einen Anthropic-API-Schlüssel.',
+  'key.add': 'API-Schlüssel hinzufügen',
+  'key.uses':
+    'Dient zum Lesen von Etiketten, zur Suche nach Rebsorten und Trinkfenstern und zum Ergänzen von Importen. Nur auf diesem Gerät gespeichert.',
   'capture.photoFailed': 'Das Foto ist nicht lesbar. Der Wein wird ohne Foto gespeichert; abbrechen, um ein neues aufzunehmen.',
 
   'extract.no-key':
@@ -550,7 +572,9 @@ export const de: Messages<typeof en> = {
   'settings.title': 'Einstellungen',
   'settings.apiKey': 'Anthropic-API-Schlüssel',
   'settings.apiKeyNote':
-    'Nur auf diesem Gerät gespeichert. Wird nur beim Lesen eines Etiketts an api.anthropic.com gesendet.',
+    'Nur auf diesem Gerät gespeichert und nur an api.anthropic.com gesendet.',
+  'settings.apiKeyUses':
+    'Er ermöglicht das Lesen von Etiketten, die Suche nach Rebsorten und Trinkfenster sowie das Ergänzen von Importen. Alles andere funktioniert auch ohne.',
   'settings.workspaceId': 'Workspace-ID (optional)',
   'settings.workspaceIdNote':
     'Nur für identitätsgebundene API-Schlüssel nötig: die ID des Console-Workspace, in dem der Schlüssel gilt.',

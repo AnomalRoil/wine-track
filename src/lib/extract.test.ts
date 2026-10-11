@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignCompletions, changedFields, emptyDraft, lookupKey, toWineDraft, wineQuery } from './extract'
+import { alignCompletions, changedFields, emptyDraft, lookupKey, mergeExtraction, toWineDraft, wineQuery, type WineDraft, type WineExtraction } from './extract'
 import { makeWine } from './testing'
 
 describe('toWineDraft', () => {
@@ -47,6 +47,70 @@ describe('toWineDraft', () => {
   it('returns an empty draft for null', () => {
     expect(toWineDraft(null)).toEqual(emptyDraft())
   })
+})
+
+describe('mergeExtraction', () => {
+  const label: WineExtraction = {
+    name: 'Chablis',
+    producer: 'Dauvissat',
+    vintage: 2020,
+    grapes: ['Chardonnay'],
+    region: 'Chablis',
+    country: 'France',
+    color: 'white',
+    volumeCl: 150,
+  }
+  const none = new Set<keyof WineDraft>()
+  const cases: { name: string; draft: WineDraft; touched: Set<keyof WineDraft>; extraction: WineExtraction; want: WineDraft }[] = [
+    { name: 'empty draft', draft: emptyDraft(), touched: none, extraction: label, want: toWineDraft(label) },
+    {
+      name: 'unknown color on an empty draft',
+      draft: emptyDraft(),
+      touched: none,
+      extraction: { ...label, color: 'unknown' },
+      want: { ...toWineDraft(label), color: 'other' },
+    },
+    {
+      name: 'tags and LWIN kept',
+      draft: { ...emptyDraft(), tags: ['gift'], lwin: '1012345' },
+      touched: new Set(['tags', 'lwin']),
+      extraction: label,
+      want: { ...toWineDraft(label), tags: ['gift'], lwin: '1012345' },
+    },
+    {
+      name: 'touched fields win',
+      draft: { ...emptyDraft(), name: 'Les Clos', vintage: 2019, grapes: ['Pinot'], color: 'rose', sizeCl: 37.5 },
+      touched: new Set(['name', 'vintage', 'grapes', 'color', 'sizeCl']),
+      extraction: label,
+      want: { ...toWineDraft(label), name: 'Les Clos', vintage: 2019, grapes: ['Pinot'], color: 'rose', sizeCl: 37.5 },
+    },
+    {
+      name: 'chosen red and 75 cl kept',
+      draft: emptyDraft(),
+      touched: new Set(['color', 'sizeCl']),
+      extraction: label,
+      want: { ...toWineDraft(label), color: 'red', sizeCl: 75 },
+    },
+    {
+      name: 'default red and 75 cl replaced',
+      draft: emptyDraft(),
+      touched: new Set(['name']),
+      extraction: label,
+      want: { ...toWineDraft(label), name: '' },
+    },
+    {
+      name: 'cleared field kept',
+      draft: { ...emptyDraft(), producer: '' },
+      touched: new Set(['producer']),
+      extraction: label,
+      want: { ...toWineDraft(label), producer: '' },
+    },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(mergeExtraction(c.draft, c.extraction, c.touched)).toEqual(c.want)
+    })
+  }
 })
 
 describe('wineQuery', () => {

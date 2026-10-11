@@ -105,6 +105,18 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
   }
 }
 
+/** Draft fields a label can supply. */
+const LABEL_FIELDS = ['name', 'producer', 'vintage', 'grapes', 'region', 'country', 'color', 'sizeCl'] as const
+
+/**
+ * Fills the fields of `draft` not in `touched` with what the label reads.
+ * Touched fields, and those a label never supplies (tags, LWIN), are kept.
+ */
+export function mergeExtraction(draft: WineDraft, e: WineExtraction, touched: ReadonlySet<keyof WineDraft>): WineDraft {
+  const label = toWineDraft(e)
+  return { ...draft, ...Object.fromEntries(LABEL_FIELDS.filter((f) => !touched.has(f)).map((f) => [f, label[f]])) }
+}
+
 const EXTRACT_PROMPT = `This photo shows a wine bottle label (front and/or back).
 Extract the wine's details. Use null for any field that is not legible or not present.
 - vintage: the year printed on the label (millésime); null for non-vintage wines.

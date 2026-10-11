@@ -5,9 +5,18 @@
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
   import type { Aging } from '../lib/types'
-  import Icon from './Icon.svelte'
+  import NeedsKey from './NeedsKey.svelte'
 
-  let { aging = $bindable(), wine }: { aging: Aging; wine: WineDraft & { id?: string } } = $props()
+  let {
+    aging = $bindable(),
+    wine,
+    busy = false,
+  }: {
+    aging: Aging
+    wine: WineDraft & { id?: string }
+    /** Another request is filling the wine, so the lookup waits for it and drops a pending answer. */
+    busy?: boolean
+  } = $props()
 
   let lookingUp = $state(false)
   let lookupNote = $state<string | null>(null)
@@ -33,13 +42,14 @@
     aging.servingMaxC = celsius(v)
   }
 
-  // A pending lookup is dropped when the wine changes or the fields close, so its answer
+  // A pending lookup is dropped when the wine changes, another request starts filling it, or the fields close, so its answer
   // never lands on another wine through the aging binding.
   // Saving the wine replaces its object; only a change of what the lookup asks about counts.
   let generation = 0
   const key = $derived(lookupKey(wine))
   $effect(() => {
     void key
+    void busy
     return () => {
       generation++
       lookingUp = false
@@ -66,9 +76,13 @@
   }
 </script>
 
-<button type="button" class="link" disabled={lookingUp || !canLookupGrapes(wine)} onclick={lookup}>
-  <Icon name="search" size={20} />{lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
-</button>
+<NeedsKey
+  label={lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
+  icon="search"
+  link
+  disabled={lookingUp || busy || !canLookupGrapes(wine)}
+  onclick={lookup}
+/>
 {#if lookupNote}<p class="muted">{lookupNote}</p>{/if}
 
 <div class="grid">

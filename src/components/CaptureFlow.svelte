@@ -2,13 +2,13 @@
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
   import { wineKey } from '../lib/csvImport'
-  import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
+  import { emptyDraft, extractFromLabel, mergeExtraction, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
-  import { settings } from '../lib/settings.svelte'
+  import { hasApiKey, settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
   import { cellarName, wineLabel } from '../lib/labels'
-  import { applyLwin, confidentMatch, displayName, duplicateOf, type LwinWine } from '../lib/lwin'
+  import { applyLwin, confidentMatch, displayName, duplicateOf, lwinFields, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
   import { addToWine, addWine, sortedCellars, store, storeGeneration } from '../lib/store.svelte'
   import type { Aging, Photo, Wine } from '../lib/types'
@@ -16,6 +16,7 @@
   import BottleGlyph from './BottleGlyph.svelte'
   import WineForm from './WineForm.svelte'
   import Icon from './Icon.svelte'
+  import NeedsKey from './NeedsKey.svelte'
 
   let {
     onsaved,
@@ -34,10 +35,15 @@
 
   let step = $state<'idle' | 'extracting' | 'form'>(untrack(() => (intoCellar ? 'form' : 'idle')))
   let draft = $state<WineDraft>(emptyDraft())
+  /** Fields the user or an applied LWIN match set, which a label read keeps. */
+  const touched = new Set<keyof WineDraft>()
   let aging = $state<Aging>({ ...NO_AGING })
   let photoBlob = $state<Blob | null>(null)
   let photoUrl = $state<string | null>(null)
   let extractError = $state<{ kind: FailureKind; detail?: string } | null>(null)
+  let labelRead = $state(false)
+  /** A label read started from the form, which stays mounted meanwhile. */
+  let reading = $state(false)
   let photoFailed = $state(false)
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
@@ -49,6 +55,8 @@
   /** The photo being resized, which a save waits for. */
   let photoTask: Promise<Blob> | null = null
   let saving = $state(false)
+  /** A save or label read is in flight; each waits for the other. */
+  const pending = $derived(saving || reading)
   /** A database wine the label looks like, offered until applied or ignored. */
   let lwinMatch = $state.raw<LwinWine | null>(null)
   /** A wine of the collection the draft repeats, shown instead of saving. */
@@ -63,6 +71,7 @@
     void identity
     untrack(() => (duplicate = null))
   })
+
   /** A restore ran while saving, so the wine was dropped. */
   let stale = $state(false)
 
@@ -71,8 +80,11 @@
     photoUrl = null
     photoBlob = null
     draft = emptyDraft()
+    touched.clear()
     aging = { ...NO_AGING }
     extractError = null
+    labelRead = false
+    reading = false
     photoFailed = false
     lwinMatch = null
     duplicate = null
@@ -94,7 +106,7 @@
   }
 
   async function usePhoto(file: File) {
-    step = 'extracting'
+    step = hasApiKey() ? 'extracting' : 'form'
     const current = session
     const task = (photoTask = processPhoto(file))
     const blob = await task.catch(() => null)
@@ -120,26 +132,37 @@
   })
 
   async function extract() {
-    if (!photoBlob) return
-    if (!settings.apiKey) {
-      extractError = { kind: 'no-key' }
+    if (!photoBlob || pending) return
+    extractError = null
+    if (step === 'form') {
+      reading = true
+    } else {
+      step = 'extracting'
+    }
+    const gen = ++generation
+    let image: string
+    try {
+      image = await blobToBase64(photoBlob)
+    } catch (err) {
+      if (gen !== generation) return
+      reading = false
+      extractError = { kind: 'error', detail: err instanceof Error ? err.message : String(err) }
       step = 'form'
       return
     }
-    extractError = null
-    step = 'extracting'
-    const gen = ++generation
-    const image = await blobToBase64(photoBlob)
     if (gen !== generation) return
     const result = await extractFromLabel(settings, settings.model, image)
     if (gen !== generation) return
+    reading = false
     if (result.ok) {
-      draft = toWineDraft(result.data)
+      const kept = new Set([...touched, ...(form?.typedFields() ?? [])])
+      draft = mergeExtraction($state.snapshot(draft), result.data, kept)
+      labelRead = true
     } else {
       extractError = result
     }
     step = 'form'
-    if (result.ok) await suggestMatch(gen)
+    if (result.ok && !draft.lwin) await suggestMatch(gen)
   }
 
   async function suggestMatch(gen: number) {
@@ -149,11 +172,12 @@
 
   function applyMatch() {
     draft = applyLwin($state.snapshot(draft), lwinMatch!)
+    for (const field of lwinFields(lwinMatch!)) touched.add(field)
     lwinMatch = null
   }
 
   function saveAsNew() {
-    if (!form!.validate()) return
+    if (pending || !form!.validate()) return
     allowedDuplicateId = duplicate!.id
     save()
   }
@@ -167,7 +191,7 @@
   // Sends only the duplicate's id: the store applies the photo and bottles to the wine as
   // it is when the write runs, so edits or a deletion made meanwhile are kept.
   async function addToDuplicate() {
-    if (saving || !form!.validate()) return
+    if (pending || !form!.validate()) return
     const { id, photoId } = duplicate!
     const { lwin } = $state.snapshot(draft)
     const since = storeGeneration()
@@ -199,7 +223,7 @@
   }
 
   async function save() {
-    if (saving) return
+    if (pending) return
     const existing = duplicateOf($state.snapshot(draft), store.wines)
     if (existing && existing.id !== allowedDuplicateId) {
       duplicate = existing
@@ -273,7 +297,7 @@
   {#if extractError}
     <p class="error card">
       {t(`extract.${extractError.kind}`, { detail: extractError.detail ?? '' })}
-      {#if extractError.kind !== 'no-key' && photoBlob}
+      {#if photoBlob && hasApiKey()}
         <button class="link" onclick={extract}>{t('extract.retry')}</button>
       {/if}
     </p>
@@ -287,7 +311,20 @@
       </div>
     </div>
   {/if}
-  <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:this={form} bind:draft {touched} title={t('form.newWine')} {photoUrl} {saving} busy={reading} onsave={save} oncancel={oncancel ?? reset}>
+    {#snippet photoNote()}
+      {@const readable = photoBlob && !labelRead && !extractError}
+      {#if readable}
+        <div class="read-label" class:pulse={reading}>
+          <NeedsKey
+            label={reading ? t('capture.extracting') : t('capture.readLabel')}
+            icon="sparkle"
+            disabled={pending}
+            onclick={extract}
+          />
+        </div>
+      {/if}
+    {/snippet}
     {#snippet extra()}
       {#if intoCellar}
         <label for="price">{t('stock.unitPrice')}</label>
@@ -313,16 +350,16 @@
       {/if}
       <details class="aging">
         <summary>{t('aging.title')}</summary>
-        <AgingFields bind:aging wine={draft} />
+        <AgingFields bind:aging wine={draft} busy={reading} />
       </details>
       {#if duplicate}
         <div class="card duplicate">
           <p>{t('dup.found', { name: wineLabel(duplicate) })}</p>
           <div class="row wrap">
-            <button type="button" class="primary" disabled={saving} onclick={addToDuplicate}>
+            <button type="button" class="primary" disabled={pending} onclick={addToDuplicate}>
               {quantity > 0 ? t('dup.addTo') : t('dup.open')}
             </button>
-            <button type="button" disabled={saving} onclick={saveAsNew}>{t('dup.saveNew')}</button>
+            <button type="button" disabled={pending} onclick={saveAsNew}>{t('dup.saveNew')}</button>
           </div>
         </div>
       {/if}
@@ -333,6 +370,15 @@
 <style>
   .aging {
     margin-top: 1rem;
+  }
+
+  .read-label {
+    margin-top: 0.75rem;
+    text-align: center;
+  }
+
+  .read-label :global(p) {
+    justify-content: center;
   }
 
   .match {

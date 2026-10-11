@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { staleStep } from './navigation'
+import { staleStep, type Entry } from './navigation'
 
 describe('staleStep', () => {
   const cases = [
@@ -102,5 +102,35 @@ describe('skipStale', () => {
     await vi.waitFor(() => expect(fake.index()).toBe(0))
     await new Promise((resolve) => setTimeout(resolve))
     expect(fake.index()).toBe(0)
+  })
+})
+
+describe('key dialog entry', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('is skipped by Forward after the dialog closed', async () => {
+    const fake = fakeHistory(true)
+    vi.stubGlobal('window', fake.window)
+    vi.stubGlobal('history', fake.history)
+
+    const nav = await import('./navigation')
+    const seen: unknown[] = []
+    fake.window.addEventListener('popstate', () => seen.push(fake.history.state))
+    fake.history.replaceState({ depth: 0 })
+    nav.pushEntry({ depth: 1, wine: 'w1' })
+    nav.pushEntry({ depth: 2, wine: 'w1', keyDialog: true })
+    fake.history.back()
+    await vi.waitFor(() => expect(fake.index()).toBe(1))
+
+    fake.history.forward()
+    await vi.waitFor(() => expect(seen).toHaveLength(2))
+    expect(fake.index()).toBe(1)
+    expect(seen.some((state) => (state as Entry).keyDialog)).toBe(false)
+
+    fake.history.back()
+    await vi.waitFor(() => expect(fake.index()).toBe(0))
   })
 })

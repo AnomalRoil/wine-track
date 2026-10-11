@@ -256,6 +256,18 @@ export function displayName(wine: Pick<LwinWine, 'producer' | 'label'>): string 
   return wine.producer ? `${wine.producer}, ${wine.label}` : wine.label
 }
 
+/** Draft fields applyLwin(draft, wine) takes from `wine`, which a label read then keeps. */
+export function lwinFields(wine: LwinWine): (keyof WineDraft)[] {
+  const given: [keyof WineDraft, unknown][] = [
+    ['name', wine.label],
+    ['producer', wine.producer],
+    ['region', wine.subRegion || wine.region],
+    ['country', wine.country],
+    ['color', lwinColor(wine) !== 'other'],
+  ]
+  return [...given.filter(([, value]) => value).map(([field]) => field), 'lwin']
+}
+
 /**
  * The draft named after `wine`: its producer, label, place and code. The colour
  * changes only when the draft's does not fit the wine (a sweet white stays sweet).

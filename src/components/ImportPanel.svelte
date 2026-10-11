@@ -12,6 +12,7 @@
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
   import Icon from './Icon.svelte'
+  import NeedsKey from './NeedsKey.svelte'
 
   let rows = $state.raw<ImportRow[] | null>(null)
   let ignored = $state.raw<string[]>([])
@@ -216,7 +217,7 @@
         <p class="pulse">{t('io.completing', progress)}</p>
       {:else}
         <p class="muted">{t('io.completeHelp', { n: incomplete.length, size: COMPLETION_BATCH })}</p>
-        <button disabled={committing} onclick={complete}><Icon name="sparkle" size={20} />{t('io.complete', { n: incomplete.length })}</button>
+        <NeedsKey label={t('io.complete', { n: incomplete.length })} icon="sparkle" disabled={committing} onclick={complete} />
       {/if}
       {#if completeError}
         <p class="error-text">{t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>

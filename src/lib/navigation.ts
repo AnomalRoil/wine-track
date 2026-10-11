@@ -3,6 +3,8 @@ export interface Entry {
   depth: number
   /** Set once an entry was pushed over this one, so an entry lies ahead even after a reload. */
   next?: boolean
+  /** Set on the entry of the key dialog. */
+  keyDialog?: boolean
 }
 
 /** Depth of the entry shown, and whether the last move went forward. */
@@ -13,10 +15,17 @@ if (typeof history !== 'undefined') position.depth = (history.state as Entry | n
 
 // Registered before any view's listener, so views read the direction of the move that just happened.
 if (typeof window !== 'undefined') {
-  window.addEventListener('popstate', () => {
-    const depth = (history.state as Entry | null)?.depth ?? 0
+  window.addEventListener('popstate', (e) => {
+    const entry = history.state as Entry | null
+    const depth = entry?.depth ?? 0
     position.forward = depth > position.depth
     position.depth = depth
+    // An open dialog's entry is the current one, so arriving on a dialog entry means its dialog
+    // is gone: the views never see it.
+    if (entry?.keyDialog) {
+      e.stopImmediatePropagation()
+      skipStale()
+    }
   })
 }
 
