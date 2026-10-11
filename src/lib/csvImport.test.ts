@@ -365,6 +365,24 @@ it('adds to the stored wine with the same code rather than coding one with the s
   expect(plan.codes).toEqual(new Map())
 })
 
+it('adds an uncoded row to the wine an earlier coded row of the same name matched', () => {
+  const p = parseImport(
+    'name,producer,vintage,lwin,quantity\nLes Clos,Dauvissat,2019,1066553,1\nLes Clos,Dauvissat,2019,,1\nChablis Les Clos,Dauvissat,2019,1066553,1\nChablis Les Clos,Dauvissat,2019,,1',
+    2026,
+  )
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const existing = [makeWine({ id: 'old', name: 'Chablis Grand Cru Les Clos', producer: 'Dauvissat', vintage: 2019, lwin: '1066553' })]
+  const cellars = [{ id: 'c', name: '', position: 0, storage: {} }]
+  const plan = planImport(p.rows, existing, { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.wines).toEqual([])
+  expect(plan.movements.map((m) => m.wineId)).toEqual(['old', 'old', 'old', 'old'])
+
+  const fresh = planImport(p.rows, [], { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(fresh.matches.map((m) => m.kind)).toEqual(['new', 'repeat', 'repeat', 'repeat'])
+  expect(fresh.wines).toHaveLength(1)
+})
+
 it('keeps codes apart after an uncoded row of the same wine', () => {
   const p = parseImport('name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,,1\nChablis,Dauvissat,2019,1066540,1\nChablis,Dauvissat,2019,1066553,1', 2026)
   if (!p.ok) throw new Error(p.error)

@@ -377,6 +377,8 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
     let wineId: string
     if (same) {
       wineId = same.wineId
+      // A code match under another name makes this name find the same wine too.
+      if (!candidates.includes(same)) known.set(key, [...candidates, same])
       // A coded row claims an uncoded wine for its code, so a row with another code stays apart.
       if (same.lwin === null && lwin !== null) {
         same.lwin = lwin
