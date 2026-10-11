@@ -15,9 +15,9 @@
     ondone,
   }: { wineId: string; color: WineColor; tasting?: Tasting; ondone: () => void } = $props()
 
-  // The form edits a copy; the original is only needed to diff its photos on save.
-  const initial = untrack(() => $state.snapshot(tasting))
-  const since = storeGeneration()
+  // The form edits a copy; the stored tasting is only needed to diff its photos on save.
+  let initial = untrack(() => $state.snapshot(tasting))
+  let since = storeGeneration()
   let date = $state(initial?.date ?? today())
   let rating = $state(initial?.rating ?? 3.5)
   let notes = $state(initial?.notes ?? '')
@@ -53,7 +53,11 @@
     }
     if (current !== session) return
     stale = !ok
-    if (ok) ondone()
+    if (ok) return ondone()
+    // The next Save applies the kept draft to the tasting as it is now.
+    since = storeGeneration()
+    const latest = initial && store.tastings.find((t) => t.id === initial?.id)
+    if (latest) initial = $state.snapshot(latest)
   }
 </script>
 

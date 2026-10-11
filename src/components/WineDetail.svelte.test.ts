@@ -30,7 +30,7 @@ async function openEditor() {
 const name = () => screen.getByLabelText<HTMLInputElement>('Wine name')
 const button = (label: string) => screen.getByRole<HTMLButtonElement>('button', { name: label })
 
-it('keeps the draft and says why when a restore ran since the editor opened', async () => {
+it('keeps the draft after a restore and saves it on retry', async () => {
   await openEditor()
   await fireEvent.input(name(), { target: { value: 'Renamed' } })
   const wines = $state.snapshot(store.wines)
@@ -42,6 +42,13 @@ it('keeps the draft and says why when a restore ran since the editor opened', as
   expect(await screen.findByText('Something changed in the meantime. Check and try again.')).toBeTruthy()
   expect(name().value).toBe('Renamed')
   expect(store.wines[0].name).toBe('Wine')
+
+  await fireEvent.click(button('Save'))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
+  expect(store.wines[0].name).toBe('Renamed')
 })
 
 it('keeps the editor and its actions locked until the save lands', async () => {

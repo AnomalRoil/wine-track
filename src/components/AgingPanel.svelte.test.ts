@@ -40,7 +40,7 @@ function renderPanel() {
 
 const decant = () => screen.getByLabelText<HTMLInputElement>(/^Decanting/)
 
-it('keeps the draft and says why when a restore ran since the editor opened', async () => {
+it('keeps the draft after a restore and saves it on retry', async () => {
   renderPanel()
   await fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
   await fireEvent.input(decant(), { target: { value: '30' } })
@@ -51,6 +51,13 @@ it('keeps the draft and says why when a restore ran since the editor opened', as
   expect(await screen.findByText('Something changed in the meantime. Check and try again.')).toBeTruthy()
   expect(decant().value).toBe('30')
   expect(store.wines[0].decantMinutes).toBeNull()
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).toBeNull())
+  expect(store.wines[0].decantMinutes).toBe(30)
 })
 
 it('closes once the save lands', async () => {

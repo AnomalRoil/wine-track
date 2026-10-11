@@ -151,6 +151,8 @@
     if (current !== session) return
     stale = !saved
     if (saved) editing = false
+    // The next Save applies the kept draft to the wine as it is now.
+    else since = storeGeneration()
   }
 
   async function update(patch: Partial<Wine>) {
