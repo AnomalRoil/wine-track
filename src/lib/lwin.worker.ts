@@ -1,15 +1,16 @@
 // Holds the parsed wine names database off the main thread and answers lookups.
 import { readLwin } from './db'
 import type { WineDraft } from './extract'
-import { match, parseLwin, search, type LwinIndex, type Scored } from './lwin'
+import { findCodes, match, parseLwin, search, type LwinIndex, type LwinWine, type Scored } from './lwin'
 
 export type LwinRequest =
   | { kind: 'load' }
   | { kind: 'search'; query: string; limit: number }
   | { kind: 'match'; drafts: WineDraft[]; limit: number }
+  | { kind: 'codes'; codes: string[] }
 
-/** Answer to a request, by kind: wines loaded (0 when none), search results, results per draft. */
-export type LwinResult = { load: number; search: Scored[]; match: Scored[][] }
+/** Answer to a request, by kind: wines loaded (0 when none), search results, results per draft, wine per code. */
+export type LwinResult = { load: number; search: Scored[]; match: Scored[][]; codes: (LwinWine | null)[] }
 
 let index: Promise<LwinIndex | null> | null = null
 
@@ -32,6 +33,8 @@ async function answer(request: LwinRequest): Promise<LwinResult[LwinRequest['kin
       return current ? search(current, request.query, request.limit) : []
     case 'match':
       return request.drafts.map((d) => (current ? match(current, d, request.limit) : []))
+    case 'codes':
+      return current ? findCodes(current, request.codes) : request.codes.map(() => null)
   }
 }
 

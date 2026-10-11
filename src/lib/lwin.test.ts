@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, findCodes, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -221,6 +221,16 @@ describe('completeFromLwin', () => {
       color: 'white',
       lwin: '1066553',
     })
+  })
+
+  it('keeps the code a file gave', () => {
+    expect(completeFromLwin({ ...emptyDraft(), lwin: '1066540' }, byCode('1066553')).lwin).toBe('1066540')
+  })
+})
+
+describe('findCodes', () => {
+  it('finds each code in order, null for an unknown one', () => {
+    expect(findCodes(index, ['1100002', '9999999', '1066540']).map((w) => w?.label ?? null)).toEqual(['Rose', null, 'Chablis'])
   })
 })
 

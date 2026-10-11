@@ -169,6 +169,14 @@ export function search(index: LwinIndex, query: string, limit: number): Scored[]
   return top
 }
 
+/** The wine of each code, null for a code the database lacks. */
+export function findCodes(index: LwinIndex, codes: string[]): (LwinWine | null)[] {
+  const wanted = new Set(codes)
+  const found = new Map<string, LwinWine>()
+  for (const wine of index.wines) if (wanted.has(wine.lwin)) found.set(wine.lwin, wine)
+  return codes.map((code) => found.get(code) ?? null)
+}
+
 /** A match score at or above this is likely the same wine. */
 export const CONFIDENT = 0.75
 
@@ -266,14 +274,14 @@ export function applyLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   }
 }
 
-/** Fills the region, country and colour a file left empty, and records the code. */
+/** Fills the region, country, colour and code a file left empty. */
 export function completeFromLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   return {
     ...draft,
     region: draft.region || wine.subRegion || wine.region,
     country: draft.country || wine.country,
     color: draft.color === 'other' ? lwinColor(wine) : draft.color,
-    lwin: wine.lwin,
+    lwin: draft.lwin ?? wine.lwin,
   }
 }
 

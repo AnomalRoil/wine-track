@@ -8,7 +8,7 @@
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
   import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
-  import { matchLwin } from '../lib/lwinData.svelte'
+  import { findLwin, matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
   import Icon from './Icon.svelte'
@@ -20,7 +20,7 @@
   let progress = $state<{ done: number; total: number } | null>(null)
   let completeError = $state<{ kind: FailureKind; detail?: string } | null>(null)
   let committing = $state(false)
-  /** Database wines that rows lacking a region or country look like, by line. */
+  /** Database wines of the rows lacking a region or country, by line: by code, or else by name. */
   let lwinMatches = $state.raw(new Map<number, LwinWine>())
   /** Drafts as read from the file, for the rows filled in from the database. */
   let unfilled = $state.raw(new Map<number, ImportRow['draft']>())
@@ -88,14 +88,18 @@
   async function suggestMatches(gen: number) {
     const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
     if (todo.length === 0) return
-    const results = await matchLwin(todo.map((r) => r.draft), 2)
+    const coded = todo.filter((r) => r.draft.lwin !== null)
+    const named = todo.filter((r) => r.draft.lwin === null)
+    const [byCode, results] = await Promise.all([
+      findLwin(coded.map((r) => r.draft.lwin!)),
+      named.length > 0 ? matchLwin(named.map((r) => r.draft), 2) : [],
+    ])
     if (gen !== generation) return
-    lwinMatches = new Map(
-      todo.flatMap((r, i) => {
-        const wine = confidentMatch(results[i])
-        return wine ? [[r.line, wine] as const] : []
-      }),
-    )
+    const found = [
+      ...coded.map((r, i) => [r.line, byCode[i]] as const),
+      ...named.map((r, i) => [r.line, confidentMatch(results[i])] as const),
+    ]
+    lwinMatches = new Map(found.filter((entry): entry is [number, LwinWine] => entry[1] !== null))
   }
 
   function toggleMatch(line: number, on: boolean) {
