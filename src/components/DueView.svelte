@@ -26,7 +26,7 @@
       })),
     ]
     const ics = buildIcs(items, icsTimestamp(new Date()))
-    downloadFile('wine-track-due.ics', new Blob([ics], { type: 'text/calendar' }))
+    downloadFile('cave-man-due.ics', new Blob([ics], { type: 'text/calendar' }))
   }
 </script>
 

@@ -26,7 +26,7 @@
     const { data, photos } = await backupSnapshot()
     const json = await encodeBackup(data, photos, blobToBase64, new Date().toISOString())
     const date = new Date().toISOString().slice(0, 10)
-    downloadFile(`wine-track-backup-${date}.json`, new Blob([json], { type: 'application/json' }))
+    downloadFile(`cave-man-backup-${date}.json`, new Blob([json], { type: 'application/json' }))
     settings.lastBackupAt = Date.now()
   }
 

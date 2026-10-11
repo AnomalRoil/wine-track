@@ -21,7 +21,7 @@
 
   function exportCollection() {
     const csv = exportCsv(store.wines, store.movements, store.cellars, cellarName)
-    downloadFile(`wine-track-${today()}.csv`, new Blob([csv], { type: 'text/csv' }))
+    downloadFile(`cave-man-${today()}.csv`, new Blob([csv], { type: 'text/csv' }))
   }
 
   function inventoryBlob(): Blob {
