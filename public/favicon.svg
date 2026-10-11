@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <clipPath id="tile"><rect width="512" height="512" rx="112.64"/></clipPath>
   <rect width="512" height="512" rx="112.64" fill="#ffd9de"/>
+  <g clip-path="url(#tile)">
   <!-- tunic -->
   <path d="M40 512 L64 430 Q92 368 168 360 L292 360 Q352 372 372 440 L392 512 Z" fill="#d98a3d"/>
   <path d="M168 360 L232 512 L196 512 L132 372 Z" fill="#b06a26"/>
@@ -34,4 +36,5 @@
   <!-- fist -->
   <circle cx="392" cy="306" r="36" fill="#e7ad84"/>
   <path d="M368 296 Q392 286 416 296" stroke="#c98a62" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
 </svg>
