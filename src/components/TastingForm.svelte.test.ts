@@ -88,3 +88,23 @@ it('drops photos a restore references without an image when saving the kept draf
   await vi.waitFor(() => expect(ondone).toHaveBeenCalledOnce())
   expect(store.tastings[0].sheet?.photoIds).toEqual(['p1'])
 })
+
+it('saves the kept draft as a new tasting when a restore removed the edited one', async () => {
+  store.tastings = [makeTasting({ sheet: { ...emptySheet(), photoIds: ['p1'] } })]
+  const ondone = vi.fn()
+  render(TastingForm, { wineId: 'w1', color: 'red', tasting: store.tastings[0], ondone })
+  const notes = screen.getByLabelText<HTMLTextAreaElement>('Notes')
+  await fireEvent.input(notes, { target: { value: 'Flint' } })
+  await restoreWith([])
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Save tasting' }))
+  await screen.findByText('Something changed in the meantime. Check and try again.')
+  await fireEvent.click(screen.getByRole('button', { name: 'Save tasting' }))
+
+  await vi.waitFor(() => expect(ondone).toHaveBeenCalledOnce())
+  expect(store.tastings).toHaveLength(1)
+  expect(store.tastings[0].id).not.toBe('t1')
+  expect(store.tastings[0].notes).toBe('Flint')
+  expect(store.tastings[0].sheet).toBeUndefined()
+  expect(vi.mocked(db.putTasting).mock.lastCall?.[2]).toEqual([])
+})
