@@ -103,13 +103,26 @@ it('CaptureFlow goes from a photo straight to the form without a key', async () 
   expect(document.querySelector('.error')).toBeNull()
   expect(extractFromLabel).not.toHaveBeenCalled()
 
-  // One hint near the top covers the lookups further down.
-  const hint = screen.getByText(/Needs an Anthropic API key/)
   await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
-  for (const name of ['Read the label', 'Look up grapes online', 'Look up online']) {
-    expect(screen.getByRole('button', { name }).getAttribute('aria-describedby')).toBe(hint.id)
+  expectHintNextToEach(['Read the label', 'Look up grapes online', 'Look up online'])
+})
+
+/** Each action named in `names` is gated, with the key hint right after it. */
+function expectHintNextToEach(names: string[]) {
+  for (const name of names) {
+    const action = screen.getByRole('button', { name })
+    expect(action.getAttribute('aria-describedby')).toBe(action.nextElementSibling?.id)
+    expect(action.nextElementSibling?.textContent).toMatch(/Needs an Anthropic API key/)
   }
-  expect(screen.getAllByText(/Needs an Anthropic API key/)).toHaveLength(1)
+  expect(screen.getAllByText(/Needs an Anthropic API key/)).toHaveLength(names.length)
+}
+
+it('CaptureFlow without a photo shows the key hint only next to the lookups', async () => {
+  render(CaptureFlow, { onsaved: () => {}, intoCellar: 'home' })
+  expect(screen.queryByText(/Needs an Anthropic API key/)).toBeNull()
+
+  await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
+  expectHintNextToEach(['Look up grapes online', 'Look up online'])
 })
 
 async function captureWithDraft() {
@@ -117,7 +130,7 @@ async function captureWithDraft() {
   render(CaptureFlow, { onsaved: () => {}, photo: new File(['jpeg'], 'label.jpg') })
   await screen.findByRole('button', { name: 'Read the label' })
   await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
-  const link = screen.getByRole('button', { name: 'Add an API key' })
+  const [link] = screen.getAllByRole('button', { name: 'Add an API key' })
   link.focus()
   await fireEvent.click(link)
   return { link, dialog: await screen.findByRole('dialog', { name: 'Add an API key' }) }

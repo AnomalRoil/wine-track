@@ -22,7 +22,6 @@
     saving = false,
     busy = false,
     photoNote,
-    keyHint,
     extra,
   }: {
     draft: WineDraft
@@ -38,8 +37,6 @@
     busy?: boolean
     /** Shown under the photo. */
     photoNote?: Snippet
-    /** Id of the key hint the screen shows, so the grape lookup does not repeat it. */
-    keyHint?: string
     /** Extra fields rendered above the actions. */
     extra?: Snippet
   } = $props()
@@ -194,7 +191,6 @@
     label={lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
     link
     disabled={lookingUp || busy || !canLookupGrapes(draft)}
-    hint={keyHint}
     onclick={doLookup}
   />
   {#if lookupNote}

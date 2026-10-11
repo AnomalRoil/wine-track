@@ -2,7 +2,7 @@
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
   import { wineKey } from '../lib/csvImport'
-  import { canLookupGrapes, emptyDraft, extractFromLabel, mergeExtraction, type FailureKind, type WineDraft } from '../lib/extract'
+  import { emptyDraft, extractFromLabel, mergeExtraction, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { hasApiKey, settings } from '../lib/settings.svelte'
@@ -16,7 +16,6 @@
   import BottleGlyph from './BottleGlyph.svelte'
   import WineForm from './WineForm.svelte'
   import Icon from './Icon.svelte'
-  import KeyHint from './KeyHint.svelte'
   import NeedsKey from './NeedsKey.svelte'
 
   let {
@@ -70,9 +69,6 @@
     void identity
     untrack(() => (duplicate = null))
   })
-  // One hint covers every action of the form that needs the key, shown once one is available.
-  const keyHint = $props.id()
-  const keyless = $derived(!hasApiKey() && (photoBlob !== null || canLookupGrapes(draft)))
 
   /** A restore ran while saving, so the wine was dropped. */
   let stale = $state(false)
@@ -299,21 +295,17 @@
       </div>
     </div>
   {/if}
-  <WineForm bind:this={form} bind:draft {touched} title={t('form.newWine')} {photoUrl} {saving} busy={reading} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:this={form} bind:draft {touched} title={t('form.newWine')} {photoUrl} {saving} busy={reading} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet photoNote()}
       {@const readable = photoBlob && !labelRead && !extractError}
-      {#if readable || keyless}
+      {#if readable}
         <div class="read-label" class:pulse={reading}>
-          {#if readable}
-            <NeedsKey
-              label={reading ? t('capture.extracting') : t('capture.readLabel')}
-              icon="sparkle"
-              disabled={reading}
-              hint={keyHint}
-              onclick={extract}
-            />
-          {/if}
-          {#if keyless}<KeyHint id={keyHint} />{/if}
+          <NeedsKey
+            label={reading ? t('capture.extracting') : t('capture.readLabel')}
+            icon="sparkle"
+            disabled={reading}
+            onclick={extract}
+          />
         </div>
       {/if}
     {/snippet}
@@ -342,7 +334,7 @@
       {/if}
       <details class="aging">
         <summary>{t('aging.title')}</summary>
-        <AgingFields bind:aging wine={draft} {keyHint} />
+        <AgingFields bind:aging wine={draft} />
       </details>
       {#if duplicate}
         <div class="card duplicate">

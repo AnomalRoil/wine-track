@@ -10,12 +10,9 @@
   let {
     aging = $bindable(),
     wine,
-    keyHint,
   }: {
     aging: Aging
     wine: WineDraft & { id?: string }
-    /** Id of the key hint the screen shows, so the lookup does not repeat it. */
-    keyHint?: string
   } = $props()
 
   let lookingUp = $state(false)
@@ -80,7 +77,6 @@
   icon="search"
   link
   disabled={lookingUp || !canLookupGrapes(wine)}
-  hint={keyHint}
   onclick={lookup}
 />
 {#if lookupNote}<p class="muted">{lookupNote}</p>{/if}

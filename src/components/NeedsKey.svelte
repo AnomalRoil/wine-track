@@ -13,7 +13,6 @@ The button stays the same element once a key is added, so focus can come back to
     icon,
     link = false,
     disabled = false,
-    hint,
     onclick,
   }: {
     label: string
@@ -21,12 +20,10 @@ The button stays the same element once a key is added, so focus can come back to
     link?: boolean
     /** Unavailable for another reason than the key, which then goes unmentioned. */
     disabled?: boolean
-    /** Id of a key hint the screen already shows, which this action points to instead of repeating it. */
-    hint?: string
     onclick: () => void
   } = $props()
 
-  const own = $props.id()
+  const hint = $props.id()
   const gated = $derived(!disabled && !hasApiKey())
 </script>
 
@@ -35,12 +32,12 @@ The button stays the same element once a key is added, so focus can come back to
   class:link
   {disabled}
   aria-disabled={gated ? 'true' : undefined}
-  aria-describedby={gated ? (hint ?? own) : undefined}
+  aria-describedby={gated ? hint : undefined}
   onclick={() => gated || onclick()}
 >
   {#if icon}<Icon name={icon} size={20} />{/if}{label}
 </button>
-{#if gated && !hint}<KeyHint id={own} />{/if}
+{#if gated}<KeyHint id={hint} />{/if}
 
 <style>
   [aria-disabled='true'] {
