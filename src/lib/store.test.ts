@@ -28,7 +28,7 @@ import {
   unplace,
   updateRack,
 } from './store.svelte'
-import { makeMovement as mv, makeWine } from './testing'
+import { makeMovement as mv, makeTasting, makeWine } from './testing'
 import type { Cellar, Rack } from './types'
 
 vi.mock('./db', () => ({
@@ -173,6 +173,23 @@ it('restores a backup after the writes queued before it', async () => {
   expect(store.racks).toEqual([rack])
   expect(store.placements).toEqual([kept])
   expect(store.movements.map((m) => m.id)).toEqual(['b'])
+})
+
+it('drops the photo references a restored backup has no image for', async () => {
+  const backup: db.Data = {
+    wines: [makeWine({ photoId: 'gone' }), makeWine({ id: 'w2', photoId: 'kept' })],
+    tastings: [makeTasting({ sheet: { ...emptySheet(), photoIds: ['gone', 'kept'] } })],
+    cellars: [cellar('home')],
+    movements: [],
+    racks: [],
+    placements: [],
+  }
+  vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))
+  await release(restore(backup, [{ id: 'kept', blob: new Blob() }]))
+
+  const [restored] = vi.mocked(db.replaceAll).mock.calls[0]
+  expect(restored.wines.map((w) => w.photoId)).toEqual([null, 'kept'])
+  expect(restored.tastings[0].sheet?.photoIds).toEqual(['kept'])
 })
 
 it('empties the last slot when two queued removals take both bottles', async () => {

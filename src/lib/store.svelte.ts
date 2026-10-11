@@ -53,8 +53,8 @@ export function initStore(): Promise<void> {
 }
 
 /**
- * Replaces all data with a backup once the pending writes are done. Tastings lose the
- * photo references the backup has no image for.
+ * Replaces all data with a backup once the pending writes are done. Wines and tastings
+ * lose the photo references the backup has no image for.
  */
 export function restore(data: db.Data, photos: Photo[]): Promise<void> {
   return writes(async () => {
@@ -62,10 +62,11 @@ export function restore(data: db.Data, photos: Photo[]): Promise<void> {
     generation++
     try {
       const images = new Set(photos.map((p) => p.id))
+      const wines = data.wines.map((w) => (w.photoId && !images.has(w.photoId) ? { ...w, photoId: null } : w))
       const tastings = data.tastings.map((t) =>
         t.sheet ? { ...t, sheet: { ...t.sheet, photoIds: t.sheet.photoIds.filter((id) => images.has(id)) } } : t,
       )
-      await db.replaceAll({ ...data, tastings }, photos)
+      await db.replaceAll({ ...data, wines, tastings }, photos)
       await load()
     } finally {
       generation++
