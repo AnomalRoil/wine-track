@@ -59,6 +59,11 @@
 
   let editing = $state(false)
   let since = 0
+  let saving = $state(false)
+  let stale = $state(false)
+  // Bumped when the editor opens or closes, so a save still pending then does not close the next one.
+  let session = 0
+  $effect(() => () => void session++)
   let addingTasting = $state(false)
   let editingTastingId = $state<string | null>(null)
   let fullscreen = $state(false)
@@ -122,14 +127,30 @@
     const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = wine
     draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags], lwin }
     since = storeGeneration()
+    session++
+    stale = false
     editing = true
   }
 
-  async function saveEdit() {
-    if (!wine || store.restoring) return
-    const fields = $state.snapshot(draft)
-    await patchWine(wine.id, () => fields, since)
+  function cancelEdit() {
+    session++
     editing = false
+  }
+
+  async function saveEdit() {
+    if (!wine || saving || store.restoring) return
+    const current = session
+    const fields = $state.snapshot(draft)
+    saving = true
+    let saved: boolean
+    try {
+      saved = await patchWine(wine.id, () => fields, since)
+    } finally {
+      saving = false
+    }
+    if (current !== session) return
+    stale = !saved
+    if (saved) editing = false
   }
 
   async function update(patch: Partial<Wine>) {
@@ -173,7 +194,11 @@
 {#if !wine}
   <p class="muted">…</p>
 {:else if editing}
-  <WineForm bind:draft title={t('form.editWine')} {photoUrl} saving={store.restoring} onsave={saveEdit} oncancel={() => (editing = false)} />
+  <WineForm bind:draft title={t('form.editWine')} {photoUrl} saving={saving || store.restoring} onsave={saveEdit} oncancel={cancelEdit}>
+    {#snippet extra()}
+      {#if stale}<p class="error">{t('form.stale')}</p>{/if}
+    {/snippet}
+  </WineForm>
 {:else}
   <header class="bar">
     <button class="icon" aria-label={t('nav.back')} onclick={onclose}><Icon name="back" /></button>
