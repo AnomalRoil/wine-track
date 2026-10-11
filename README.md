@@ -2,7 +2,7 @@
 
 Mobile-first wine-tasting tracker. Photograph a bottle, let Claude read the label, keep your notes and cellar on your device.
 
-Live at [anomalroil.github.io/wine-track](https://anomalroil.github.io/wine-track/).
+Live at [cave-man.wouaib.ch](https://cave-man.wouaib.ch/).
 
 ## Features
 
@@ -34,7 +34,7 @@ npm ci
 npm run dev      # local dev server
 npm run check    # svelte-check + tsc
 npm test         # vitest
-npm run build && npm run preview   # production build under /wine-track/
+npm run build && npm run preview   # production build
 npm run lwin     # downloads LWIN into public/lwin/; pass a local .xlsx path to skip the download
 ```
 
