@@ -19,7 +19,11 @@
   let editing = $state(false)
   let draft = $state<Aging>({ ...NO_AGING })
   let saving = $state(false)
+  let stale = $state(false)
   let since = 0
+  // Bumped when the editor opens or closes, so a save still pending then does not close the next one.
+  let session = 0
+  $effect(() => () => void session++)
   let section: HTMLElement
 
   /** Opens the editor, keeping any unsaved edits when it is already open, and scrolls to it. */
@@ -29,6 +33,8 @@
       // A snapshot, so sliders never mutate the stored wine before saving.
       draft = mergeAging(NO_AGING, $state.snapshot(wine))
       since = storeGeneration()
+      session++
+      stale = false
       editing = true
       await tick()
     }
@@ -39,13 +45,24 @@
   async function save(e: SubmitEvent) {
     e.preventDefault()
     if (saving || store.restoring) return
+    const current = session
     saving = true
+    let saved: boolean
     try {
       const aging = cleanAging($state.snapshot(draft))
-      await patchWine(wine.id, () => aging, since)
+      saved = await patchWine(wine.id, () => aging, since)
     } finally {
       saving = false
     }
+    if (current !== session) return
+    stale = !saved
+    if (saved) editing = false
+    // The next Save applies the kept draft to the wine as it is now.
+    else since = storeGeneration()
+  }
+
+  function cancel() {
+    session++
     editing = false
   }
 </script>
@@ -59,9 +76,10 @@
   {#if editing}
     <form onsubmit={save}>
       <AgingFields bind:aging={draft} {wine} />
+      {#if stale}<p class="error">{t('form.stale')}</p>{/if}
 
       <div class="row actions">
-        <button type="button" disabled={saving} onclick={() => (editing = false)}>{t('form.cancel')}</button>
+        <button type="button" disabled={saving} onclick={cancel}>{t('form.cancel')}</button>
         <button type="submit" class="primary grow" disabled={saving || store.restoring}>{t('form.save')}</button>
       </div>
     </form>

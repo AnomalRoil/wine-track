@@ -1,6 +1,6 @@
 import { deleteLwin, getLwin, putLwin, type LwinCache } from './db'
 import type { WineDraft } from './extract'
-import { LWIN_FORMAT, type LwinMeta, type Scored } from './lwin'
+import { LWIN_FORMAT, type LwinMeta, type LwinWine, type Scored } from './lwin'
 import type { LwinRequest, LwinResult } from './lwin.worker'
 
 const BASE = `${import.meta.env.BASE_URL}lwin/`
@@ -132,6 +132,13 @@ export async function searchLwin(query: string, limit: number): Promise<Scored[]
   if (!(await installed())) return []
   // A lookup that fails only means no suggestion.
   return ask({ kind: 'search', query, limit }).catch(() => [])
+}
+
+/** The wine of each code; null for every code when the database is not installed. */
+export async function findLwin(codes: string[]): Promise<(LwinWine | null)[]> {
+  const none = codes.map(() => null)
+  if (codes.length === 0 || !(await installed())) return none
+  return ask({ kind: 'codes', codes }).catch(() => none)
 }
 
 /** The best matches of each draft; empty lists when the database is not installed. */

@@ -1,6 +1,6 @@
 import * as db from './db'
 import { defaultCellar, normalizeCellar, normalizeWine } from './migrate'
-import { canRecord, canRemoveCellar, computeStock, emptyCellar, withinStock } from './stock'
+import { canRecord, canRemoveCellar, cellarBottles, computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
 import { planImport, type ImportPlan, type ImportRow, type PlanContext } from './csvImport'
 import { approvedDrops, canPlace, cellarLosing, freedSlots, holds, outside, place, planMove, stalePlacements, type Slot } from './racks'
@@ -52,13 +52,21 @@ export function initStore(): Promise<void> {
   return writes(load)
 }
 
-/** Replaces all data with a backup once the pending writes are done. */
+/**
+ * Replaces all data with a backup once the pending writes are done. Wines and tastings
+ * lose the photo references the backup has no image for.
+ */
 export function restore(data: db.Data, photos: Photo[]): Promise<void> {
   return writes(async () => {
     store.restoring = true
     generation++
     try {
-      await db.replaceAll(data, photos)
+      const images = new Set(photos.map((p) => p.id))
+      const wines = data.wines.map((w) => (w.photoId && !images.has(w.photoId) ? { ...w, photoId: null } : w))
+      const tastings = data.tastings.map((t) =>
+        t.sheet ? { ...t, sheet: { ...t.sheet, photoIds: t.sheet.photoIds.filter((id) => images.has(id)) } } : t,
+      )
+      await db.replaceAll({ ...data, wines, tastings }, photos)
       await load()
     } finally {
       generation++
@@ -165,20 +173,22 @@ export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], 
 }
 
 /**
- * Adds stock additions to a stored wine, giving it `photo` when it has none yet, all or
- * nothing. Returns the wine as saved; null when it is gone, a restore ran since `since`,
- * an addition's cellar is gone, or the write fails.
+ * Adds stock additions to a stored wine, giving it `photo` and `lwin` when it has none yet,
+ * all or nothing. Returns the wine as saved; null when it is gone, has a code other than
+ * `lwin`, a restore ran since `since`, an addition's cellar is gone, or the write fails.
  */
-export function addToWine(id: string, photo: Photo | null, movements: Movement[], since: number): Promise<Wine | null> {
+export function addToWine(id: string, photo: Photo | null, lwin: string | null, movements: Movement[], since: number): Promise<Wine | null> {
   return writes(async () => {
     if (since !== generation) return null
     const i = store.wines.findIndex((w) => w.id === id)
     if (i < 0) return null
     if (!canRecord(stock, movements, new Set(store.wines.map((w) => w.id)), new Set(store.cellars.map((c) => c.id)))) return null
     const current = store.wines[i]
+    if (lwin && current.lwin && lwin !== current.lwin) return null
     const newPhoto = current.photoId ? null : photo
-    if (!newPhoto && movements.length === 0) return current
-    const wine = newPhoto ? { ...current, photoId: newPhoto.id } : current
+    const newLwin = current.lwin ? null : lwin
+    if (!newPhoto && !newLwin && movements.length === 0) return current
+    const wine = { ...current, ...(newPhoto && { photoId: newPhoto.id }), ...(newLwin && { lwin: newLwin }) }
     try {
       await db.putWine($state.snapshot(wine), newPhoto, movements)
     } catch {
@@ -197,13 +207,16 @@ export function saveThumb(photo: Photo, since: number): Promise<void> {
   })
 }
 
-export function removeWine(wine: Wine): Promise<void> {
+/** Deletes a wine as the previous writes left it, with its photo, tastings, stock and slots. */
+export function removeWine(id: string): Promise<void> {
   return writes(async () => {
+    const wine = store.wines.find((w) => w.id === id)
+    if (!wine) return
     await db.deleteWine($state.snapshot(wine))
-    store.wines = store.wines.filter((w) => w.id !== wine.id)
-    store.tastings = store.tastings.filter((t) => t.wineId !== wine.id)
-    store.movements = store.movements.filter((m) => m.wineId !== wine.id)
-    store.placements = store.placements.filter((p) => p.wineId !== wine.id)
+    store.wines = store.wines.filter((w) => w.id !== id)
+    store.tastings = store.tastings.filter((t) => t.wineId !== id)
+    store.movements = store.movements.filter((m) => m.wineId !== id)
+    store.placements = store.placements.filter((p) => p.wineId !== id)
   })
 }
 
@@ -379,11 +392,13 @@ export function swapCellars(a: string, b: string): Promise<void> {
 
 /**
  * Deletes a cellar, moving its bottles to `targetId` or, when null, out of stock.
- * False when it is the last cellar or either cellar is gone.
+ * `bottles` is the count the user approved. False when it is the last cellar, either
+ * cellar is gone, or the cellar no longer holds `bottles`.
  */
-export function removeCellar(id: string, targetId: string | null): Promise<boolean> {
+export function removeCellar(id: string, targetId: string | null, bottles: number): Promise<boolean> {
   return writes(async () => {
     if (!canRemoveCellar(store.cellars.map((c) => c.id), id, targetId)) return false
+    if (cellarBottles(stock, id) !== bottles) return false
     const emptying = emptyCellar(stock, id, targetId, today(), () => crypto.randomUUID())
     await db.deleteCellar(id, emptying)
     store.movements.push(...emptying)
@@ -448,13 +463,18 @@ export function removeRack(id: string): Promise<void> {
 
 /**
  * Plans the import against the stored wines and cellars and commits it atomically:
- * new wines, new cellars and stock additions. Returns the plan it committed.
+ * new wines, codes for stored wines, new cellars and stock additions. Returns the plan it committed.
  */
 export function applyImport(rows: ImportRow[], ctx: Omit<PlanContext, 'cellars'>): Promise<ImportPlan> {
   return writes(async () => {
     const plan = planImport(rows, store.wines, { ...ctx, cellars: store.cellars })
     const { wines, cellars, movements } = plan
-    await db.putImport({ wines, cellars, movements })
+    const coded = store.wines.flatMap((w) => {
+      const lwin = plan.codes.get(w.id)
+      return lwin ? [{ ...$state.snapshot(w), lwin }] : []
+    })
+    await db.putImport({ wines: [...wines, ...coded], cellars, movements })
+    for (const w of coded) store.wines[store.wines.findIndex((x) => x.id === w.id)] = w
     store.wines.push(...wines)
     store.cellars.push(...cellars)
     store.movements.push(...movements)

@@ -16,7 +16,7 @@
   import { getPhoto } from '../lib/db'
   import { downloadFile } from '../lib/download'
   import { addYears, thisYear, today } from '../lib/due'
-  import { emptyDraft, type WineDraft } from '../lib/extract'
+  import { changedFields, emptyDraft, type WineDraft } from '../lib/extract'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, rackName, sizeLabel, slotLabel, wineLabel } from '../lib/labels'
@@ -59,6 +59,11 @@
 
   let editing = $state(false)
   let since = 0
+  let saving = $state(false)
+  let stale = $state(false)
+  // Bumped when the editor opens or closes, so a save still pending then does not close the next one.
+  let session = 0
+  $effect(() => () => void session++)
   let addingTasting = $state(false)
   let editingTastingId = $state<string | null>(null)
   let fullscreen = $state(false)
@@ -66,6 +71,8 @@
   /** The summary row or tile whose editor is open. */
   let open = $state<'value' | 'drinkBy' | 'tasteAgain' | 'history' | null>(null)
   let draft = $state<WineDraft>(emptyDraft())
+  /** The draft as the editor opened, so a save leaves fields changed meanwhile, like an imported code, alone. */
+  let opened = emptyDraft()
   let photoUrl = $state<string | null>(null)
   let aging = $state<AgingPanel>()
 
@@ -116,20 +123,50 @@
     open = open === row ? null : row
   }
 
+  function editable(w: Wine): WineDraft {
+    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
+    return { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin }
+  }
+
   function startEdit() {
     menu = false
     if (!wine) return
-    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = wine
-    draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags], lwin }
+    opened = editable(wine)
+    draft = editable(wine)
     since = storeGeneration()
+    session++
+    stale = false
     editing = true
   }
 
-  async function saveEdit() {
-    if (!wine || store.restoring) return
-    const fields = $state.snapshot(draft)
-    await patchWine(wine.id, () => fields, since)
+  function cancelEdit() {
+    session++
     editing = false
+  }
+
+  async function saveEdit() {
+    if (!wine || saving || store.restoring) return
+    const current = session
+    const fields = changedFields($state.snapshot(draft), opened)
+    saving = true
+    let saved: boolean
+    try {
+      saved = await patchWine(wine.id, () => fields, since)
+    } finally {
+      saving = false
+    }
+    if (current !== session) return
+    stale = !saved
+    if (saved) {
+      editing = false
+      return
+    }
+    // Rebase the kept changes onto the wine as it is now, so the next Save writes what the form shows.
+    since = storeGeneration()
+    if (!wine) return
+    const kept = changedFields($state.snapshot(draft), opened)
+    opened = editable(wine)
+    draft = { ...editable(wine), ...kept }
   }
 
   async function update(patch: Partial<Wine>) {
@@ -141,7 +178,7 @@
     menu = false
     if (!wine) return
     if (!confirm(t('detail.deleteConfirm', { n: tastings.length }))) return
-    await removeWine(wine)
+    await removeWine(wine.id)
     onclose()
   }
 
@@ -173,7 +210,11 @@
 {#if !wine}
   <p class="muted">…</p>
 {:else if editing}
-  <WineForm bind:draft title={t('form.editWine')} {photoUrl} saving={store.restoring} onsave={saveEdit} oncancel={() => (editing = false)} />
+  <WineForm bind:draft title={t('form.editWine')} {photoUrl} saving={saving || store.restoring} onsave={saveEdit} oncancel={cancelEdit}>
+    {#snippet extra()}
+      {#if stale}<p class="error">{t('form.stale')}</p>{/if}
+    {/snippet}
+  </WineForm>
 {:else}
   <header class="bar">
     <button class="icon" aria-label={t('nav.back')} onclick={onclose}><Icon name="back" /></button>

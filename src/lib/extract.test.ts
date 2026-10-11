@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignCompletions, emptyDraft, lookupKey, mergeExtraction, toWineDraft, wineQuery, type WineDraft, type WineExtraction } from './extract'
+import { alignCompletions, changedFields, emptyDraft, lookupKey, mergeExtraction, toWineDraft, wineQuery, type WineDraft, type WineExtraction } from './extract'
 import { makeWine } from './testing'
 
 describe('toWineDraft', () => {
@@ -147,4 +147,19 @@ describe('lookupKey', () => {
       expect(lookupKey(c.other) === lookupKey(wine)).toBe(c.same)
     })
   }
+})
+
+describe('changedFields', () => {
+  const opened = { ...emptyDraft(), name: 'Chablis', vintage: 2019, grapes: ['Chardonnay'], tags: ['gift', 'old'], lwin: '1066553' }
+  it.each([
+    ['nothing changed', { ...opened, grapes: ['Chardonnay'], tags: ['gift', 'old'] }, {}],
+    ['a text field', { ...opened, name: 'Les Clos' }, { name: 'Les Clos' }],
+    ['an added grape', { ...opened, grapes: ['Chardonnay', 'Aligoté'] }, { grapes: ['Chardonnay', 'Aligoté'] }],
+    ['reordered tags', { ...opened, tags: ['old', 'gift'] }, { tags: ['old', 'gift'] }],
+    ['an emptied array', { ...opened, tags: [] }, { tags: [] }],
+    ['a cleared vintage', { ...opened, vintage: null }, { vintage: null }],
+    ['a cleared code', { ...opened, lwin: null }, { lwin: null }],
+  ])('%s', (_, draft, want) => {
+    expect(changedFields(draft, opened)).toEqual(want)
+  })
 })

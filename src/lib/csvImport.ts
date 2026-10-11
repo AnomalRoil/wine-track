@@ -316,6 +316,62 @@ export function wineKey(w: Pick<WineDraft, 'name' | 'producer' | 'vintage' | 'si
   return JSON.stringify([identity(w.name), identity(w.producer), w.vintage ?? 'nv', w.sizeCl])
 }
 
+/** Name and producer as matchWine compares them. */
+export function nameKey(w: Pick<WineDraft, 'name' | 'producer'>): string {
+  return JSON.stringify([identity(w.name), identity(w.producer)])
+}
+
+/** A wine as matchWine sees it; `name` is its nameKey. */
+export interface MatchRow {
+  lwin: string | null
+  name: string
+  vintage: number | null
+  sizeCl: number
+}
+
+/** A wine a row can match; `names` holds every nameKey it is known by. */
+export interface MatchCandidate {
+  lwin: string | null
+  names: string[]
+  vintage: number | null
+  sizeCl: number
+}
+
+type Matchable = Pick<WineDraft, 'name' | 'producer' | 'vintage' | 'sizeCl' | 'lwin'>
+
+/** The MatchRow of a wine or draft. */
+export function matchRow(w: Matchable): MatchRow {
+  return { lwin: w.lwin, name: nameKey(w), vintage: w.vintage, sizeCl: w.sizeCl }
+}
+
+/** The MatchCandidate of a wine or draft, known by its own name only. */
+export function matchCandidate(w: Matchable): MatchCandidate {
+  return { lwin: w.lwin, names: [nameKey(w)], vintage: w.vintage, sizeCl: w.sizeCl }
+}
+
+/**
+ * The candidate `row` adds bottles to, or undefined for a new wine. Candidates
+ * are in creation order; vintage and size must always be equal. The first
+ * matching line wins:
+ *
+ *   row code | candidate                  | result
+ *   ---------+----------------------------+--------------------------------------
+ *   X        | code X, any name           | earliest such candidate
+ *   X        | no code, same name         | earliest such candidate; caller gives it X
+ *   none     | no code, same name         | earliest such candidate
+ *   none     | any code, same name        | earliest such candidate
+ *   any      | other code or other name   | new wine
+ *
+ * After a match, the caller sets a claimed code on the candidate and adds
+ * `row.name` to its names, so later rows see both.
+ */
+export function matchWine<C extends MatchCandidate>(row: MatchRow, candidates: readonly C[]): C | undefined {
+  const fits = candidates.filter((c) => c.vintage === row.vintage && c.sizeCl === row.sizeCl)
+  const named = fits.filter((c) => c.names.includes(row.name))
+  if (row.lwin !== null) return fits.find((c) => c.lwin === row.lwin) ?? named.find((c) => c.lwin === null)
+  return named.find((c) => c.lwin === null) ?? named[0]
+}
+
 export type RowMatch =
   | { kind: 'invalid' }
   | { kind: 'new' }
@@ -326,6 +382,8 @@ export interface ImportPlan {
   /** One entry per input row, in order. */
   matches: RowMatch[]
   wines: Wine[]
+  /** Codes that coded rows give to stored uncoded wines, by wine id. */
+  codes: Map<string, string>
   cellars: Cellar[]
   movements: Movement[]
 }
@@ -342,33 +400,45 @@ export interface PlanContext {
 
 /**
  * Turns valid rows into new wines, new cellars and stock additions. A row
- * matching an existing wine, or an earlier row, adds stock to that wine.
+ * matching a stored wine, or an earlier row, adds stock to that wine (see matchWine).
  */
 export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext): ImportPlan {
-  const byKey = new Map(existing.map((w) => [wineKey(w), w.id]))
-  const firstLine = new Map<string, number>()
+  // A planned candidate has the line that created it and the wine it plans.
+  type Candidate = MatchCandidate & { wineId: string; planned?: { line: number; wine: Wine } }
+  // matchWine needs equal vintage and size, so candidates are grouped by both.
+  const groups = new Map<string, Candidate[]>()
+  const group = (w: { vintage: number | null; sizeCl: number }) => {
+    const key = `${w.vintage}|${w.sizeCl}`
+    if (!groups.has(key)) groups.set(key, [])
+    return groups.get(key)!
+  }
+  for (const w of existing) group(w).push({ ...matchCandidate(w), wineId: w.id })
   const sorted = [...ctx.cellars].sort((a, b) => a.position - b.position)
   const cellarIds = new Map(sorted.map((c) => [identity(c.name || ctx.defaultCellarName), c.id]))
   let position = Math.max(-1, ...sorted.map((c) => c.position))
-  const plan: ImportPlan = { matches: [], wines: [], cellars: [], movements: [] }
+  const plan: ImportPlan = { matches: [], wines: [], codes: new Map(), cellars: [], movements: [] }
 
   for (const row of rows) {
     if (row.errors.length > 0) {
       plan.matches.push({ kind: 'invalid' })
       continue
     }
-    const key = wineKey(row.draft)
-    let wineId = byKey.get(key)
-    if (wineId && firstLine.has(key)) {
-      plan.matches.push({ kind: 'repeat', line: firstLine.get(key)! })
-    } else if (wineId) {
-      plan.matches.push({ kind: 'existing', wineId })
+    const wanted = matchRow(row.draft)
+    const candidates = group(row.draft)
+    const same = matchWine(wanted, candidates)
+    let wineId: string
+    if (same) {
+      wineId = same.wineId
+      if (!same.names.includes(wanted.name)) same.names.push(wanted.name)
+      if (same.lwin === null && wanted.lwin !== null) {
+        same.lwin = wanted.lwin
+        if (same.planned) same.planned.wine.lwin = wanted.lwin
+        else plan.codes.set(wineId, wanted.lwin)
+      }
+      plan.matches.push(same.planned ? { kind: 'repeat', line: same.planned.line } : { kind: 'existing', wineId })
     } else {
       wineId = ctx.newId()
-      byKey.set(key, wineId)
-      firstLine.set(key, row.line)
-      plan.matches.push({ kind: 'new' })
-      plan.wines.push({
+      const wine: Wine = {
         id: wineId,
         ...row.draft,
         wished: false,
@@ -380,7 +450,10 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
         createdAt: ctx.now,
         ...NO_AGING,
         ...row.window,
-      })
+      }
+      candidates.push({ ...matchCandidate(row.draft), wineId, planned: { line: row.line, wine } })
+      plan.matches.push({ kind: 'new' })
+      plan.wines.push(wine)
     }
     if (row.quantity === 0) continue
 
