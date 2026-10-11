@@ -348,10 +348,16 @@ export interface PlanContext {
  */
 export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext): ImportPlan {
   // Wines with the same key stay apart when both have a code and the codes differ.
-  const known = new Map<string, { wineId: string; lwin: string | null; line?: number }[]>()
-  const remember = (key: string, entry: { wineId: string; lwin: string | null; line?: number }) =>
+  type Entry = { wineId: string; lwin: string | null; line?: number }
+  const known = new Map<string, Entry[]>()
+  // Like duplicateOf, the same code, vintage and size is the same wine whatever its name.
+  const coded = new Map<string, Entry>()
+  const codeKey = (lwin: string, w: Pick<WineDraft, 'vintage' | 'sizeCl'>) => `${lwin}|${w.vintage}|${w.sizeCl}`
+  const remember = (key: string, entry: Entry, w: Pick<WineDraft, 'vintage' | 'sizeCl'>) => {
     known.set(key, [...(known.get(key) ?? []), entry])
-  for (const w of existing) remember(wineKey(w), { wineId: w.id, lwin: w.lwin })
+    if (entry.lwin !== null && !coded.has(codeKey(entry.lwin, w))) coded.set(codeKey(entry.lwin, w), entry)
+  }
+  for (const w of existing) remember(wineKey(w), { wineId: w.id, lwin: w.lwin }, w)
   const sorted = [...ctx.cellars].sort((a, b) => a.position - b.position)
   const cellarIds = new Map(sorted.map((c) => [identity(c.name || ctx.defaultCellarName), c.id]))
   let position = Math.max(-1, ...sorted.map((c) => c.position))
@@ -366,7 +372,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
     const { lwin } = row.draft
     const candidates = known.get(key) ?? []
     const same =
-      (lwin !== null && candidates.find((k) => k.lwin === lwin)) ||
+      (lwin !== null && coded.get(codeKey(lwin, row.draft))) ||
       candidates.find((k) => k.lwin === null || lwin === null)
     let wineId: string
     if (same) {
@@ -374,6 +380,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       // A coded row claims an uncoded wine for its code, so a row with another code stays apart.
       if (same.lwin === null && lwin !== null) {
         same.lwin = lwin
+        coded.set(codeKey(lwin, row.draft), same)
         const planned = plan.wines.find((w) => w.id === wineId)
         if (planned) planned.lwin = lwin
         else plan.codes.set(wineId, lwin)
@@ -381,7 +388,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       plan.matches.push(same.line === undefined ? { kind: 'existing', wineId } : { kind: 'repeat', line: same.line })
     } else {
       wineId = ctx.newId()
-      remember(key, { wineId, lwin, line: row.line })
+      remember(key, { wineId, lwin, line: row.line }, row.draft)
       plan.matches.push({ kind: 'new' })
       plan.wines.push({
         id: wineId,
