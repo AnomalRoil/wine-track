@@ -135,7 +135,6 @@
     if (!photoBlob || pending) return
     extractError = null
     if (step === 'form') {
-      form!.commitChips()
       reading = true
     } else {
       step = 'extracting'
@@ -156,9 +155,8 @@
     if (gen !== generation) return
     reading = false
     if (result.ok) {
-      // Grapes typed during the read count as the user's, as they do before it.
-      form?.commitChips()
-      draft = mergeExtraction($state.snapshot(draft), result.data, touched)
+      const kept = new Set([...touched, ...(form?.typedFields() ?? [])])
+      draft = mergeExtraction($state.snapshot(draft), result.data, kept)
       labelRead = true
     } else {
       extractError = result

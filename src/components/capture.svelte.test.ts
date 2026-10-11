@@ -91,19 +91,23 @@ it('Reading the label keeps the grape being typed', async () => {
   answer({ ok: true, data: label })
 
   await waitFor(() => expect(name().value).toBe('Chablis'))
-  screen.getByRole('button', { name: 'Remove Syrah' })
+  expect(document.querySelector<HTMLInputElement>('#grape-input')!.value).toBe('Syrah')
   expect(screen.queryByRole('button', { name: 'Remove Chardonnay' })).toBeNull()
   expect(activeColor()).toBe('White')
 })
 
-it('Reading the label keeps a grape typed while it reads', async () => {
+it('Reading the label leaves a grape being typed whole', async () => {
   const { answer } = await formWithPhoto()
+  const grape = document.querySelector<HTMLInputElement>('#grape-input')!
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
-  await fireEvent.input(document.querySelector('#grape-input')!, { target: { value: 'Syrah' } })
+  await fireEvent.input(grape, { target: { value: 'Cabernet Sau' } })
   answer({ ok: true, data: label })
-
   await waitFor(() => expect(name().value).toBe('Chablis'))
-  screen.getByRole('button', { name: 'Remove Syrah' })
+
+  await fireEvent.input(grape, { target: { value: 'Cabernet Sauvignon' } })
+  await fireEvent.keyDown(grape, { key: 'Enter' })
+  screen.getByRole('button', { name: 'Remove Cabernet Sauvignon' })
+  expect(screen.queryByRole('button', { name: 'Remove Cabernet Sau' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Remove Chardonnay' })).toBeNull()
 })
 

@@ -118,15 +118,18 @@
 
   let form: HTMLFormElement
 
-  /** Commits the grapes and tags being typed. */
-  export function commitChips() {
-    grapeInput.commit()
-    tagInput.commit()
+  /** The chip fields with text being typed, which a label read keeps. */
+  export function typedFields(): (keyof WineDraft)[] {
+    const fields: (keyof WineDraft)[] = []
+    if (grapeInput.typing()) fields.push('grapes')
+    if (tagInput.typing()) fields.push('tags')
+    return fields
   }
 
   /** Commits the chips being typed and shows invalid fields; true when the draft can be saved. */
   export function validate(): boolean {
-    commitChips()
+    grapeInput.commit()
+    tagInput.commit()
     return form.reportValidity()
   }
 

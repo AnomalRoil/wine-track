@@ -21,6 +21,11 @@
     input = ''
   }
 
+  /** Whether text is typed but not yet committed. */
+  export function typing(): boolean {
+    return input.trim() !== ''
+  }
+
   function remove(value: string) {
     values = values.filter((v) => v !== value)
     onchange?.()
