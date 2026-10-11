@@ -362,7 +362,10 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
     }
     const key = wineKey(row.draft)
     const { lwin } = row.draft
-    const same = known.get(key)?.find((k) => k.lwin === null || lwin === null || k.lwin === lwin)
+    const candidates = known.get(key) ?? []
+    const same =
+      (lwin !== null && candidates.find((k) => k.lwin === lwin)) ||
+      candidates.find((k) => k.lwin === null || lwin === null)
     let wineId: string
     if (same) {
       wineId = same.wineId
