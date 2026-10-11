@@ -155,7 +155,7 @@
       extractError = result
     }
     step = 'form'
-    if (result.ok) await suggestMatch(gen)
+    if (result.ok && !draft.lwin) await suggestMatch(gen)
   }
 
   async function suggestMatch(gen: number) {

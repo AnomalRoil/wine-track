@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { extractFromLabel, lookupAging, lookupGrapes, type AgingLookup, type GrapeLookup, type Result, type WineExtraction } from '../lib/extract'
-import { searchLwin } from '../lib/lwinData.svelte'
+import { matchLwin, searchLwin } from '../lib/lwinData.svelte'
 import { processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
 import { store } from '../lib/store.svelte'
@@ -205,4 +205,20 @@ it('Saving waits for the label read', async () => {
   await waitFor(() => expect(save.disabled).toBe(false))
   await fireEvent.click(save)
   await waitFor(() => expect(onsaved).toHaveBeenCalledWith(expect.objectContaining({ name: 'Chablis' })))
+})
+
+it('Reading the label offers no match once an LWIN wine is linked', async () => {
+  const { answer } = await formWithPhoto()
+  const wine = { lwin: '1066553', producer: 'Dauvissat', label: 'Chablis', country: 'France', region: '', subRegion: '', colour: 'white', subType: '', firstVintage: null, finalVintage: null }
+  vi.mocked(searchLwin).mockResolvedValue([{ wine, score: 1 }])
+  vi.mocked(matchLwin).mockResolvedValue([[{ wine, score: 1 }]])
+  await fireEvent.input(name(), { target: { value: 'Chab' } })
+  await fireEvent.click(await screen.findByRole('button', { name: /^Dauvissat/ }))
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  answer({ ok: true, data: label })
+  await waitFor(() => expect(activeColor()).toBe('White'))
+  await new Promise((resolve) => setTimeout(resolve))
+
+  expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull()
 })
