@@ -1,6 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112.64" fill="#ffd9de"/>
-  <circle cx="256" cy="256" r="153.6" fill="#6e2233"/>
-  <circle cx="256" cy="256" r="99.84" fill="#4f1824"/>
-  <circle cx="256" cy="256" r="46.08" fill="#2e0d15"/>
+  <!-- tunic -->
+  <path d="M40 512 L64 430 Q92 368 168 360 L292 360 Q352 372 372 440 L392 512 Z" fill="#d98a3d"/>
+  <path d="M168 360 L232 512 L196 512 L132 372 Z" fill="#b06a26"/>
+  <g fill="#5a2a1c">
+    <ellipse cx="96" cy="452" rx="16" ry="11"/>
+    <ellipse cx="150" cy="420" rx="13" ry="9"/>
+    <ellipse cx="270" cy="440" rx="15" ry="10"/>
+    <ellipse cx="320" cy="400" rx="12" ry="9"/>
+    <ellipse cx="300" cy="490" rx="14" ry="10"/>
+    <ellipse cx="120" cy="496" rx="12" ry="8"/>
+  </g>
+  <!-- raised arm -->
+  <path d="M300 410 L388 300" stroke="#e7ad84" stroke-width="64" stroke-linecap="round"/>
+  <!-- hair -->
+  <path d="M96 236 L74 196 L106 182 L90 136 L132 140 L136 92 L176 116 L200 70 L226 110 L262 76 L274 122 L314 104 L310 150 L350 156 L326 196 L356 226 L320 238 Z" fill="#4a2b1a"/>
+  <!-- face -->
+  <circle cx="216" cy="232" r="88" fill="#e7ad84"/>
+  <path d="M138 196 Q216 168 294 196 L290 216 Q216 196 142 216 Z" fill="#4a2b1a"/>
+  <ellipse cx="184" cy="228" rx="10" ry="12" fill="#2a1710"/>
+  <ellipse cx="248" cy="228" rx="10" ry="12" fill="#2a1710"/>
+  <ellipse cx="216" cy="258" rx="18" ry="13" fill="#c98a62"/>
+  <!-- beard -->
+  <path d="M132 250 Q138 300 168 330 L176 372 L196 348 L214 384 L232 348 L252 372 L262 330 Q294 300 300 250 Q290 288 256 296 Q216 306 176 296 Q142 288 132 250 Z" fill="#4a2b1a"/>
+  <path d="M188 300 Q216 314 244 300 Q232 288 216 290 Q200 288 188 300 Z" fill="#8a3b2b"/>
+  <!-- bottle -->
+  <rect x="384" y="64" width="34" height="86" rx="8" fill="#6e2233"/>
+  <rect x="380" y="56" width="42" height="22" rx="6" fill="#2e0d15"/>
+  <path d="M384 140 Q358 158 358 196 L358 330 Q358 348 376 348 L426 348 Q444 348 444 330 L444 196 Q444 158 418 140 Z" fill="#6e2233"/>
+  <rect x="366" y="226" width="70" height="56" rx="8" fill="#fff4e0"/>
+  <rect x="380" y="242" width="42" height="8" rx="4" fill="#6e2233"/>
+  <rect x="380" y="258" width="30" height="6" rx="3" fill="#c98a62"/>
+  <!-- fist -->
+  <circle cx="392" cy="306" r="36" fill="#e7ad84"/>
+  <path d="M368 296 Q392 286 416 296" stroke="#c98a62" stroke-width="6" fill="none" stroke-linecap="round"/>
 </svg>
