@@ -162,7 +162,7 @@
     menu = false
     if (!wine) return
     if (!confirm(t('detail.deleteConfirm', { n: tastings.length }))) return
-    await removeWine(wine)
+    await removeWine(wine.id)
     onclose()
   }
 

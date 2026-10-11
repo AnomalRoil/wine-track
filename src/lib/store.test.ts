@@ -278,7 +278,7 @@ it('drops a capture whose photo was still processing when a backup was restored'
 
 it('keeps a wine and its tastings deleted while an edit waited', async () => {
   const wine = makeWine()
-  const removed = removeWine(wine)
+  const removed = removeWine(wine.id)
   const edited = patchWine(wine.id, () => ({ name: 'Renamed' }))
   const tasted = saveTasting({ id: 't', wineId: wine.id, date: '2026-01-01', rating: 4, notes: '' }, { since: storeGeneration() })
   await release(removed, edited, tasted)
@@ -349,7 +349,7 @@ it('keeps edits made to a duplicate while its photo was processing', async () =>
 
 it('keeps a duplicate deleted while its photo was processing', async () => {
   const { added, processed } = addToDuplicate(2)
-  await release(removeWine(makeWine()))
+  await release(removeWine('w1'))
   processed()
   await release(added)
 
@@ -357,6 +357,15 @@ it('keeps a duplicate deleted while its photo was processing', async () => {
   expect(db.putWine).not.toHaveBeenCalled()
   expect(store.wines).toEqual([])
   expect(store.movements).toEqual([])
+})
+
+it('deletes the photo a duplicate gained while its deletion waited', async () => {
+  const added = addToWine('w1', { id: 'p', blob: new Blob() }, [], storeGeneration())
+  const removed = removeWine('w1')
+  await release(added, removed)
+
+  expect(vi.mocked(db.deleteWine).mock.calls[0][0].photoId).toBe('p')
+  expect(store.wines).toEqual([])
 })
 
 it('drops bottles added to a duplicate when a backup was restored meanwhile', async () => {

@@ -197,13 +197,16 @@ export function saveThumb(photo: Photo, since: number): Promise<void> {
   })
 }
 
-export function removeWine(wine: Wine): Promise<void> {
+/** Deletes a wine as the previous writes left it, with its photo, tastings, stock and slots. */
+export function removeWine(id: string): Promise<void> {
   return writes(async () => {
+    const wine = store.wines.find((w) => w.id === id)
+    if (!wine) return
     await db.deleteWine($state.snapshot(wine))
-    store.wines = store.wines.filter((w) => w.id !== wine.id)
-    store.tastings = store.tastings.filter((t) => t.wineId !== wine.id)
-    store.movements = store.movements.filter((m) => m.wineId !== wine.id)
-    store.placements = store.placements.filter((p) => p.wineId !== wine.id)
+    store.wines = store.wines.filter((w) => w.id !== id)
+    store.tastings = store.tastings.filter((t) => t.wineId !== id)
+    store.movements = store.movements.filter((m) => m.wineId !== id)
+    store.placements = store.placements.filter((p) => p.wineId !== id)
   })
 }
 
