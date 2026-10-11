@@ -334,7 +334,7 @@
       {/if}
       <details class="aging">
         <summary>{t('aging.title')}</summary>
-        <AgingFields bind:aging wine={draft} />
+        <AgingFields bind:aging wine={draft} busy={reading} />
       </details>
       {#if duplicate}
         <div class="card duplicate">

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
-import { extractFromLabel, lookupGrapes, type GrapeLookup, type Result, type WineExtraction } from '../lib/extract'
+import { extractFromLabel, lookupAging, lookupGrapes, type AgingLookup, type GrapeLookup, type Result, type WineExtraction } from '../lib/extract'
 import { searchLwin } from '../lib/lwinData.svelte'
 import { processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
@@ -24,6 +24,7 @@ vi.mock('../lib/extract', async (original) => ({
   ...(await original<typeof import('../lib/extract')>()),
   extractFromLabel: vi.fn(),
   lookupGrapes: vi.fn(),
+  lookupAging: vi.fn(),
 }))
 
 const label: WineExtraction = {
@@ -135,4 +136,42 @@ it('The grape lookup waits for the label read', async () => {
 
   const lookup = screen.getByRole('button', { name: 'Look up grapes online' }) as HTMLButtonElement
   expect(lookup.disabled).toBe(true)
+})
+
+it('A grape lookup answering during the label read is dropped', async () => {
+  const { answer } = await formWithPhoto()
+  let found: (result: Result<GrapeLookup>) => void = () => {}
+  vi.mocked(lookupGrapes).mockReturnValue(new Promise((resolve) => (found = resolve)))
+  await fireEvent.input(document.querySelector('#producer')!, { target: { value: 'Dauvissat' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  found({ ok: true, data: { grapes: ['Merlot'], confidence: 'printed-source' } })
+  await new Promise((resolve) => setTimeout(resolve))
+  expect(screen.queryByRole('button', { name: 'Remove Merlot' })).toBeNull()
+
+  answer({ ok: true, data: label })
+  await waitFor(() => expect(name().value).toBe('Chablis'))
+  screen.getByRole('button', { name: 'Remove Chardonnay' })
+})
+
+it('A drinking-window lookup answering during the label read is dropped, and waits for it', async () => {
+  const { answer } = await formWithPhoto()
+  let found: (result: Result<AgingLookup>) => void = () => {}
+  vi.mocked(lookupAging).mockReturnValue(new Promise((resolve) => (found = resolve)))
+  await fireEvent.input(document.querySelector('#producer')!, { target: { value: 'Dauvissat' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Look up online' }))
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  found({
+    ok: true,
+    data: { drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: null, servingMinC: null, servingMaxC: null, decantMinutes: null, profile: null, confidence: 'similar' },
+  })
+  await new Promise((resolve) => setTimeout(resolve))
+  expect(document.querySelector<HTMLInputElement>('#aging-drinkFrom')!.value).toBe('')
+  expect((screen.getByRole('button', { name: 'Look up online' }) as HTMLButtonElement).disabled).toBe(true)
+
+  answer({ ok: true, data: label })
+  await waitFor(() => expect(name().value).toBe('Chablis'))
+  expect((screen.getByRole('button', { name: 'Look up online' }) as HTMLButtonElement).disabled).toBe(false)
 })
