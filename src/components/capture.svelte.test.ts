@@ -94,6 +94,17 @@ it('Reading the label keeps the grape being typed', async () => {
   expect(activeColor()).toBe('White')
 })
 
+it('Reading the label keeps a grape typed while it reads', async () => {
+  const { answer } = await formWithPhoto()
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  await fireEvent.input(document.querySelector('#grape-input')!, { target: { value: 'Syrah' } })
+  answer({ ok: true, data: label })
+
+  await waitFor(() => expect(name().value).toBe('Chablis'))
+  screen.getByRole('button', { name: 'Remove Syrah' })
+  expect(screen.queryByRole('button', { name: 'Remove Chardonnay' })).toBeNull()
+})
+
 it('Reading the label fills the fields a picked LWIN wine left empty', async () => {
   const { answer } = await formWithPhoto()
   const wine = { lwin: '1066553', producer: '', label: 'Chablis', country: '', region: '', subRegion: '', colour: '', subType: '', firstVintage: null, finalVintage: null }

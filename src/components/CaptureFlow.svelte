@@ -145,6 +145,8 @@
     if (gen !== generation) return
     reading = false
     if (result.ok) {
+      // Grapes typed during the read count as the user's, as they do before it.
+      form?.commitChips()
       draft = mergeExtraction($state.snapshot(draft), result.data, touched)
       labelRead = true
     } else {
