@@ -269,9 +269,6 @@
       {/if}
     </p>
   {/if}
-  {#if photoBlob && !hasApiKey()}
-    <NeedsKey label={t('capture.readLabel')} icon="sparkle" />
-  {/if}
   {#if lwinMatch}
     <div class="card match">
       <p class="row"><Icon name="sparkle" />{t('lwin.matches', { name: displayName(lwinMatch) })}</p>
@@ -282,6 +279,11 @@
     </div>
   {/if}
   <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
+    {#snippet photoNote()}
+      {#if photoBlob && !hasApiKey()}
+        <div class="read-label"><NeedsKey label={t('capture.readLabel')} icon="sparkle" /></div>
+      {/if}
+    {/snippet}
     {#snippet extra()}
       {#if intoCellar}
         <label for="price">{t('stock.unitPrice')}</label>
@@ -327,6 +329,15 @@
 <style>
   .aging {
     margin-top: 1rem;
+  }
+
+  .read-label {
+    margin-top: 0.75rem;
+    text-align: center;
+  }
+
+  .read-label :global(p) {
+    justify-content: center;
   }
 
   .match {

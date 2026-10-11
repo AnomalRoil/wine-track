@@ -19,6 +19,7 @@
     onsave,
     oncancel,
     saving = false,
+    photoNote,
     extra,
   }: {
     draft: WineDraft
@@ -28,6 +29,8 @@
     oncancel: () => void
     /** Disables the actions while the caller writes. */
     saving?: boolean
+    /** Shown under the photo. */
+    photoNote?: Snippet
     /** Extra fields rendered above the actions. */
     extra?: Snippet
   } = $props()
@@ -107,6 +110,7 @@
   {#if photoUrl}
     <img class="preview" src={photoUrl} alt="" />
   {/if}
+  {@render photoNote?.()}
 
   <label for="name">{t('form.name')}</label>
   <input id="name" type="text" autocomplete="off" bind:value={draft.name} oninput={suggest} />
