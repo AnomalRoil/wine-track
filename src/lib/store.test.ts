@@ -366,7 +366,7 @@ function addToDuplicate(quantity: number) {
   const added = (async () => {
     const since = storeGeneration()
     const blob = await processing
-    return addToWine('w1', { id: 'p', blob }, [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity })], since)
+    return addToWine('w1', { id: 'p', blob }, null, [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity })], since)
   })()
   return { added, processed: () => processed(new Blob()) }
 }
@@ -397,7 +397,7 @@ it('keeps a duplicate deleted while its photo was processing', async () => {
 })
 
 it('deletes the photo a duplicate gained while its deletion waited', async () => {
-  const added = addToWine('w1', { id: 'p', blob: new Blob() }, [], storeGeneration())
+  const added = addToWine('w1', { id: 'p', blob: new Blob() }, null, [], storeGeneration())
   const removed = removeWine('w1')
   await release(added, removed)
 
@@ -427,6 +427,16 @@ it('keeps the photo a duplicate gained meanwhile', async () => {
   expect(await added).toMatchObject({ photoId: 'mine' })
   expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[1]).toBeNull()
   expect(store.movements.map((m) => m.id)).toEqual(['m'])
+})
+
+it('gives an uncoded duplicate the code of the capture added to it', async () => {
+  store.wines = [makeWine({ lwin: null }), makeWine({ id: 'w2', lwin: '1066553' })]
+  const coded = addToWine('w1', null, '1066540', [], storeGeneration())
+  const kept = addToWine('w2', null, '1066540', [], storeGeneration())
+  await release(coded, kept)
+
+  expect(store.wines.map((w) => w.lwin)).toEqual(['1066540', '1066553'])
+  expect(vi.mocked(db.putWine).mock.calls.map(([w]) => [w.id, w.lwin])).toEqual([['w1', '1066540']])
 })
 
 it('keeps nothing of a capture whose write fails', async () => {

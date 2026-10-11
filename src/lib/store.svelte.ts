@@ -173,11 +173,11 @@ export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], 
 }
 
 /**
- * Adds stock additions to a stored wine, giving it `photo` when it has none yet, all or
- * nothing. Returns the wine as saved; null when it is gone, a restore ran since `since`,
- * an addition's cellar is gone, or the write fails.
+ * Adds stock additions to a stored wine, giving it `photo` and `lwin` when it has none yet,
+ * all or nothing. Returns the wine as saved; null when it is gone, a restore ran since
+ * `since`, an addition's cellar is gone, or the write fails.
  */
-export function addToWine(id: string, photo: Photo | null, movements: Movement[], since: number): Promise<Wine | null> {
+export function addToWine(id: string, photo: Photo | null, lwin: string | null, movements: Movement[], since: number): Promise<Wine | null> {
   return writes(async () => {
     if (since !== generation) return null
     const i = store.wines.findIndex((w) => w.id === id)
@@ -185,8 +185,9 @@ export function addToWine(id: string, photo: Photo | null, movements: Movement[]
     if (!canRecord(stock, movements, new Set(store.wines.map((w) => w.id)), new Set(store.cellars.map((c) => c.id)))) return null
     const current = store.wines[i]
     const newPhoto = current.photoId ? null : photo
-    if (!newPhoto && movements.length === 0) return current
-    const wine = newPhoto ? { ...current, photoId: newPhoto.id } : current
+    const newLwin = current.lwin ? null : lwin
+    if (!newPhoto && !newLwin && movements.length === 0) return current
+    const wine = { ...current, ...(newPhoto && { photoId: newPhoto.id }), ...(newLwin && { lwin: newLwin }) }
     try {
       await db.putWine($state.snapshot(wine), newPhoto, movements)
     } catch {

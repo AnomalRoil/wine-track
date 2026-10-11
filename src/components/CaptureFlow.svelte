@@ -169,6 +169,7 @@
   async function addToDuplicate() {
     if (saving || !form!.validate()) return
     const { id, photoId } = duplicate!
+    const { lwin } = $state.snapshot(draft)
     const since = storeGeneration()
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
     const additions =
@@ -177,7 +178,7 @@
     const current = session
     let wine: Wine | null
     try {
-      wine = await addToWine(id, photoId ? null : await takenPhoto(), additions, since)
+      wine = await addToWine(id, photoId ? null : await takenPhoto(), lwin, additions, since)
     } finally {
       saving = false
     }
