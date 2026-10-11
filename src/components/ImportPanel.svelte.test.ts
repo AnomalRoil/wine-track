@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/svelte'
+import { tick } from 'svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { completeWines, type Result } from '../lib/extract'
 import type { Completion } from '../lib/csvImport'
@@ -80,8 +81,11 @@ it('shows only the newer file when two reads finish in reverse order', async () 
   second.arrive('name\nNewer')
   await screen.findByText('Newer')
   first.arrive('name\nOlder')
-  await vi.waitFor(() => expect(matchLwin).toHaveBeenCalledTimes(1))
+  // A macrotask runs the older read's continuation, then tick() flushes what it would render.
+  await new Promise((resolve) => setTimeout(resolve))
+  await tick()
 
+  expect(matchLwin).toHaveBeenCalledTimes(1)
   expect(screen.queryByText('Older')).toBeNull()
   expect(screen.getByText('Newer')).toBeTruthy()
 })
