@@ -16,7 +16,7 @@
   import { getPhoto } from '../lib/db'
   import { downloadFile } from '../lib/download'
   import { addYears, thisYear, today } from '../lib/due'
-  import { emptyDraft, type WineDraft } from '../lib/extract'
+  import { changedFields, emptyDraft, type WineDraft } from '../lib/extract'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, rackName, sizeLabel, slotLabel, wineLabel } from '../lib/labels'
@@ -143,9 +143,7 @@
   async function saveEdit() {
     if (!wine || saving || store.restoring) return
     const current = session
-    const fields = Object.fromEntries(
-      Object.entries($state.snapshot(draft)).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(opened[key as keyof WineDraft])),
-    )
+    const fields = changedFields($state.snapshot(draft), opened)
     saving = true
     let saved: boolean
     try {
