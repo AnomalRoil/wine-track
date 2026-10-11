@@ -7,6 +7,7 @@ import { settings } from '../lib/settings.svelte'
 import { store } from '../lib/store.svelte'
 import AgingFields from './AgingFields.svelte'
 import CaptureFlow from './CaptureFlow.svelte'
+import CellarView from './CellarView.svelte'
 import NeedsKey from './NeedsKey.svelte'
 import WineForm from './WineForm.svelte'
 
@@ -187,4 +188,35 @@ it('Cancel and Escape close the key dialog without saving', async () => {
     await waitFor(() => expect(document.activeElement).toBe(link))
     cleanup()
   }
+})
+
+it('Closing the key dialog keeps a slot capture in CellarView', async () => {
+  vi.mocked(processPhoto).mockResolvedValue(new Blob(['jpeg'], { type: 'image/jpeg' }))
+  store.racks = [{ id: 'r', cellarId: 'home', name: '', columns: 1, rows: 1, depth: 1, layout: 'lying', position: 0 }]
+  render(CellarView, { onopen: () => {} })
+  await fireEvent.click(document.querySelector('[data-slot]')!)
+  const gallery = document.querySelector<HTMLInputElement>('input[type=file]:not([capture])')!
+  await fireEvent.change(gallery, { target: { files: [new File(['jpeg'], 'label.jpg')] } })
+  await screen.findByRole('button', { name: 'Read the label' })
+  await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
+
+  for (const close of [
+    (dialog: HTMLElement) => fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' })),
+    async (dialog: HTMLElement) => {
+      await fireEvent.input(dialog.querySelector('input[type=password]')!, { target: { value: 'sk-ant-test' } })
+      await fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    },
+  ]) {
+    const hint = screen.getByRole('button', { name: 'Read the label' }).nextElementSibling as HTMLElement
+    await fireEvent.click(within(hint).getByRole('button', { name: 'Add an API key' }))
+    await close(await screen.findByRole('dialog', { name: 'Add an API key' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // Forward lands on the closed dialog's entry, which must still read as the capture's.
+    history.forward()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(document.querySelector<HTMLImageElement>('img.preview')?.src).toBe('blob:photo')
+    expect(document.querySelector<HTMLInputElement>('#name')?.value).toBe('Les Clos')
+  }
+  expect(settings.apiKey).toBe('sk-ant-test')
 })
