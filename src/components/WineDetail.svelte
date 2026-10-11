@@ -71,6 +71,8 @@
   /** The summary row or tile whose editor is open. */
   let open = $state<'value' | 'drinkBy' | 'tasteAgain' | 'history' | null>(null)
   let draft = $state<WineDraft>(emptyDraft())
+  /** The draft as the editor opened, so a save leaves fields changed meanwhile, like an imported code, alone. */
+  let opened = emptyDraft()
   let photoUrl = $state<string | null>(null)
   let aging = $state<AgingPanel>()
 
@@ -126,6 +128,7 @@
     if (!wine) return
     const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = wine
     draft = { name, producer, vintage, grapes: [...grapes], region, country, color, sizeCl, tags: [...tags], lwin }
+    opened = $state.snapshot(draft)
     since = storeGeneration()
     session++
     stale = false
@@ -140,7 +143,9 @@
   async function saveEdit() {
     if (!wine || saving || store.restoring) return
     const current = session
-    const fields = $state.snapshot(draft)
+    const fields = Object.fromEntries(
+      Object.entries($state.snapshot(draft)).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(opened[key as keyof WineDraft])),
+    )
     saving = true
     let saved: boolean
     try {
@@ -151,7 +156,7 @@
     if (current !== session) return
     stale = !saved
     if (saved) editing = false
-    // The next Save applies the kept draft to the wine as it is now.
+    // The next Save applies the kept changes to the wine as it is now.
     else since = storeGeneration()
   }
 

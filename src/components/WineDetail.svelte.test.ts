@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
+import { parseImport } from '../lib/csvImport'
 import * as db from '../lib/db'
 import { settings } from '../lib/settings.svelte'
-import { restore, store } from '../lib/store.svelte'
+import { applyImport, restore, store } from '../lib/store.svelte'
 import { makeTasting, makeWine } from '../lib/testing'
 import WineDetail from './WineDetail.svelte'
 
@@ -76,4 +77,24 @@ it('keeps the editor and its actions locked until the save lands', async () => {
   pending[0]()
   await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
   expect(store.wines[0].name).toBe('Renamed')
+})
+
+it('keeps the code an import gave the wine while its editor was open', async () => {
+  let imported!: () => void
+  vi.mocked(db.putImport).mockImplementation(() => new Promise<void>((resolve) => (imported = resolve)))
+  const parsed = parseImport('name,producer,vintage,lwin,quantity\nWine,Producer,2020,1066553,1', 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  const done = applyImport(parsed.rows, { defaultCellarName: 'Home', date: '2026-01-01', now: 0, newId: () => crypto.randomUUID() })
+  await vi.waitFor(() => expect(db.putImport).toHaveBeenCalled())
+
+  await openEditor()
+  imported()
+  await done
+  await fireEvent.input(name(), { target: { value: 'Renamed' } })
+  await fireEvent.click(button('Save'))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
+  expect(store.wines[0]).toMatchObject({ name: 'Renamed', lwin: '1066553' })
 })
