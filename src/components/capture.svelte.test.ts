@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { extractFromLabel, lookupAging, lookupGrapes, type AgingLookup, type GrapeLookup, type Result, type WineExtraction } from '../lib/extract'
 import { matchLwin, searchLwin } from '../lib/lwinData.svelte'
-import { processPhoto } from '../lib/photo'
+import { blobToBase64, processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
 import { store } from '../lib/store.svelte'
 import type { Wine } from '../lib/types'
@@ -221,4 +221,23 @@ it('Reading the label offers no match once an LWIN wine is linked', async () => 
   await new Promise((resolve) => setTimeout(resolve))
 
   expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull()
+})
+
+it('A photo that cannot be read shows an error and frees Save', async () => {
+  await formWithPhoto()
+  vi.mocked(blobToBase64).mockRejectedValueOnce(new Error('NotReadableError'))
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+
+  await screen.findByText('Extraction failed: NotReadableError')
+  expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false)
+})
+
+it('A photo that cannot be read before extraction opens the form with an error', async () => {
+  settings.apiKey = 'key'
+  vi.mocked(processPhoto).mockResolvedValue(new Blob(['jpeg'], { type: 'image/jpeg' }))
+  vi.mocked(blobToBase64).mockRejectedValueOnce(new Error('NotReadableError'))
+  render(CaptureFlow, { onsaved: () => {}, photo: new File(['jpeg'], 'label.jpg') })
+
+  await screen.findByText('Extraction failed: NotReadableError')
+  expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false)
 })

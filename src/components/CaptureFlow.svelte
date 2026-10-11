@@ -141,7 +141,16 @@
       step = 'extracting'
     }
     const gen = ++generation
-    const image = await blobToBase64(photoBlob)
+    let image: string
+    try {
+      image = await blobToBase64(photoBlob)
+    } catch (err) {
+      if (gen !== generation) return
+      reading = false
+      extractError = { kind: 'error', detail: err instanceof Error ? err.message : String(err) }
+      step = 'form'
+      return
+    }
     if (gen !== generation) return
     const result = await extractFromLabel(settings, settings.model, image)
     if (gen !== generation) return
