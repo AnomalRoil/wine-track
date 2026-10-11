@@ -71,6 +71,17 @@ it('completes a coded row from its own code and keeps that code', async () => {
   expect(rows[0].draft).toMatchObject({ lwin: '1066553', region: 'Chablis', country: 'France' })
 })
 
+it('matches by name a coded row whose code is unknown', async () => {
+  vi.mocked(matchLwin).mockImplementation(async (drafts) => drafts.map(() => [{ wine: lesClos, score: 1 }]))
+  render(ImportPanel)
+
+  await load('name,producer,vintage,lwin\nLes Clos,Dauvissat,2019,1066540')
+
+  expect(await screen.findByLabelText('Fill in from LWIN: Vincent Dauvissat, Chablis Grand Cru, Les Clos')).toBeTruthy()
+  expect(findLwin).toHaveBeenCalledWith(['1066540'])
+  expect(vi.mocked(matchLwin).mock.calls.map(([drafts]) => drafts.map((d) => d.lwin))).toEqual([['1066540']])
+})
+
 it('shows only the newer file when two reads finish in reverse order', async () => {
   render(ImportPanel)
   const first = deferredFile()

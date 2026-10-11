@@ -89,17 +89,19 @@
     const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
     if (todo.length === 0) return
     const coded = todo.filter((r) => r.draft.lwin !== null)
-    const named = todo.filter((r) => r.draft.lwin === null)
-    const [byCode, results] = await Promise.all([
-      findLwin(coded.map((r) => r.draft.lwin!)),
-      named.length > 0 ? matchLwin(named.map((r) => r.draft), 2) : [],
-    ])
+    const byCode = coded.length > 0 ? await findLwin(coded.map((r) => r.draft.lwin!)) : []
     if (gen !== generation) return
-    const found = [
-      ...coded.map((r, i) => [r.line, byCode[i]] as const),
-      ...named.map((r, i) => [r.line, confidentMatch(results[i])] as const),
-    ]
-    lwinMatches = new Map(found.filter((entry): entry is [number, LwinWine] => entry[1] !== null))
+    const found = new Map<number, LwinWine>()
+    coded.forEach((r, i) => byCode[i] && found.set(r.line, byCode[i]))
+    // A code missing from the installed database still gets a match by name.
+    const named = todo.filter((r) => !found.has(r.line))
+    const results = named.length > 0 ? await matchLwin(named.map((r) => r.draft), 2) : []
+    if (gen !== generation) return
+    named.forEach((r, i) => {
+      const wine = confidentMatch(results[i])
+      if (wine) found.set(r.line, wine)
+    })
+    lwinMatches = found
   }
 
   function toggleMatch(line: number, on: boolean) {
