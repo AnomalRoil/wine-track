@@ -8,7 +8,16 @@
   import Icon from './Icon.svelte'
   import NeedsKey from './NeedsKey.svelte'
 
-  let { aging = $bindable(), wine }: { aging: Aging; wine: WineDraft & { id?: string } } = $props()
+  let {
+    aging = $bindable(),
+    wine,
+    keyHint,
+  }: {
+    aging: Aging
+    wine: WineDraft & { id?: string }
+    /** Id of the key hint the screen shows, so the lookup does not repeat it. */
+    keyHint?: string
+  } = $props()
 
   let lookingUp = $state(false)
   let lookupNote = $state<string | null>(null)
@@ -67,12 +76,12 @@
   }
 </script>
 
-{#if hasApiKey()}
+{#if hasApiKey() || !canLookupGrapes(wine)}
   <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(wine)} onclick={lookup}>
     <Icon name="search" size={20} />{lookingUp ? t('aging.lookingUp') : t('aging.lookup')}
   </button>
 {:else}
-  <NeedsKey label={t('aging.lookup')} icon="search" link />
+  <NeedsKey label={t('aging.lookup')} icon="search" link hint={keyHint} />
 {/if}
 {#if lookupNote}<p class="muted">{lookupNote}</p>{/if}
 

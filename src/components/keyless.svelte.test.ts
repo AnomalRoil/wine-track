@@ -47,7 +47,7 @@ it('NeedsKey shows the action unavailable and requests the Settings screen', asy
   const action = screen.getByRole('button', { name: 'Look up grapes online' })
   expect(action.getAttribute('aria-disabled')).toBe('true')
   expect(action.getAttribute('aria-describedby')).toBe(screen.getByText(/Needs an Anthropic API key/).id)
-  await fireEvent.click(screen.getAllByRole('button', { name: 'Add it in Settings' })[0])
+  await fireEvent.click(screen.getByRole('button', { name: 'Add it in Settings' }))
   stop()
 
   expect(requested).toEqual(['settings'])
@@ -63,6 +63,15 @@ it('WineForm offers the grape lookup only with a key', async () => {
 
   settings.apiKey = 'key'
   await waitFor(() => expect(screen.getByRole('button', { name: 'Look up grapes online' }).getAttribute('aria-disabled')).toBeNull())
+  expect(screen.queryByText(/Needs an Anthropic API key/)).toBeNull()
+})
+
+it('WineForm keeps the grape lookup plainly disabled while it has nothing to look up', () => {
+  render(WineForm, { draft: emptyDraft(), title: 'New wine', onsave: () => {}, oncancel: () => {} })
+
+  const lookup = screen.getByRole('button', { name: 'Look up grapes online' }) as HTMLButtonElement
+  expect(lookup.disabled).toBe(true)
+  expect(lookup.getAttribute('aria-disabled')).toBeNull()
   expect(screen.queryByText(/Needs an Anthropic API key/)).toBeNull()
 })
 
@@ -86,6 +95,14 @@ it('CaptureFlow goes from a photo straight to the form without a key', async () 
   expect(screen.queryByText('Reading the label…')).toBeNull()
   expect(document.querySelector('.error')).toBeNull()
   expect(extractFromLabel).not.toHaveBeenCalled()
+
+  // One hint near the top covers the lookups further down.
+  const hint = screen.getByText(/Needs an Anthropic API key/)
+  await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
+  for (const name of ['Read the label', 'Look up grapes online', 'Look up online']) {
+    expect(screen.getByRole('button', { name }).getAttribute('aria-describedby')).toBe(hint.id)
+  }
+  expect(screen.getAllByText(/Needs an Anthropic API key/)).toHaveLength(1)
 })
 
 it('Settings opened from the capture form returns to the same form', async () => {
@@ -94,7 +111,7 @@ it('Settings opened from the capture form returns to the same form', async () =>
   await screen.findByRole('button', { name: 'Read the label' })
   await fireEvent.input(document.querySelector('#name')!, { target: { value: 'Les Clos' } })
 
-  await fireEvent.click(screen.getAllByRole('button', { name: 'Add it in Settings' })[0])
+  await fireEvent.click(screen.getByRole('button', { name: 'Add it in Settings' }))
   const layer = await screen.findByRole('dialog', { name: 'Settings' })
   await fireEvent.input(layer.querySelector('#apikey')!, { target: { value: 'key' } })
   await fireEvent.click(screen.getByRole('button', { name: 'Back' }))

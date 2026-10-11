@@ -20,6 +20,7 @@
     oncancel,
     saving = false,
     photoNote,
+    keyHint,
     extra,
   }: {
     draft: WineDraft
@@ -31,6 +32,8 @@
     saving?: boolean
     /** Shown under the photo. */
     photoNote?: Snippet
+    /** Id of the key hint the screen shows, so the grape lookup does not repeat it. */
+    keyHint?: string
     /** Extra fields rendered above the actions. */
     extra?: Snippet
   } = $props()
@@ -155,12 +158,12 @@
     placeholder={t('form.addGrape')}
     suggestions={distinctGrapes(store.wines)}
   />
-  {#if hasApiKey()}
+  {#if hasApiKey() || !canLookupGrapes(draft)}
     <button type="button" class="link" disabled={lookingUp || !canLookupGrapes(draft)} onclick={doLookup}>
       {lookingUp ? t('form.lookingUp') : t('form.lookupGrapes')}
     </button>
   {:else}
-    <NeedsKey label={t('form.lookupGrapes')} link />
+    <NeedsKey label={t('form.lookupGrapes')} link hint={keyHint} />
   {/if}
   {#if lookupNote}
     <p class="muted">{lookupNote}</p>

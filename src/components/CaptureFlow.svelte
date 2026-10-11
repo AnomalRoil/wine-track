@@ -2,7 +2,7 @@
   import { cleanAging, NO_AGING } from '../lib/aging'
   import { untrack } from 'svelte'
   import { wineKey } from '../lib/csvImport'
-  import { emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, emptyDraft, extractFromLabel, toWineDraft, type FailureKind, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { blobToBase64, makeThumb, processPhoto } from '../lib/photo'
   import { hasApiKey, settings } from '../lib/settings.svelte'
@@ -16,6 +16,7 @@
   import BottleGlyph from './BottleGlyph.svelte'
   import WineForm from './WineForm.svelte'
   import Icon from './Icon.svelte'
+  import KeyHint from './KeyHint.svelte'
   import NeedsKey from './NeedsKey.svelte'
 
   let {
@@ -65,6 +66,10 @@
     void identity
     untrack(() => (duplicate = null))
   })
+  // One hint covers every action of the form that needs the key, shown once one is available.
+  const keyHint = $props.id()
+  const keyless = $derived(!hasApiKey() && (photoBlob !== null || canLookupGrapes(draft)))
+
   /** A restore ran while saving, so the wine was dropped. */
   let stale = $state(false)
 
@@ -281,10 +286,13 @@
       </div>
     </div>
   {/if}
-  <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} onsave={save} oncancel={oncancel ?? reset}>
+  <WineForm bind:this={form} bind:draft title={t('form.newWine')} {photoUrl} {saving} {keyHint} onsave={save} oncancel={oncancel ?? reset}>
     {#snippet photoNote()}
-      {#if photoBlob && !hasApiKey()}
-        <div class="read-label"><NeedsKey label={t('capture.readLabel')} icon="sparkle" /></div>
+      {#if keyless}
+        <div class="read-label">
+          {#if photoBlob}<NeedsKey label={t('capture.readLabel')} icon="sparkle" hint={keyHint} />{/if}
+          <KeyHint id={keyHint} />
+        </div>
       {:else if photoBlob && !labelRead && !extractError}
         <div class="read-label"><button type="button" onclick={extract}><Icon name="sparkle" size={20} />{t('capture.readLabel')}</button></div>
       {/if}
@@ -314,7 +322,7 @@
       {/if}
       <details class="aging">
         <summary>{t('aging.title')}</summary>
-        <AgingFields bind:aging wine={draft} />
+        <AgingFields bind:aging wine={draft} {keyHint} />
       </details>
       {#if duplicate}
         <div class="card duplicate">
