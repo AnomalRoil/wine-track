@@ -60,6 +60,20 @@ it('NeedsKey shows the action unavailable and asks for a key in a dialog', async
   expect(settings.apiKey).toBe('')
 })
 
+it('NeedsKey keeps the same button once a key is added', async () => {
+  const onclick = vi.fn()
+  render(NeedsKey, { label: 'Look up grapes online', onclick })
+  const action = screen.getByRole('button', { name: 'Look up grapes online' })
+  await fireEvent.click(action)
+  expect(onclick).not.toHaveBeenCalled()
+
+  settings.apiKey = 'key'
+  await waitFor(() => expect(action.getAttribute('aria-disabled')).toBeNull())
+  expect(action.isConnected).toBe(true)
+  await fireEvent.click(action)
+  expect(onclick).toHaveBeenCalledOnce()
+})
+
 it('WineForm offers the grape lookup only with a key', async () => {
   render(WineForm, { draft: draft(), title: 'New wine', onsave: () => {}, oncancel: () => {} })
 
@@ -69,8 +83,12 @@ it('WineForm offers the grape lookup only with a key', async () => {
   expect(lookupGrapes).not.toHaveBeenCalled()
 
   settings.apiKey = 'key'
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Look up grapes online' }).getAttribute('aria-disabled')).toBeNull())
+  await waitFor(() => expect(lookup.getAttribute('aria-disabled')).toBeNull())
+  expect(lookup.isConnected).toBe(true)
   expect(screen.queryByText(/Needs an Anthropic API key/)).toBeNull()
+  vi.mocked(lookupGrapes).mockResolvedValue({ ok: true, data: { grapes: ['Chardonnay'], confidence: 'printed-source' } })
+  await fireEvent.click(lookup)
+  expect(lookupGrapes).toHaveBeenCalledOnce()
 })
 
 it('WineForm keeps the grape lookup plainly disabled while it has nothing to look up', () => {
