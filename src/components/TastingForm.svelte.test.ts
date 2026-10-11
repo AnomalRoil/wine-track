@@ -53,3 +53,22 @@ it('drops photos a restore removed before saving the kept draft', async () => {
   await vi.waitFor(() => expect(ondone).toHaveBeenCalledOnce())
   expect(store.tastings[0].sheet?.photoIds).toEqual(['p1'])
 })
+
+it('keeps photos a restore brought when saving the kept draft', async () => {
+  const sheet = { ...emptySheet(), photoIds: ['p1', 'p2'] }
+  store.tastings = [makeTasting({ sheet })]
+  const ondone = vi.fn()
+  render(TastingForm, { wineId: 'w1', color: 'red', tasting: store.tastings[0], ondone })
+  const restored = [makeTasting({ sheet: { ...sheet, photoIds: ['p1', 'p3'] } })]
+  const data = { wines: $state.snapshot(store.wines), tastings: restored, cellars: [], movements: [], racks: [], placements: [] }
+  vi.mocked(db.loadAll).mockResolvedValue(data)
+  await restore(data, [])
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Save tasting' }))
+  await screen.findByText('Something changed in the meantime. Check and try again.')
+  await fireEvent.click(screen.getByRole('button', { name: 'Save tasting' }))
+
+  await vi.waitFor(() => expect(ondone).toHaveBeenCalledOnce())
+  expect(store.tastings[0].sheet?.photoIds).toEqual(['p1', 'p3'])
+  expect(vi.mocked(db.putTasting).mock.lastCall?.[2]).toEqual([])
+})
