@@ -4,7 +4,6 @@
   import Icon from './components/Icon.svelte'
   import More from './components/More.svelte'
   import Overview from './components/Overview.svelte'
-  import ScreenLayer from './components/ScreenLayer.svelte'
   import TabBar, { type Tab } from './components/TabBar.svelte'
   import WineDetail from './components/WineDetail.svelte'
   import WineList from './components/WineList.svelte'
@@ -111,32 +110,30 @@
   }
 </script>
 
-<ScreenLayer onopen={openWine}>
-  <main class:with-fab={fab}>
-    {#if !store.loaded}
-      <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
-    {:else if detail && selectedWineId}
-      <WineDetail wineId={selectedWineId} onclose={closeWine} onlocate={locate} />
-    {:else if tab === 'wines'}
-      <WineList onopen={openWine} />
-    {:else if tab === 'add'}
-      <CaptureFlow onsaved={onWineSaved} />
-    {:else if tab === 'cellar'}
-      <CellarView onopen={openWine} focus={locatedWineId} onoverlay={(open) => (cellarOverlay = open)} />
-    {:else if tab === 'overview'}
-      <Overview onopen={openWine} />
-    {:else if screen}
-      <screen.component onopen={openWine} />
-    {:else}
-      <More onselect={openScreen} />
-    {/if}
-  </main>
-
-  {#if fab}
-    <button class="fab" onclick={() => selectTab('add')}><Icon name="camera" />{t('nav.addBottle')}</button>
+<main class:with-fab={fab}>
+  {#if !store.loaded}
+    <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
+  {:else if detail && selectedWineId}
+    <WineDetail wineId={selectedWineId} onclose={closeWine} onlocate={locate} />
+  {:else if tab === 'wines'}
+    <WineList onopen={openWine} />
+  {:else if tab === 'add'}
+    <CaptureFlow onsaved={onWineSaved} />
+  {:else if tab === 'cellar'}
+    <CellarView onopen={openWine} focus={locatedWineId} onoverlay={(open) => (cellarOverlay = open)} />
+  {:else if tab === 'overview'}
+    <Overview onopen={openWine} />
+  {:else if screen}
+    <screen.component onopen={openWine} />
+  {:else}
+    <More onselect={openScreen} />
   {/if}
-  <TabBar {tab} onselect={selectTab} />
-</ScreenLayer>
+</main>
+
+{#if fab}
+  <button class="fab" onclick={() => selectTab('add')}><Icon name="camera" />{t('nav.addBottle')}</button>
+{/if}
+<TabBar {tab} onselect={selectTab} />
 
 <style>
   .fab {

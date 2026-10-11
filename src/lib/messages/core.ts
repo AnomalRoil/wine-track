@@ -46,7 +46,9 @@ export const en = {
   'capture.readLabel': 'Read the label',
 
   'key.needed': 'Needs an Anthropic API key.',
-  'key.add': 'Add it in Settings',
+  'key.add': 'Add an API key',
+  'key.uses':
+    'Used to read labels, look up grapes and drinking windows, and complete imports. Stored only on this device.',
   'capture.photoFailed': 'The photo could not be read. The wine is saved without it; cancel to take another.',
 
   'extract.no-key': 'No API key configured. Add one in Settings, or fill the form manually.',
@@ -270,7 +272,9 @@ export const fr: Messages<typeof en> = {
   'capture.readLabel': 'Lire l’étiquette',
 
   'key.needed': 'Nécessite une clé API Anthropic.',
-  'key.add': 'L’ajouter dans Réglages',
+  'key.add': 'Ajouter une clé API',
+  'key.uses':
+    'Sert à lire les étiquettes, rechercher cépages et fenêtres de dégustation, et compléter les imports. Stockée uniquement sur cet appareil.',
   'capture.photoFailed': 'Photo illisible. Le vin sera enregistré sans elle ; annulez pour en prendre une autre.',
 
   'extract.no-key': 'Aucune clé API configurée. Ajoutez-en une dans Réglages, ou remplissez le formulaire.',
@@ -494,7 +498,9 @@ export const de: Messages<typeof en> = {
   'capture.readLabel': 'Etikett lesen',
 
   'key.needed': 'Benötigt einen Anthropic-API-Schlüssel.',
-  'key.add': 'In den Einstellungen hinzufügen',
+  'key.add': 'API-Schlüssel hinzufügen',
+  'key.uses':
+    'Dient zum Lesen von Etiketten, zur Suche nach Rebsorten und Trinkfenstern und zum Ergänzen von Importen. Nur auf diesem Gerät gespeichert.',
   'capture.photoFailed': 'Das Foto ist nicht lesbar. Der Wein wird ohne Foto gespeichert; abbrechen, um ein neues aufzunehmen.',
 
   'extract.no-key':
