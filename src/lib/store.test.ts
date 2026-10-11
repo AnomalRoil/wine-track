@@ -243,6 +243,26 @@ it('adds to the wines of an import already committed instead of duplicating them
   expect(store.movements).toHaveLength(2)
 })
 
+it('stores the code an import gives to an uncoded wine', async () => {
+  store.wines = [makeWine({ id: 'old', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: null })]
+  const ctx = { defaultCellarName: 'Home', date: '2026-01-01', now: 0, newId: () => crypto.randomUUID() }
+  const rows = (lwin: string) => {
+    const parsed = parseImport(`name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,${lwin},1`, 2026)
+    if (!parsed.ok) throw new Error(parsed.error)
+    return parsed.rows
+  }
+
+  const first = applyImport(rows('1066553'), ctx)
+  const second = applyImport(rows('1066540'), ctx)
+  await release(first, second)
+
+  expect(store.wines.map((w) => [w.id === 'old', w.lwin])).toEqual([
+    [true, '1066553'],
+    [false, '1066540'],
+  ])
+  expect(vi.mocked(db.putImport).mock.calls.at(-2)?.[0].wines).toEqual([store.wines[0]])
+})
+
 it('keeps every field of overlapping wine edits', async () => {
   const aging = patchWine('w1', () => ({ drinkFrom: 2028, drinkUntil: 2040 }))
   const value = patchWine('w1', (w) => ({ value: 30, valueHistory: [...w.valueHistory, { date: '2026-01-01', value: 30 }] }))

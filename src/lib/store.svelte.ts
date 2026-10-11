@@ -460,13 +460,18 @@ export function removeRack(id: string): Promise<void> {
 
 /**
  * Plans the import against the stored wines and cellars and commits it atomically:
- * new wines, new cellars and stock additions. Returns the plan it committed.
+ * new wines, codes for stored wines, new cellars and stock additions. Returns the plan it committed.
  */
 export function applyImport(rows: ImportRow[], ctx: Omit<PlanContext, 'cellars'>): Promise<ImportPlan> {
   return writes(async () => {
     const plan = planImport(rows, store.wines, { ...ctx, cellars: store.cellars })
     const { wines, cellars, movements } = plan
-    await db.putImport({ wines, cellars, movements })
+    const coded = store.wines.flatMap((w) => {
+      const lwin = plan.codes.get(w.id)
+      return lwin ? [{ ...$state.snapshot(w), lwin }] : []
+    })
+    await db.putImport({ wines: [...wines, ...coded], cellars, movements })
+    for (const w of coded) store.wines[store.wines.findIndex((x) => x.id === w.id)] = w
     store.wines.push(...wines)
     store.cellars.push(...cellars)
     store.movements.push(...movements)

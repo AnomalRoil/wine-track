@@ -326,6 +326,8 @@ export interface ImportPlan {
   /** One entry per input row, in order. */
   matches: RowMatch[]
   wines: Wine[]
+  /** Codes that coded rows give to stored uncoded wines, by wine id. */
+  codes: Map<string, string>
   cellars: Cellar[]
   movements: Movement[]
 }
@@ -353,7 +355,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
   const sorted = [...ctx.cellars].sort((a, b) => a.position - b.position)
   const cellarIds = new Map(sorted.map((c) => [identity(c.name || ctx.defaultCellarName), c.id]))
   let position = Math.max(-1, ...sorted.map((c) => c.position))
-  const plan: ImportPlan = { matches: [], wines: [], cellars: [], movements: [] }
+  const plan: ImportPlan = { matches: [], wines: [], codes: new Map(), cellars: [], movements: [] }
 
   for (const row of rows) {
     if (row.errors.length > 0) {
@@ -374,6 +376,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
         same.lwin = lwin
         const planned = plan.wines.find((w) => w.id === wineId)
         if (planned) planned.lwin = lwin
+        else plan.codes.set(wineId, lwin)
       }
       plan.matches.push(same.line === undefined ? { kind: 'existing', wineId } : { kind: 'repeat', line: same.line })
     } else {

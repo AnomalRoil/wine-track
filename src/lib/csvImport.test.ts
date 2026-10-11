@@ -340,6 +340,17 @@ it('prefers the wine with the same code over an uncoded one', () => {
   expect(plan.movements.map((m) => m.wineId)).toEqual(['coded'])
 })
 
+it('gives a stored uncoded wine the code of the row it matches', () => {
+  const p = parseImport('name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,1066553,1\nChablis,Dauvissat,2019,1066540,1', 2026)
+  if (!p.ok) throw new Error(p.error)
+  let n = 0
+  const existing = [makeWine({ id: 'old', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, lwin: null })]
+  const cellars = [{ id: 'c', name: '', position: 0, storage: {} }]
+  const plan = planImport(p.rows, existing, { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => `id${++n}` })
+  expect(plan.codes).toEqual(new Map([['old', '1066553']]))
+  expect(plan.wines.map((w) => [w.id, w.lwin])).toEqual([['id2', '1066540']])
+})
+
 it('keeps codes apart after an uncoded row of the same wine', () => {
   const p = parseImport('name,producer,vintage,lwin,quantity\nChablis,Dauvissat,2019,,1\nChablis,Dauvissat,2019,1066540,1\nChablis,Dauvissat,2019,1066553,1', 2026)
   if (!p.ok) throw new Error(p.error)

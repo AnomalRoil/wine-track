@@ -58,7 +58,7 @@ async function load(csv: string) {
 
 it('completes a coded row from its own code and keeps that code', async () => {
   vi.mocked(findLwin).mockImplementation(async (codes) => codes.map((c) => (c === '1066553' ? lesClos : null)))
-  vi.mocked(applyImport).mockResolvedValue({ matches: [], wines: [], cellars: [], movements: [] })
+  vi.mocked(applyImport).mockResolvedValue({ matches: [], wines: [], codes: new Map(), cellars: [], movements: [] })
   render(ImportPanel)
 
   await load('name,producer,vintage,lwin\nLes Clos,Dauvissat,2019,1066553\nChablis,Dauvissat,2019,')
