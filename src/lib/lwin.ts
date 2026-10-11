@@ -1,4 +1,4 @@
-import { fold, wineKey } from './csvImport'
+import { fold, matchCandidate, matchRow, matchWine } from './csvImport'
 import type { WineDraft } from './extract'
 import type { Wine, WineColor } from './types'
 
@@ -292,15 +292,8 @@ export function undoLwinCompletion(draft: WineDraft, original: WineDraft, wine: 
   return { ...draft, region: back('region'), country: back('country'), color: back('color'), lwin: back('lwin') }
 }
 
-/**
- * A wine of the collection that `draft` repeats: same LWIN, vintage and size first,
- * otherwise same name, producer, vintage and size when either has no code.
- */
+/** A wine of the collection that `draft` repeats, by the rule of matchWine. */
 export function duplicateOf(draft: WineDraft, wines: Wine[]): Wine | undefined {
-  const key = wineKey(draft)
-  const exact =
-    draft.lwin === null
-      ? undefined
-      : wines.find((w) => w.lwin === draft.lwin && w.vintage === draft.vintage && w.sizeCl === draft.sizeCl)
-  return exact ?? wines.find((w) => (draft.lwin === null || w.lwin === null) && wineKey(w) === key)
+  const candidates = wines.map((wine) => ({ ...matchCandidate(wine), wine }))
+  return matchWine(matchRow(draft), candidates)?.wine
 }
