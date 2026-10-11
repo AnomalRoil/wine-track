@@ -52,13 +52,20 @@ export function initStore(): Promise<void> {
   return writes(load)
 }
 
-/** Replaces all data with a backup once the pending writes are done. */
+/**
+ * Replaces all data with a backup once the pending writes are done. Tastings lose the
+ * photo references the backup has no image for.
+ */
 export function restore(data: db.Data, photos: Photo[]): Promise<void> {
   return writes(async () => {
     store.restoring = true
     generation++
     try {
-      await db.replaceAll(data, photos)
+      const images = new Set(photos.map((p) => p.id))
+      const tastings = data.tastings.map((t) =>
+        t.sheet ? { ...t, sheet: { ...t.sheet, photoIds: t.sheet.photoIds.filter((id) => images.has(id)) } } : t,
+      )
+      await db.replaceAll({ ...data, tastings }, photos)
       await load()
     } finally {
       generation++
