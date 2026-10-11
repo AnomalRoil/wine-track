@@ -8,7 +8,7 @@
   import { hasApiKey, settings } from '../lib/settings.svelte'
   import { today } from '../lib/due'
   import { cellarName, wineLabel } from '../lib/labels'
-  import { applyLwin, confidentMatch, displayName, duplicateOf, LWIN_FIELDS, type LwinWine } from '../lib/lwin'
+  import { applyLwin, confidentMatch, displayName, duplicateOf, lwinFields, type LwinWine } from '../lib/lwin'
   import { matchLwin } from '../lib/lwinData.svelte'
   import { addToWine, addWine, sortedCellars, store, storeGeneration } from '../lib/store.svelte'
   import type { Aging, Photo, Wine } from '../lib/types'
@@ -165,7 +165,7 @@
 
   function applyMatch() {
     draft = applyLwin($state.snapshot(draft), lwinMatch!)
-    for (const field of LWIN_FIELDS) touched.add(field)
+    for (const field of lwinFields(lwinMatch!)) touched.add(field)
     lwinMatch = null
   }
 

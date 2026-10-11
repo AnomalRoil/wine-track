@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { extractFromLabel, type Result, type WineExtraction } from '../lib/extract'
+import { searchLwin } from '../lib/lwinData.svelte'
 import { processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
 import { store } from '../lib/store.svelte'
@@ -86,4 +87,21 @@ it('Reading the label keeps the grape being typed', async () => {
   screen.getByRole('button', { name: 'Remove Syrah' })
   expect(screen.queryByRole('button', { name: 'Remove Chardonnay' })).toBeNull()
   expect(activeColor()).toBe('White')
+})
+
+it('Reading the label fills the fields a picked LWIN wine left empty', async () => {
+  const { answer } = await formWithPhoto()
+  const wine = { lwin: '1066553', producer: '', label: 'Chablis', country: '', region: '', subRegion: '', colour: '', subType: '', firstVintage: null, finalVintage: null }
+  vi.mocked(searchLwin).mockResolvedValue([{ wine, score: 1 }])
+  await fireEvent.input(name(), { target: { value: 'Chab' } })
+  await fireEvent.click(await screen.findByRole('button', { name: /^Chablis/ }))
+  expect(activeColor()).toBe('Red')
+
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  answer({ ok: true, data: { ...label, name: 'Other' } })
+
+  await waitFor(() => expect(activeColor()).toBe('White'))
+  expect(name().value).toBe('Chablis')
+  expect(document.querySelector<HTMLInputElement>('#producer')!.value).toBe('Dauvissat')
+  expect(document.querySelector<HTMLInputElement>('#country')!.value).toBe('France')
 })

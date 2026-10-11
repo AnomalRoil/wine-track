@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, lwinFields, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -208,6 +208,17 @@ describe('applyLwin', () => {
       country: 'France',
     })
     expect(applyLwin(emptyDraft(), byCode('1100001')).region).toBe('Port')
+  })
+})
+
+describe('lwinFields', () => {
+  it('names the fields the wine gives', () => {
+    expect(lwinFields(byCode('1181812'))).toEqual(['name', 'producer', 'region', 'country', 'color', 'lwin'])
+  })
+
+  it('leaves out the fields the wine leaves empty', () => {
+    const partial = { ...byCode('1066553'), producer: '', region: '', subRegion: '', country: '', colour: '' }
+    expect(lwinFields(partial)).toEqual(['name', 'lwin'])
   })
 })
 

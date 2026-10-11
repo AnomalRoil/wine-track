@@ -4,7 +4,7 @@
   import { distinctGrapes, distinctTags } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
-  import { applyLwin, displayName, LWIN_FIELDS, type LwinWine, type Scored } from '../lib/lwin'
+  import { applyLwin, displayName, lwinFields, type LwinWine, type Scored } from '../lib/lwin'
   import { initLwin, searchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { store } from '../lib/store.svelte'
@@ -65,7 +65,7 @@
     searches++
     suggestions = []
     draft = applyLwin($state.snapshot(draft), wine)
-    touch(...LWIN_FIELDS)
+    touch(...lwinFields(wine))
   }
 
   function place(wine: LwinWine): string {
