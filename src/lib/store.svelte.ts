@@ -174,8 +174,8 @@ export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], 
 
 /**
  * Adds stock additions to a stored wine, giving it `photo` and `lwin` when it has none yet,
- * all or nothing. Returns the wine as saved; null when it is gone, a restore ran since
- * `since`, an addition's cellar is gone, or the write fails.
+ * all or nothing. Returns the wine as saved; null when it is gone, has a code other than
+ * `lwin`, a restore ran since `since`, an addition's cellar is gone, or the write fails.
  */
 export function addToWine(id: string, photo: Photo | null, lwin: string | null, movements: Movement[], since: number): Promise<Wine | null> {
   return writes(async () => {
@@ -184,6 +184,7 @@ export function addToWine(id: string, photo: Photo | null, lwin: string | null, 
     if (i < 0) return null
     if (!canRecord(stock, movements, new Set(store.wines.map((w) => w.id)), new Set(store.cellars.map((c) => c.id)))) return null
     const current = store.wines[i]
+    if (lwin && current.lwin && lwin !== current.lwin) return null
     const newPhoto = current.photoId ? null : photo
     const newLwin = current.lwin ? null : lwin
     if (!newPhoto && !newLwin && movements.length === 0) return current

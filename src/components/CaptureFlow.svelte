@@ -184,7 +184,11 @@
     }
     if (current !== session) return
     stale = !wine
-    if (!wine) return
+    if (!wine) {
+      // A write queued meanwhile may have given the duplicate another code: offer the wine that matches now.
+      duplicate = duplicateOf($state.snapshot(draft), store.wines) ?? null
+      return
+    }
     reset()
     onsaved(wine)
   }

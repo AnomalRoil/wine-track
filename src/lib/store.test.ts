@@ -435,8 +435,23 @@ it('gives an uncoded duplicate the code of the capture added to it', async () =>
   const kept = addToWine('w2', null, '1066540', [], storeGeneration())
   await release(coded, kept)
 
+  expect(await kept).toBeNull()
   expect(store.wines.map((w) => w.lwin)).toEqual(['1066540', '1066553'])
   expect(vi.mocked(db.putWine).mock.calls.map(([w]) => [w.id, w.lwin])).toEqual([['w1', '1066540']])
+})
+
+it('adds nothing to a duplicate an earlier import gave another code', async () => {
+  store.wines = [makeWine({ lwin: null })]
+  const parsed = parseImport('name,producer,vintage,lwin\nWine,Producer,2020,1066553\n', 2026)
+  if (!parsed.ok) throw new Error(parsed.error)
+  const imported = applyImport(parsed.rows, { defaultCellarName: 'Home', date: '2026-01-01', now: 0, newId: () => crypto.randomUUID() })
+  const added = addToWine('w1', null, '1066540', [mv({ id: 'm', wineId: 'w1', cellarId: 'home', quantity: 2 })], storeGeneration())
+  await release(imported, added)
+
+  expect(await added).toBeNull()
+  expect(db.putWine).not.toHaveBeenCalled()
+  expect(store.wines.map((w) => w.lwin)).toEqual(['1066553'])
+  expect(store.movements.map((m) => m.id)).not.toContain('m')
 })
 
 it('keeps nothing of a capture whose write fails', async () => {
