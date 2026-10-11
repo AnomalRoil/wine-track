@@ -5,6 +5,7 @@ import { searchLwin } from '../lib/lwinData.svelte'
 import { processPhoto } from '../lib/photo'
 import { settings } from '../lib/settings.svelte'
 import { store } from '../lib/store.svelte'
+import type { Wine } from '../lib/types'
 import CaptureFlow from './CaptureFlow.svelte'
 
 vi.mock('../lib/db')
@@ -19,6 +20,7 @@ vi.mock('../lib/photo', async (original) => ({
   ...(await original<typeof import('../lib/photo')>()),
   processPhoto: vi.fn(),
   blobToBase64: vi.fn(async () => 'jpeg'),
+  makeThumb: vi.fn(async (blob: Blob) => blob),
 }))
 vi.mock('../lib/extract', async (original) => ({
   ...(await original<typeof import('../lib/extract')>()),
@@ -48,9 +50,9 @@ beforeEach(() => {
 })
 
 /** Opens the capture form on a photo, then adds a key so the label can be read from the form. */
-async function formWithPhoto() {
+async function formWithPhoto(onsaved: (wine: Wine) => void = () => {}) {
   vi.mocked(processPhoto).mockResolvedValue(new Blob(['jpeg'], { type: 'image/jpeg' }))
-  render(CaptureFlow, { onsaved: () => {}, photo: new File(['jpeg'], 'label.jpg') })
+  render(CaptureFlow, { onsaved, photo: new File(['jpeg'], 'label.jpg') })
   await screen.findByRole('button', { name: 'Read the label' })
   settings.apiKey = 'key'
   let answer: (result: Result<WineExtraction>) => void = () => {}
@@ -185,4 +187,22 @@ it('A drinking-window lookup answering during the label read is dropped, and wai
   answer({ ok: true, data: label })
   await waitFor(() => expect(name().value).toBe('Chablis'))
   expect((screen.getByRole('button', { name: 'Look up online' }) as HTMLButtonElement).disabled).toBe(false)
+})
+
+it('Saving waits for the label read', async () => {
+  const onsaved = vi.fn()
+  const { answer } = await formWithPhoto(onsaved)
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+
+  const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement
+  expect(save.disabled).toBe(true)
+  expect((screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement).disabled).toBe(false)
+  await fireEvent.submit(save.form!)
+  await new Promise((resolve) => setTimeout(resolve))
+  expect(onsaved).not.toHaveBeenCalled()
+
+  answer({ ok: true, data: label })
+  await waitFor(() => expect(save.disabled).toBe(false))
+  await fireEvent.click(save)
+  await waitFor(() => expect(onsaved).toHaveBeenCalledWith(expect.objectContaining({ name: 'Chablis' })))
 })

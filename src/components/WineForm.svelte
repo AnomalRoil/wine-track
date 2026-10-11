@@ -33,7 +33,7 @@
     oncancel: () => void
     /** Disables the actions while the caller writes. */
     saving?: boolean
-    /** Another request is filling the draft, so the grape lookup waits for it and drops a pending answer. */
+    /** Another request is filling the draft, so saving and the grape lookup wait for it, and a pending lookup answer is dropped. */
     busy?: boolean
     /** Shown under the photo. */
     photoNote?: Snippet
@@ -240,7 +240,7 @@
 
   <div class="row actions">
     <button type="button" disabled={saving} onclick={oncancel}>{t('form.cancel')}</button>
-    <button type="submit" class="primary grow" disabled={saving}>{t('form.save')}</button>
+    <button type="submit" class="primary grow" disabled={saving || busy}>{t('form.save')}</button>
   </div>
 </form>
 

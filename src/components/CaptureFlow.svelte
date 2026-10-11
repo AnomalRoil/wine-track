@@ -55,6 +55,8 @@
   /** The photo being resized, which a save waits for. */
   let photoTask: Promise<Blob> | null = null
   let saving = $state(false)
+  /** A save or label read is in flight; each waits for the other. */
+  const pending = $derived(saving || reading)
   /** A database wine the label looks like, offered until applied or ignored. */
   let lwinMatch = $state.raw<LwinWine | null>(null)
   /** A wine of the collection the draft repeats, shown instead of saving. */
@@ -130,7 +132,7 @@
   })
 
   async function extract() {
-    if (!photoBlob) return
+    if (!photoBlob || pending) return
     extractError = null
     if (step === 'form') {
       form!.commitChips()
@@ -168,7 +170,7 @@
   }
 
   function saveAsNew() {
-    if (!form!.validate()) return
+    if (pending || !form!.validate()) return
     allowedDuplicateId = duplicate!.id
     save()
   }
@@ -182,7 +184,7 @@
   // Sends only the duplicate's id: the store applies the photo and bottles to the wine as
   // it is when the write runs, so edits or a deletion made meanwhile are kept.
   async function addToDuplicate() {
-    if (saving || !form!.validate()) return
+    if (pending || !form!.validate()) return
     const { id, photoId } = duplicate!
     const since = storeGeneration()
     const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
@@ -209,7 +211,7 @@
   }
 
   async function save() {
-    if (saving) return
+    if (pending) return
     const existing = duplicateOf($state.snapshot(draft), store.wines)
     if (existing && existing.id !== allowedDuplicateId) {
       duplicate = existing
@@ -305,7 +307,7 @@
           <NeedsKey
             label={reading ? t('capture.extracting') : t('capture.readLabel')}
             icon="sparkle"
-            disabled={reading}
+            disabled={pending}
             onclick={extract}
           />
         </div>
@@ -342,10 +344,10 @@
         <div class="card duplicate">
           <p>{t('dup.found', { name: wineLabel(duplicate) })}</p>
           <div class="row wrap">
-            <button type="button" class="primary" disabled={saving} onclick={addToDuplicate}>
+            <button type="button" class="primary" disabled={pending} onclick={addToDuplicate}>
               {quantity > 0 ? t('dup.addTo') : t('dup.open')}
             </button>
-            <button type="button" disabled={saving} onclick={saveAsNew}>{t('dup.saveNew')}</button>
+            <button type="button" disabled={pending} onclick={saveAsNew}>{t('dup.saveNew')}</button>
           </div>
         </div>
       {/if}
