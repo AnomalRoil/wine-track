@@ -6,6 +6,7 @@
   import { sizeLabel } from '../lib/labels'
   import { applyLwin, displayName, lwinFields, type LwinWine, type Scored } from '../lib/lwin'
   import { initLwin, searchLwin } from '../lib/lwinData.svelte'
+  import { placeLine } from '../lib/place'
   import { settings } from '../lib/settings.svelte'
   import { store } from '../lib/store.svelte'
   import { BOTTLE_SIZES, WINE_COLORS } from '../lib/types'
@@ -69,7 +70,7 @@
   }
 
   function place(wine: LwinWine): string {
-    return [wine.subRegion || wine.region, wine.country].filter(Boolean).join(' · ')
+    return placeLine({ appellation: wine.subRegion, region: wine.region, country: wine.country })
   }
   let tagInput: ChipInput
 
@@ -201,6 +202,9 @@
   {#if lookupNote}
     <p class="muted">{lookupNote}</p>
   {/if}
+
+  <label for="appellation">{t('form.appellation')}</label>
+  <input id="appellation" type="text" bind:value={draft.appellation} oninput={() => touch('appellation')} />
 
   <label for="region">{t('form.region')}</label>
   <input id="region" type="text" bind:value={draft.region} oninput={() => touch('region')} />

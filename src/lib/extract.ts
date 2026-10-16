@@ -10,6 +10,7 @@ const WineExtraction = z.object({
   producer: z.string().nullable(),
   vintage: z.number().int().nullable(),
   grapes: z.array(z.string()),
+  appellation: z.string().nullable(),
   region: z.string().nullable(),
   country: z.string().nullable(),
   color: z.enum(['red', 'white', 'rose', 'orange', 'sparkling', 'sweet', 'fortified', 'unknown']),
@@ -60,6 +61,7 @@ export interface WineDraft {
   vintage: number | null
   grapes: string[]
   region: string
+  appellation: string
   country: string
   color: WineColor
   sizeCl: number
@@ -75,6 +77,7 @@ export function emptyDraft(): WineDraft {
     vintage: null,
     grapes: [],
     region: '',
+    appellation: '',
     country: '',
     color: 'red',
     sizeCl: STANDARD_SIZE_CL,
@@ -97,6 +100,7 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
     vintage: e.vintage,
     grapes: e.grapes.map((g) => g.trim()).filter(Boolean),
     region: e.region ?? '',
+    appellation: e.appellation ?? '',
     country: e.country ?? '',
     color: e.color === 'unknown' ? 'other' : e.color,
     sizeCl: e.volumeCl && e.volumeCl > 0 ? e.volumeCl : STANDARD_SIZE_CL,
@@ -106,7 +110,7 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
 }
 
 /** Draft fields a label can supply. */
-const LABEL_FIELDS = ['name', 'producer', 'vintage', 'grapes', 'region', 'country', 'color', 'sizeCl'] as const
+const LABEL_FIELDS = ['name', 'producer', 'vintage', 'grapes', 'region', 'appellation', 'country', 'color', 'sizeCl'] as const
 
 /**
  * Fills the fields of `draft` not in `touched` with what the label reads.
@@ -122,7 +126,11 @@ Extract the wine's details. Use null for any field that is not legible or not pr
 - vintage: the year printed on the label (millésime); null for non-vintage wines.
 - grapes: varieties if printed, or if the appellation implies them with certainty
   (e.g. Chablis implies Chardonnay); otherwise an empty list.
-- region: the appellation or region as printed.
+- appellation: the appellation (AOC, AOP, DOC, AVA…) or sub-region as printed, e.g.
+  "Pauillac" or "Chablis Premier Cru"; null when none is printed, or when it names
+  the whole region (Champagne): then it is the region.
+- region: the wider wine region, e.g. "Bordeaux" or "Burgundy": as printed, or the
+  region the appellation belongs to.
 - color: infer from the label and your knowledge of the appellation; "sweet" means
   dessert wine; use "unknown" if you cannot tell.
 - volumeCl: the bottle volume printed on the label, in centiliters (75 cl → 75, 1.5 L → 150).`
@@ -197,12 +205,12 @@ function webSearchTool(model: Model, maxUses = 2): Anthropic.Messages.ToolUnion 
 const MAX_QUERY_FIELD = 120
 
 /**
- * "Producer Name 2018 Region Country": what identifies a wine in a search.
+ * "Producer Name 2018 Appellation Region Country": what identifies a wine in a search.
  * Fields come from labels and imported files: they are clipped, kept on one line
  * and cannot close the tags that delimit them in prompts.
  */
 export function wineQuery(draft: WineDraft): string {
-  return [draft.producer, draft.name, draft.vintage ?? '', draft.region, draft.country]
+  return [draft.producer, draft.name, draft.vintage ?? '', draft.appellation, draft.region, draft.country]
     .map((field) => String(field).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, MAX_QUERY_FIELD))
     .filter(Boolean)
     .join(' ')
@@ -218,7 +226,7 @@ const DATA_ONLY = 'The wine descriptions come from photos and files the user imp
 
 /** True when the draft identifies the wine well enough for an online lookup. */
 export function canLookupGrapes(draft: WineDraft): boolean {
-  return Boolean(draft.name.trim() || draft.producer.trim() || draft.region.trim())
+  return Boolean(draft.name.trim() || draft.producer.trim() || draft.appellation.trim() || draft.region.trim())
 }
 
 async function searchAndParse<S extends z.ZodType>(
