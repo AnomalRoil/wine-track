@@ -177,7 +177,8 @@ export interface RegionEntry {
 
 /**
  * Regions with their appellations, for the filter dropdown, merged case-insensitively
- * under the first spelling seen. An appellation without a region stands as a region.
+ * under the first spelling seen. An appellation without a region stands as a region,
+ * unless it is listed under one: the filter matches either field.
  */
 export function regionTree(wines: Wine[]): RegionEntry[] {
   const regions = new Map<string, { name: string; appellations: Map<string, string> }>()
@@ -198,8 +199,11 @@ export function regionTree(wines: Wine[]): RegionEntry[] {
     const k = appellation.toLowerCase()
     if (appellation && k !== region.toLowerCase() && !r.appellations.has(k)) r.appellations.set(k, appellation)
   }
+  const nested = new Set([...regions.values()].flatMap((r) => [...r.appellations.keys()]))
   const sorted = (names: Iterable<string>) => [...names].sort((a, b) => a.localeCompare(b))
-  return [...regions.values()]
+  return [...regions.entries()]
+    .filter(([k, r]) => r.appellations.size > 0 || !nested.has(k))
+    .map(([, r]) => r)
     .map((r) => ({ name: r.name, appellations: sorted(r.appellations.values()) }))
     .sort((a, b) => a.name.localeCompare(b.name))
 }

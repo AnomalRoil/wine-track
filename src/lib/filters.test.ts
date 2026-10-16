@@ -132,6 +132,14 @@ describe('regionTree', () => {
       ],
     },
     { name: 'appellation without a region stands alone', wines: [{ region: '', appellation: 'Cornas' }], want: [{ name: 'Cornas', appellations: [] }] },
+    {
+      name: 'region listed as an appellation elsewhere appears once',
+      wines: [
+        { region: 'Chablis', appellation: '' },
+        { region: 'Burgundy', appellation: 'chablis' },
+      ],
+      want: [{ name: 'Burgundy', appellations: ['chablis'] }],
+    },
     { name: 'appellation repeating its region', wines: [{ region: 'Champagne', appellation: 'champagne' }], want: [{ name: 'Champagne', appellations: [] }] },
   ]
   for (const c of cases) {
