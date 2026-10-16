@@ -7,8 +7,9 @@
 </script>
 
 <p class="source">
-  {t(`aging.source.${source.kind}`)}{#if source.url}
-    · <a href={source.url} target="_blank" rel="noopener noreferrer">{sourceHost(source.url)}</a>{/if}
+  {t(`aging.source.${source.kind}`)}{#if source.url}{' · '}<a href={source.url} target="_blank" rel="noopener noreferrer"
+      >{sourceHost(source.url)}</a
+    >{/if}
 </p>
 
 <style>
