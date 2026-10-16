@@ -60,8 +60,8 @@ describe('status changes', () => {
 describe('edit', () => {
   const list = [grapes, country, pending({ field: 'color', value: 'white' }), pending({ field: 'lwin', value: '1066553' })]
   const cases: { name: string; field: Suggestion['field']; raw: string; want: Suggestion | 'unchanged' }[] = [
-    { name: 'text', field: 'country', raw: ' Suisse ', want: { ...country, value: 'Suisse', status: 'accepted', edited: true } },
-    { name: 'grape list', field: 'grapes', raw: 'Merlot; Cabernet Franc, Merlot', want: { ...grapes, value: ['Merlot', 'Cabernet Franc'], status: 'accepted', edited: true } },
+    { name: 'text', field: 'country', raw: ' Suisse ', want: pending({ field: 'country', value: 'Suisse', source: 'lwin', status: 'accepted', edited: true }) },
+    { name: 'grape list', field: 'grapes', raw: 'Merlot; Cabernet Franc, Merlot', want: pending({ field: 'grapes', value: ['Merlot', 'Cabernet Franc'], status: 'accepted', edited: true }) },
     { name: 'empty rejects', field: 'country', raw: ' ', want: { ...country, status: 'rejected' } },
     { name: 'known color', field: 'color', raw: 'red', want: pending({ field: 'color', value: 'red', status: 'accepted', edited: true }) },
     { name: 'unknown color', field: 'color', raw: 'blue', want: 'unchanged' },
