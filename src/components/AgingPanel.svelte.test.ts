@@ -145,12 +145,12 @@ it('marks a window edited by hand as set by you', async () => {
   await fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
   await fireEvent.input(year(/^Drink until/), { target: { value: '2045' } })
 
-  screen.getByText('Set by you')
+  screen.getByText('Set by you:')
   expect(screen.queryByRole('link')).toBeNull()
   await saveEdits()
   expect(store.wines[0].windowSource).toEqual({ kind: 'user', url: null })
   await rerender({ wine: store.wines[0] })
-  screen.getByText('Set by you')
+  screen.getByText('Set by you:')
 })
 
 it('drops the source once every window year is cleared', async () => {

@@ -97,12 +97,12 @@
         </span>
       </div>
       <AgingTimeline {timeline} aging={wine} {year} />
+      {#if wine.windowSource}<WindowSource source={wine.windowSource} />{/if}
       <p class="years">
         {#each WINDOW_KEYS.filter((k) => wine[k] !== null) as key (key)}
           <span>{t(`aging.${key}`)} <strong>{wine[key]}</strong></span>
         {/each}
       </p>
-      {#if wine.windowSource}<WindowSource source={wine.windowSource} />{/if}
       <StorageHint wineId={wine.id} until={until} />
     {/if}
     {#if wine.profile}
