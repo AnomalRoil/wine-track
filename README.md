@@ -23,7 +23,7 @@ Live at [cave-man.wouaib.ch](https://cave-man.wouaib.ch/).
 - Drink-before dates and "taste again in N years" reminders, with a due view that also lists wines reaching peak or decline this year, and `.ics` calendar export.
 - English, French and German UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.
-- CSV import with a template (drinking-window years included), per-line validation and duplicate detection (matching wines get the bottles), optional batched completion of grapes and regions by Claude; CSV export in the same columns. Grapes read and write as "Merlot 60%, Cabernet Franc 40%" or a plain list.
+- CSV import with a template (drinking-window years included), per-line validation (values not understood are left empty and listed before you import) and duplicate detection (matching wines get the bottles), optional batched completion of grapes and regions by Claude; CSV export in the same columns. Grapes read and write as "Merlot 60%, Cabernet Franc 40%" or a plain list.
 - Printable insurance inventory per cellar with purchase prices, estimated values, totals and bottles without any price.
 - Installable PWA, works offline. Apart from the optional wine names download from this site, the only network calls are label extraction and wine lookups to `api.anthropic.com` with your own API key, entered in Settings and stored only on the device.
 

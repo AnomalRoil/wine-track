@@ -126,7 +126,22 @@ for (const size of BOTTLE_SIZES) {
   for (const m of [core.en, core.fr, core.de]) SIZE_ALIASES.set(fold(m[`size.${size.name}`]), size.cl)
 }
 
-export type RowError = 'missing-name' | 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window' | 'lwin'
+/** Why a row cannot be imported. */
+export type RowError = 'missing-name'
+
+/** Why a cell was not understood. */
+export type CellError = 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window' | 'lwin'
+
+/**
+ * A cell imported as empty because its value was not understood: no vintage,
+ * price, year or code; the standard size; color "other"; no bottles for a quantity.
+ */
+export interface EmptiedCell {
+  column: Column
+  /** The value as written. */
+  value: string
+  reason: CellError
+}
 
 /** Drinking-window years of a row; all null when the row has none. */
 export type WindowYears = Pick<Aging, (typeof WINDOW_KEYS)[number]>
@@ -144,7 +159,9 @@ export interface ImportRow {
   place: string
   notes: string
   window: WindowYears
+  /** Non-empty when the row is not imported. */
   errors: RowError[]
+  emptied: EmptiedCell[]
 }
 
 /** Largest CSV file accepted, in bytes; a bigger file would freeze the page while parsing. */
@@ -244,24 +261,32 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
     // Undoes the escape toCsv adds before a formula sign or an apostrophe.
     const get = (c: Column) => (index.has(c) ? (cells[index.get(c)!] ?? '').trim().replace(/^'(?=[=+\-@\t\r'])/, '') : '')
     const errors: RowError[] = []
+    const emptied: EmptiedCell[] = []
+    const empty = (column: Column, reason: CellError) => emptied.push({ column, value: get(column), reason })
 
     const vintage = parseVintage(get('vintage'), currentYear + 1)
-    if (vintage === undefined) errors.push('vintage')
+    if (vintage === undefined) empty('vintage', 'vintage')
 
     const rawQuantity = get('quantity')
-    const quantity = rawQuantity === '' ? 1 : Number(rawQuantity)
-    if (!Number.isInteger(quantity) || quantity < 0 || quantity > 10000) errors.push('quantity')
+    let quantity = rawQuantity === '' ? 1 : Number(rawQuantity)
+    if (!Number.isInteger(quantity) || quantity < 0 || quantity > 10000) {
+      empty('quantity', 'quantity')
+      quantity = 0
+    }
 
     const sizeCl = parseSize(get('size_cl'), clHeader)
-    if (sizeCl === undefined) errors.push('size')
+    if (sizeCl === undefined) empty('size_cl', 'size')
 
     const rawColor = get('color')
     const color = rawColor === '' ? 'other' : COLOR_ALIASES.get(fold(rawColor))
-    if (color === undefined) errors.push('color')
+    if (color === undefined) empty('color', 'color')
 
     const rawPrice = get('purchase_price')
-    const price = rawPrice === '' ? null : parseNumber(rawPrice)
-    if (price !== null && !(price >= 0)) errors.push('price')
+    let price = rawPrice === '' ? null : parseNumber(rawPrice)
+    if (price !== null && !(price >= 0)) {
+      empty('purchase_price', 'price')
+      price = null
+    }
 
     const window = pickWindow(NO_AGING)
     for (const key of WINDOW_KEYS) {
@@ -269,12 +294,12 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
       if (raw === '') continue
       const year = Number(raw)
       if (Number.isInteger(year) && year >= MIN_YEAR && year <= MAX_YEAR) window[key] = year
-      else if (!errors.includes('window')) errors.push('window')
+      else empty(WINDOW_COLUMNS[key], 'window')
     }
 
     const rawLwin = get('lwin')
     const lwin = rawLwin === '' ? null : parseLwinCode(rawLwin)
-    if (rawLwin !== '' && lwin === null) errors.push('lwin')
+    if (rawLwin !== '' && lwin === null) empty('lwin', 'lwin')
 
     const name = get('name')
     const producer = get('producer')
@@ -296,15 +321,22 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
         tags: parseList(get('tags')),
         lwin,
       },
-      quantity: errors.includes('quantity') ? 0 : quantity,
-      price: errors.includes('price') ? null : price,
+      quantity,
+      price,
       place: get('purchase_place'),
       notes: get('notes'),
-      window: errors.includes('window') ? pickWindow(NO_AGING) : window,
+      window,
       errors,
+      emptied,
     }
   })
   return { ok: true, rows, ignored }
+}
+
+/** Importable rows with emptied cells, and how many cells they emptied. */
+export function emptiedCount(rows: readonly ImportRow[]): { rows: number; fields: number } {
+  const counted = rows.filter((r) => r.errors.length === 0 && r.emptied.length > 0)
+  return { rows: counted.length, fields: counted.reduce((n, r) => n + r.emptied.length, 0) }
 }
 
 /**
@@ -338,6 +370,8 @@ export interface MatchRow {
   name: string
   vintage: number | null
   sizeCl: number
+  /** Its vintage or size was not understood, so they may not be its own. */
+  unsure?: boolean
 }
 
 /** A wine a row can match; `names` holds every nameKey it is known by. */
@@ -346,6 +380,7 @@ export interface MatchCandidate {
   names: string[]
   vintage: number | null
   sizeCl: number
+  unsure?: boolean
 }
 
 type Matchable = Pick<WineDraft, 'name' | 'producer' | 'vintage' | 'sizeCl' | 'lwin'>
@@ -367,6 +402,8 @@ export function matchCandidate(w: Matchable): MatchCandidate {
  *
  *   row code | candidate                  | result
  *   ---------+----------------------------+--------------------------------------
+ *   unsure   | any                        | new wine
+ *   any      | unsure                     | new wine
  *   X        | code X, any name           | earliest such candidate
  *   X        | no code, same name         | earliest such candidate; caller gives it X
  *   none     | no code, same name         | earliest such candidate
@@ -377,7 +414,8 @@ export function matchCandidate(w: Matchable): MatchCandidate {
  * `row.name` to its names, so later rows see both.
  */
 export function matchWine<C extends MatchCandidate>(row: MatchRow, candidates: readonly C[]): C | undefined {
-  const fits = candidates.filter((c) => c.vintage === row.vintage && c.sizeCl === row.sizeCl)
+  if (row.unsure) return undefined
+  const fits = candidates.filter((c) => !c.unsure && c.vintage === row.vintage && c.sizeCl === row.sizeCl)
   const named = fits.filter((c) => c.names.includes(row.name))
   if (row.lwin !== null) return fits.find((c) => c.lwin === row.lwin) ?? named.find((c) => c.lwin === null)
   return named.find((c) => c.lwin === null) ?? named[0]
@@ -434,7 +472,8 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       plan.matches.push({ kind: 'invalid' })
       continue
     }
-    const wanted = matchRow(row.draft)
+    const unsure = row.emptied.some((c) => c.column === 'vintage' || c.column === 'size_cl')
+    const wanted = { ...matchRow(row.draft), unsure }
     const candidates = group(row.draft)
     const same = matchWine(wanted, candidates)
     let wineId: string
@@ -462,7 +501,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
         ...NO_AGING,
         ...row.window,
       }
-      candidates.push({ ...matchCandidate(row.draft), wineId, planned: { line: row.line, wine } })
+      candidates.push({ ...matchCandidate(row.draft), unsure, wineId, planned: { line: row.line, wine } })
       plan.matches.push({ kind: 'new' })
       plan.wines.push(wine)
     }
