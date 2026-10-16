@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
-import { cleanAging } from './aging'
+import { cleanAging, webUrl } from './aging'
 import type { Completion } from './csvImport'
 import { toShare, type GrapeShares } from './grapes'
 import type { Model } from './settings.svelte'
@@ -301,17 +301,6 @@ export interface GrapesFound {
   grapeShares: GrapeShares
   /** An http(s) link to the source, or null. */
   sourceUrl: string | null
-}
-
-/** A link a page may open: http or https only. */
-export function webUrl(raw: string | null): string | null {
-  if (!raw) return null
-  try {
-    const url = new URL(raw.trim())
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
-  } catch {
-    return null
-  }
 }
 
 export function readGrapeLookup(data: GrapeLookup): GrapesFound {
