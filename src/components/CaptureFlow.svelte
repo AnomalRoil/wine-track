@@ -48,6 +48,7 @@
   let quantity = $state(untrack(() => (intoCellar ? 1 : 0)))
   let cellarId = $state(untrack(() => intoCellar ?? sortedCellars()[0].id))
   let unitPrice = $state<number | null>(null)
+  let place = $state('')
   // generation drops a pending extraction; session also drops a photo still being processed
   // and the navigation after a save.
   let generation = 0
@@ -92,6 +93,7 @@
     stale = false
     quantity = 0
     unitPrice = null
+    place = ''
     photoTask = null
     generation++
     session++
@@ -195,7 +197,7 @@
     const { id, photoId } = duplicate!
     const { lwin } = $state.snapshot(draft)
     const since = storeGeneration()
-    const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
+    const stock = { quantity, cellarId, unitPrice: unitPrice ?? null, place: place.trim() }
     const additions =
       stock.quantity > 0 ? [{ id: crypto.randomUUID(), wineId: id, date: today(), kind: 'add' as const, ...stock, toCellarId: null, note: '' }] : []
     saving = true
@@ -243,7 +245,7 @@
     const current = session
     const since = storeGeneration()
     const fields = { ...$state.snapshot(draft), ...cleanAging($state.snapshot(aging)) }
-    const stock = { quantity, cellarId, unitPrice: unitPrice ?? null }
+    const stock = { quantity, cellarId, unitPrice: unitPrice ?? null, place: place.trim() }
     const photo = await takenPhoto()
     const wine: Wine = {
       id: crypto.randomUUID(),
@@ -329,6 +331,8 @@
       {#if intoCellar}
         <label for="price">{t('stock.unitPrice')}</label>
         <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+        <label for="place">{t('stock.place')}</label>
+        <input id="place" type="text" bind:value={place} />
       {:else}
         <h2>{t('capture.addToCellar')}</h2>
         <div class="row">
@@ -341,6 +345,8 @@
             <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
           </div>
         </div>
+        <label for="place">{t('stock.place')}</label>
+        <input id="place" type="text" bind:value={place} />
         {#if quantity > 0 && sortedCellars().length > 1}
           <label for="cellar">{t('stock.cellar')}</label>
           <select id="cellar" bind:value={cellarId}>

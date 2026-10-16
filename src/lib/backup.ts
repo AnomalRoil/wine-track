@@ -99,6 +99,8 @@ const MovementSchema = z.object({
   cellarId: z.string(),
   toCellarId: z.string().nullable(),
   unitPrice: z.number().min(0).nullable(),
+  // Arrived within version 2: older backups lack it.
+  place: z.string().default(''),
   note: z.string(),
 })
 

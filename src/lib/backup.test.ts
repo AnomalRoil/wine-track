@@ -35,7 +35,7 @@ describe('backup', () => {
       wines: [wine],
       tastings: [tasting, detailed],
       cellars: [{ id: 'main', name: '', position: 0, storage: { temperature: 'cool', light: 'bright' } }],
-      movements: [makeMovement({ unitPrice: 12.5 })],
+      movements: [makeMovement({ unitPrice: 12.5, place: 'Lavinia' })],
       racks: [{ id: 'r1', cellarId: 'main', name: 'Left wall', columns: 6, rows: 4, depth: 2, layout: 'diamond' as const, position: 0 }],
       placements: [{ id: 'r1/1/0/2', rackId: 'r1', layer: 1, row: 0, column: 2, wineId: 'w1' }],
     }
@@ -56,6 +56,12 @@ describe('backup', () => {
       photos: [],
     })
     expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING, lwin: null }])
+  })
+
+  it('gives movements from an older version 2 backup an empty purchase place', () => {
+    const { place, ...older } = makeMovement({ unitPrice: 12.5 })
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [older], photos: [] })
+    expect(parseBackup(json)?.movements).toEqual([makeMovement({ unitPrice: 12.5 })])
   })
 
   it('reads a version 2 backup made before racks existed', () => {

@@ -1,4 +1,5 @@
 import { lastYear, phaseOf, urgency, type Phase } from './aging'
+import { matchesSearch } from './search'
 import { bottlesOf, type Stock } from './stock'
 import type { Tasting, Wine, WineColor } from './types'
 
@@ -83,7 +84,6 @@ function hasName(names: string[], name: string): boolean {
 
 export function filterWines(wines: Wine[], ctx: FilterContext, f: WineFilter): Wine[] {
   const ratings = f.minRating !== null ? ratingsByWine(ctx.tastings) : null
-  const search = f.search.trim().toLowerCase()
   return wines.filter((w) => {
     if (f.ownedOnly && bottlesOf(ctx.stock, w.id) <= 0) return false
     if (f.wishedOnly && !w.wished) return false
@@ -101,12 +101,7 @@ export function filterWines(wines: Wine[], ctx: FilterContext, f: WineFilter): W
       const r = ratings.get(w.id)
       if (r === undefined || r < f.minRating!) return false
     }
-    if (search) {
-      const haystack = [w.name, w.producer, w.region, w.country, ...w.grapes, ...w.tags, w.vintage ?? '']
-        .join(' ')
-        .toLowerCase()
-      if (!haystack.includes(search)) return false
-    }
+    if (!matchesSearch([w.name, w.producer, w.region, w.country, ...w.grapes, ...w.tags, w.vintage], f.search)) return false
     return true
   })
 }

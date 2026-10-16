@@ -17,6 +17,7 @@ export const COLUMNS = [
   'country',
   'grapes',
   'purchase_price',
+  'purchase_place',
   'notes',
   'tags',
   'drink_from',
@@ -40,6 +41,7 @@ export const HEADERS: Record<Column, string> = {
   country: 'country',
   grapes: 'grapes',
   purchase_price: 'purchase price',
+  purchase_place: 'purchase place',
   notes: 'notes',
   tags: 'tags',
   drink_from: 'drink from',
@@ -72,6 +74,7 @@ const HEADER_ALIASES: Record<Column, string[]> = {
   country: ['country', 'pays', 'land'],
   grapes: ['grapes', 'grape', 'varieties', 'cepages', 'cepage', 'rebsorten', 'rebsorte'],
   purchase_price: ['purchaseprice', 'price', 'unitprice', 'prix', 'prixdachat', 'kaufpreis', 'preis'],
+  purchase_place: ['purchaseplace', 'boughtat', 'shop', 'merchant', 'supplier', 'lieudachat', 'achetechez', 'fournisseur', 'caviste', 'kaufort', 'gekauftbei', 'handler', 'lieferant', 'bezugsquelle'],
   notes: ['notes', 'note', 'comment', 'comments', 'commentaire', 'commentaires', 'notizen', 'bemerkung', 'bemerkungen'],
   tags: ['tags', 'tag', 'etiquettes', 'schlagworte', 'schlagworter'],
   drink_from: ['drinkfrom', 'readyfrom', 'aboireapartirde', 'apartirde', 'trinkreifab', 'trinkenab'],
@@ -133,6 +136,8 @@ export interface ImportRow {
   quantity: number
   /** Purchase price per bottle. */
   price: number | null
+  /** Where the bottles were bought. */
+  place: string
   notes: string
   window: WindowYears
   errors: RowError[]
@@ -288,6 +293,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
       },
       quantity: errors.includes('quantity') ? 0 : quantity,
       price: errors.includes('price') ? null : price,
+      place: get('purchase_place'),
       notes: get('notes'),
       window: errors.includes('window') ? pickWindow(NO_AGING) : window,
       errors,
@@ -472,6 +478,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       cellarId,
       toCellarId: null,
       unitPrice: row.price,
+      place: row.place,
       note: row.notes,
     })
   }

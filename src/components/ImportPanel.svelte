@@ -264,7 +264,7 @@
         {/if}
         {#if row.quantity > 0}
           <div class="muted">{t('io.bottlesTo', { n: row.quantity, cellar: destination(row) })}</div>
-        {:else if row.notes}
+        {:else if row.notes || row.place}
           <div class="muted">{t('io.notesDropped')}</div>
         {/if}
       {/if}

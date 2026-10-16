@@ -136,6 +136,7 @@ export function moveTransfers(
     cellarId,
     toCellarId,
     unitPrice: null,
+    place: '',
     note: '',
   })
   const out = [transfer(moved, from, to)]

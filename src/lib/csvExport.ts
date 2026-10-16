@@ -19,9 +19,8 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
   const rows: (string | number | null)[][] = [COLUMNS.map((c) => HEADERS[c])]
 
   const line = (wine: Wine, cellarId: string | null, quantity: number) => {
-    const notes = movements
-      .filter((m) => m.wineId === wine.id && m.kind === 'add' && m.note && (cellarId === null || m.cellarId === cellarId))
-      .map((m) => m.note)
+    const additions = movements.filter((m) => m.wineId === wine.id && m.kind === 'add' && (cellarId === null || m.cellarId === cellarId))
+    const joined = (texts: string[]) => [...new Set(texts.filter(Boolean))].join(' / ')
     const price = prices.get(wine.id)
     rows.push([
       cellarId === null ? '' : cellarName(cellarId),
@@ -35,7 +34,8 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
       wine.country,
       wine.grapes.join(', '),
       price === undefined ? null : Math.round(price * 100) / 100,
-      [...new Set(notes)].join(' / '),
+      joined(additions.map((m) => m.place)),
+      joined(additions.map((m) => m.note)),
       wine.tags.join(', '),
       wine.drinkFrom,
       wine.peakFrom,
