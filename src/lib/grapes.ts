@@ -41,19 +41,19 @@ export function shareLabel(share: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(share / 100)
 }
 
-const SHARE = String.raw`([-−]?(?:\d+(?:[.,]\d+)?|\.\d+))\s*%`
+const SHARE = String.raw`([-−]?(?:\d+(?:[.,]\d+)?|[.,]\d+))\s*%`
 const SUFFIX = new RegExp(String.raw`^(.*?)\s*\(?\s*${SHARE}\s*\)?$`)
 const PREFIX = new RegExp(String.raw`^\(?\s*${SHARE}\s*\)?\s*(.+)$`)
 
 /**
  * Reads "Merlot 60%, Cabernet Franc 40%", "60 % Merlot; 40 % Cabernet Franc" or a plain
- * list. A comma inside a share ("87,5%") is a decimal mark; an invalid share is dropped
- * and its grape kept. A single grape at 100% gets no share, as effectiveShares implies it.
+ * list. A comma inside or leading a share ("87,5%", ",5%") is a decimal mark, unless it
+ * follows a name ("Merlot,5% Malbec"); an invalid share is dropped and its grape kept. A single grape at 100% gets no share, as effectiveShares implies it.
  */
 export function parseGrapes(raw: string): { grapes: string[]; grapeShares: GrapeShares } {
   const grapes: string[] = []
   const grapeShares: GrapeShares = {}
-  for (const item of raw.split(/[;|]|(?<!\d),|,(?!\d+\s*%)/)) {
+  for (const item of raw.split(/[;|]|(?<=[^\d\s;|(\-−]),|,(?!\d+\s*%)/)) {
     const text = item.trim()
     const suffix = SUFFIX.exec(text)
     const prefix = suffix ? null : PREFIX.exec(text)
