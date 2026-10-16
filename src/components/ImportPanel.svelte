@@ -26,6 +26,8 @@
   let lwinMatches = $state.raw(new Map<number, LwinWine>())
   /** Completed fields by line; `rows` keeps the drafts as read from the file. */
   let review = $state.raw(new Map<number, Suggestion[]>())
+  /** Lines Claude answered, so none is sent twice in one import. */
+  let asked = $state.raw(new Set<number>())
   let generation = 0
 
   function withDrafts(withPending: boolean): ImportRow[] | null {
@@ -57,10 +59,7 @@
     for (const m of plan?.matches ?? []) c[m.kind]++
     return c
   })
-  // A line Claude already completed is not sent again, even after its fields are rejected.
-  const incomplete = $derived(
-    proposed && plan ? incompleteRows(proposed, plan).filter((r) => !review.get(r.line)?.some((s) => s.source === 'claude')) : [],
-  )
+  const incomplete = $derived(proposed && plan ? incompleteRows(proposed, plan).filter((r) => !asked.has(r.line)) : [])
   /** Lines whose completion the user reviews: new wines, and rows with an accepted field to undo. */
   const reviewable = $derived(
     new Set(
@@ -78,6 +77,7 @@
     ignored = []
     lwinMatches = new Map()
     review = new Map()
+    asked = new Set()
     progress = null
     completeError = null
   }
@@ -164,20 +164,23 @@
     progress = { done: 0, total: todo.length }
     for (let i = 0; i < todo.length; i += COMPLETION_BATCH) {
       const batch = todo.slice(i, i + COMPLETION_BATCH)
-      const result = await completeWines(settings, settings.model, batch.map((r) => r.draft))
+      // Only accepted values go to Claude, so a pending suggestion neither leaks nor blocks its answer.
+      const sent = new Map(accepted!.map((r) => [r.line, r.draft]))
+      const result = await completeWines(settings, settings.model, batch.map((r) => sent.get(r.line)!))
       if (gen !== generation) return
       if (!result.ok) {
         completeError = result
         break
       }
-      // Fields proposed or rejected while the batch ran are compared with the current state.
-      const current = new Map(proposed!.map((r) => [r.line, r.draft]))
+      // Fields accepted while the batch ran are compared with the current state.
+      const current = new Map(accepted!.map((r) => [r.line, r.draft]))
       propose(
         batch.map((r, j): [number, Suggestion[]] => {
           const draft = current.get(r.line)!
           return [r.line, suggestions(draft, applyCompletion(draft, result.data[j]), 'claude')]
         }),
       )
+      asked = new Set([...asked, ...batch.map((r) => r.line)])
       progress = { done: i + batch.length, total: todo.length }
     }
     progress = null

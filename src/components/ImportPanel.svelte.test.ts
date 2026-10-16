@@ -227,3 +227,53 @@ it('accepts every pending field at once', async () => {
     { grapes: ['Merlot'], region: 'Bordeaux', country: 'Frankreich' },
   ])
 })
+
+it('keeps the region Claude found behind a pending LWIN one and sends Claude no pending value', async () => {
+  const rioja = { ...lesClos, subRegion: '', region: 'Rioja' }
+  vi.mocked(findLwin).mockImplementation(async (codes) => codes.map(() => rioja))
+  vi.mocked(completeWines).mockImplementation(async (_auth, _model, drafts) => ({
+    ok: true,
+    data: drafts.map(() => ({ grapes: ['Chardonnay'], region: 'Chablis', country: 'France' })),
+  }))
+  vi.mocked(applyImport).mockResolvedValue({ matches: [], wines: [], codes: new Map(), cellars: [], movements: [] })
+  render(ImportPanel)
+  await load('name,producer,vintage,lwin\nLes Clos,Dauvissat,2019,1066553')
+  await fireEvent.click(await screen.findByRole('button', { name: 'Complete with Claude (1)' }))
+  await screen.findByText('Chardonnay')
+
+  const [sent] = vi.mocked(completeWines).mock.calls[0][2]
+  expect([sent.region, sent.country]).toEqual(['', ''])
+  expect(line(2).getByText('Rioja')).toBeTruthy()
+  await fireEvent.click(line(2).getByRole('button', { name: 'Reject Region / appellation' }))
+  expect(line(2).getByText('Chablis')).toBeTruthy()
+  await fireEvent.click(line(2).getByRole('button', { name: 'Accept Region / appellation' }))
+  expect((await imported())[0].region).toBe('Chablis')
+})
+
+it('keeps the editor open on an invalid code', async () => {
+  vi.mocked(matchLwin).mockImplementation(async (drafts) => drafts.map(() => [{ wine: lesClos, score: 1 }]))
+  render(ImportPanel)
+  await load('name,producer,vintage\nLes Clos,Dauvissat,2019')
+  await fireEvent.click(await screen.findByRole('button', { name: 'Edit LWIN code' }))
+  const input = screen.getByRole('textbox', { name: 'LWIN code' })
+  await fireEvent.input(input, { target: { value: '106655' } })
+  await fireEvent.keyDown(input, { key: 'Enter' })
+
+  expect(screen.getByText('An LWIN code has 7 digits.')).toBeTruthy()
+  expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'LWIN code' }).value).toBe('106655')
+  await fireEvent.keyDown(input, { key: 'Escape' })
+  expect(screen.getByText('1066553')).toBeTruthy()
+})
+
+it('sends no line twice after an empty answer', async () => {
+  vi.mocked(completeWines).mockImplementation(async (_auth, _model, drafts) => ({
+    ok: true,
+    data: drafts.map(() => ({ grapes: [], region: null, country: null })),
+  }))
+  render(ImportPanel)
+  await load('name\nPetrus')
+  await fireEvent.click(await screen.findByRole('button', { name: 'Complete with Claude (1)' }))
+
+  await vi.waitFor(() => expect(screen.queryByRole('button', { name: /^Complete with Claude/ })).toBeNull())
+  expect(completeWines).toHaveBeenCalledTimes(1)
+})

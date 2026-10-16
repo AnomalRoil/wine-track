@@ -24,15 +24,26 @@ export function suggestions(draft: WineDraft, completed: WineDraft, source: Sugg
   )
 }
 
-/** Adds `incoming` to `current`; a new suggestion replaces only a rejected one for the same field. */
+/**
+ * Adds `incoming` to `current`. A suggestion replaces only a rejected one from
+ * the same source; one from another source is kept as an alternative for the field.
+ */
 export function merge(current: readonly Suggestion[], incoming: readonly Suggestion[]): Suggestion[] {
   const next = [...current]
   for (const s of incoming) {
-    const i = next.findIndex((c) => c.field === s.field)
+    const i = next.findIndex((c) => c.field === s.field && c.source === s.source)
     if (i < 0) next.push(s)
     else if (next[i].status === 'rejected') next[i] = s
   }
   return next.sort((a, b) => REVIEW_FIELDS.indexOf(a.field) - REVIEW_FIELDS.indexOf(b.field))
+}
+
+/** The suggestion shown for each field: the first one not rejected, else the last rejected one. */
+export function active(list: readonly Suggestion[]): Suggestion[] {
+  return REVIEW_FIELDS.flatMap((f) => {
+    const candidates = list.filter((s) => s.field === f)
+    return candidates.find((s) => s.status !== 'rejected') ?? candidates.slice(-1)
+  })
 }
 
 /**
@@ -40,23 +51,24 @@ export function merge(current: readonly Suggestion[], incoming: readonly Suggest
  * rejected when `withPending`. Returns `draft` itself when nothing applies.
  */
 export function resolve(draft: WineDraft, list: readonly Suggestion[] = [], withPending = false): WineDraft {
-  const applied = list.filter((s) => s.status === 'accepted' || (withPending && s.status === 'pending'))
+  const applied = active(list).filter((s) => s.status === 'accepted' || (withPending && s.status === 'pending'))
   if (applied.length === 0) return draft
   return { ...draft, ...Object.fromEntries(applied.map((s) => [s.field, s.value])) }
 }
 
-/** Sets the status of `field`'s suggestion, or of every suggestion when `field` is null. */
-export function setStatus(list: readonly Suggestion[], field: ReviewField | null, status: SuggestionStatus): Suggestion[] {
-  return list.map((s) => (field === null || s.field === field ? { ...s, status } : s))
+/** Sets the status of `target`, or of every suggestion when `target` is null. */
+export function setStatus(list: readonly Suggestion[], target: Suggestion | null, status: SuggestionStatus): Suggestion[] {
+  return list.map((s) => (target === null || s === target ? { ...s, status } : s))
 }
 
-/** Accepts every pending suggestion. */
+/** Accepts every pending suggestion shown. */
 export function acceptPending(list: readonly Suggestion[]): Suggestion[] {
-  return list.map((s) => (s.status === 'pending' ? { ...s, status: 'accepted' } : s))
+  const shown = active(list)
+  return list.map((s) => (s.status === 'pending' && shown.includes(s) ? { ...s, status: 'accepted' } : s))
 }
 
 export function pendingCount(list: readonly Suggestion[]): number {
-  return list.filter((s) => s.status === 'pending').length
+  return active(list).filter((s) => s.status === 'pending').length
 }
 
 /** A suggestion's value as the user edits it. */
@@ -65,20 +77,20 @@ export function formatValue(s: Suggestion): string {
 }
 
 /**
- * Replaces `field`'s value by what the user typed and accepts it. An empty
- * entry rejects the suggestion; an invalid color or code leaves the list unchanged.
+ * Replaces `target`'s value by what the user typed and accepts it. An empty
+ * entry rejects the suggestion; an invalid color or code returns null.
  */
-export function edit(list: readonly Suggestion[], field: ReviewField, raw: string): Suggestion[] {
+export function edit(list: readonly Suggestion[], target: Suggestion, raw: string): Suggestion[] | null {
   const text = raw.trim()
-  if (text === '') return setStatus(list, field, 'rejected')
+  if (text === '') return setStatus(list, target, 'rejected')
   let value: WineDraft[ReviewField]
-  if (field === 'grapes') value = [...new Set(text.split(/[,;|]/).map((g) => g.trim()).filter(Boolean))]
-  else if (field === 'color') {
-    if (!WINE_COLORS.includes(text as WineColor)) return [...list]
+  if (target.field === 'grapes') value = [...new Set(text.split(/[,;|]/).map((g) => g.trim()).filter(Boolean))]
+  else if (target.field === 'color') {
+    if (!WINE_COLORS.includes(text as WineColor)) return null
     value = text as WineColor
-  } else if (field === 'lwin') {
-    if (!/^\d{7}$/.test(text)) return [...list]
+  } else if (target.field === 'lwin') {
+    if (!/^\d{7}$/.test(text)) return null
     value = text
   } else value = text
-  return list.map((s) => (s.field === field ? ({ ...s, value, status: 'accepted', edited: true } as Suggestion) : s))
+  return list.map((s) => (s === target ? ({ ...s, value, status: 'accepted', edited: true } as Suggestion) : s))
 }
