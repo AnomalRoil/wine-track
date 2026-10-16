@@ -238,6 +238,12 @@ describe('appellation from LWIN', () => {
     })
   }
 
+  it('leaves out a sub-region the draft already holds as its region', () => {
+    const wine = { ...byCode('1066553'), region: 'Burgundy', subRegion: 'Chablis' }
+    expect(completeFromLwin({ ...emptyDraft(), region: 'chablis' }, wine)).toMatchObject({ region: 'chablis', appellation: '' })
+    expect(applyLwin({ ...emptyDraft(), region: 'Chablis' }, { ...wine, region: '' })).toMatchObject({ region: 'Chablis', appellation: '' })
+  })
+
   it('keeps the appellation of the draft when the wine has none', () => {
     expect(applyLwin({ ...emptyDraft(), appellation: 'Vinho do Porto' }, byCode('1100001')).appellation).toBe('Vinho do Porto')
   })

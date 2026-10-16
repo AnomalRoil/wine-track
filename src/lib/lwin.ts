@@ -1,5 +1,6 @@
-import { fold, identity, matchCandidate, matchRow, matchWine } from './csvImport'
+import { fold, matchCandidate, matchRow, matchWine } from './csvImport'
 import type { WineDraft } from './extract'
+import { shownAppellation } from './place'
 import type { Wine, WineColor } from './types'
 
 /**
@@ -258,7 +259,12 @@ export function displayName(wine: Pick<LwinWine, 'producer' | 'label'>): string 
 
 /** The wine's sub-region, or '' when it only repeats the region (Champagne, Champagne). */
 function appellationOf(wine: Pick<LwinWine, 'region' | 'subRegion'>): string {
-  return identity(wine.subRegion) === identity(wine.region) ? '' : wine.subRegion
+  return shownAppellation({ appellation: wine.subRegion, region: wine.region })
+}
+
+/** `draft` with the region and appellation taken in turn, dropping an appellation that repeats the region. */
+function withPlace(draft: WineDraft, region: string, appellation: string): WineDraft {
+  return { ...draft, region, appellation: shownAppellation({ appellation, region }) ? appellation : draft.appellation }
 }
 
 /** Draft fields applyLwin(draft, wine) takes from `wine`, which a label read then keeps. */
@@ -282,11 +288,9 @@ export function applyLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   const color = lwinColor(wine)
   const keep = color === 'other' || (draft.color !== 'other' && sameColor(draft.color, color))
   return {
-    ...draft,
+    ...withPlace(draft, wine.region || draft.region, appellationOf(wine) || draft.appellation),
     name: wine.label || draft.name,
     producer: wine.producer || draft.producer,
-    region: wine.region || draft.region,
-    appellation: appellationOf(wine) || draft.appellation,
     country: wine.country || draft.country,
     color: keep ? draft.color : color,
     lwin: wine.lwin,
@@ -296,9 +300,7 @@ export function applyLwin(draft: WineDraft, wine: LwinWine): WineDraft {
 /** Fills the region, appellation, country, colour and code a file left empty. */
 export function completeFromLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   return {
-    ...draft,
-    region: draft.region || wine.region,
-    appellation: draft.appellation || appellationOf(wine),
+    ...withPlace(draft, draft.region || wine.region, draft.appellation || appellationOf(wine)),
     country: draft.country || wine.country,
     color: draft.color === 'other' ? lwinColor(wine) : draft.color,
     lwin: draft.lwin ?? wine.lwin,
