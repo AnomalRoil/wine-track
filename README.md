@@ -19,7 +19,7 @@ Live at [cave-man.wouaib.ch](https://cave-man.wouaib.ch/).
 - Overview: bottle, wine and cellar totals, invested and estimated value, composition by type, country, region, grape, vintage, size and cellar, bottles added, drunk and gifted per month and year, cellar value over time, top gains, most drunk regions, rating distribution, and ready / at peak / in decline shortcuts.
 - Optional "Hide prices" setting that masks every amount.
 - Tags and a wishlist, usable as filters; sort by value or purchase price.
-- Drinking window per wine (ready, peak, decline) with a phase badge, a timeline, and a phase filter and "drink first" sort; serving temperature in °C or °F, decanting time and a taste profile, all fillable by an online lookup.
+- Drinking window per wine (ready, peak, decline) with a phase badge, a timeline, and a phase filter and "drink first" sort; serving temperature in °C or °F, decanting time and a taste profile, all fillable by an online lookup that prefers the producer's own window, then merchants' and critics', and links to its source; windows you edit show as set by you.
 - Drink-before dates and "taste again in N years" reminders, with a due view that also lists wines reaching peak or decline this year, and `.ics` calendar export.
 - English, French and German UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.

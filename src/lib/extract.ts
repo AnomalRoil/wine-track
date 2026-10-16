@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
+import { cleanAging } from './aging'
 import type { Completion } from './csvImport'
 import type { Model } from './settings.svelte'
-import { STANDARD_SIZE_CL, type WineColor } from './types'
+import { STANDARD_SIZE_CL, type Aging, type WineColor } from './types'
 
 const WineExtraction = z.object({
   name: z.string().nullable(),
@@ -35,9 +36,17 @@ const AgingLookup = z.object({
   servingMaxC: z.number().nullable(),
   decantMinutes: z.number().int().nullable(),
   profile: z.object({ body: axis, tannin: axis, sweetness: axis, acidity: axis, fizz: axis }).nullable(),
-  confidence: z.enum(['this-wine', 'similar', 'unknown']),
+  source: z.enum(['producer', 'merchant', 'critic', 'typical', 'none']),
+  sourceUrl: z.string().nullable(),
 })
 export type AgingLookup = z.infer<typeof AgingLookup>
+
+/** The advice a lookup found, cleaned and carrying its source; null when it found nothing reliable. */
+export function foundAging(lookup: AgingLookup): Aging | null {
+  const { source, sourceUrl, ...advice } = lookup
+  if (source === 'none') return null
+  return cleanAging({ ...advice, windowSource: { kind: source, url: sourceUrl } })
+}
 
 export type FailureKind =
   | 'no-key'
@@ -221,22 +230,33 @@ export function canLookupGrapes(draft: WineDraft): boolean {
   return Boolean(draft.name.trim() || draft.producer.trim() || draft.region.trim())
 }
 
+interface SearchOptions {
+  maxUses: number
+  effort: 'low' | 'medium' | 'high'
+  maxTokens: number
+  timeoutMs: number
+}
+
+// Low effort keeps a lookup fast when the answer needs a search, not deep reasoning.
+const QUICK_SEARCH: SearchOptions = { maxUses: 2, effort: 'low', maxTokens: 4000, timeoutMs: 120_000 }
+
 async function searchAndParse<S extends z.ZodType>(
   auth: Auth,
   model: Model,
   prompt: string,
   schema: S,
+  options = QUICK_SEARCH,
 ): Promise<Result<z.infer<S>>> {
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
   try {
-    const response = await client(auth, 120_000).messages.parse({
+    const response = await client(auth, options.timeoutMs).messages.parse({
       model,
-      max_tokens: 4000,
+      max_tokens: options.maxTokens,
       messages: [{ role: 'user', content: prompt }],
-      tools: [webSearchTool(model)],
-      // Low effort keeps the lookup fast; the answer needs a search, not deep reasoning.
-      output_config: { effort: 'low', format: zodOutputFormat(schema) },
+      tools: [webSearchTool(model, options.maxUses)],
+      // Haiku 4.5 rejects the effort setting.
+      output_config: { ...(model === 'claude-haiku-4-5' ? {} : { effort: options.effort }), format: zodOutputFormat(schema) },
     })
     if (response.stop_reason === 'refusal') {
       return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
@@ -262,25 +282,35 @@ for the appellation, "unknown" when you found nothing reliable (with an empty li
   )
 }
 
-export function lookupAging(auth: Auth, model: Model, draft: WineDraft): Promise<Result<AgingLookup>> {
-  return searchAndParse(
-    auth,
-    model,
-    `Give the drinking window and serving advice for this wine.
+/** The drinking-window question for `draft`, preferring windows published for this exact wine and vintage. */
+export function agingPrompt(draft: WineDraft): string {
+  return `Give the drinking window and serving advice for this exact wine and vintage.
 <wine>${wineQuery(draft)} (${draft.color})</wine>
 ${DATA_ONLY}
-Search the web for this exact wine and vintage (producer notes, critics, merchants).
+Search the web for the drinking window, and take it from the first of these sources that gives one:
+1. "producer": the producer's own window for this wine and vintage (technical sheet, website, newsletter).
+2. "merchant": a wine merchant's published window for this wine and vintage.
+3. "critic": a critic's or wine guide's published window for this wine and vintage.
+4. "typical": the typical window for this appellation and vintage, when no window is published for this wine.
+Use a published window as given; do not shorten or adjust it. Typical windows for age-worthy wines
+(classed growths, grand crus, top Northern Rhône, Barolo, vintage port, fine sweet wines…) are often
+longer than a quick estimate suggests: allow for the full ageing potential of the appellation and vintage.
 - drinkFrom: first year it is pleasant to drink; peakFrom/peakUntil: years of its best;
   drinkUntil: last year before it fades. Calendar years; null when unknown.
 - servingMinC/servingMaxC: serving temperature range in °C.
 - decantMinutes: recommended decanting time; 0 when it should not be decanted.
 - profile: each axis from 0 to 10: body (light→bold), tannin (smooth→tannic),
   sweetness (dry→sweet), acidity (soft→acidic), fizz (still→fizzy, 0 unless sparkling).
-- confidence: "this-wine" only when sources cover this wine and vintage, "similar" when
-  estimated from the appellation, producer or other vintages, "unknown" when you found
-  nothing reliable (then use null for everything you could not estimate).`,
-    AgingLookup,
-  )
+- source: the kind of source the window comes from, as listed above; "none" when you found
+  nothing reliable (then use null for everything you could not establish).
+- sourceUrl: the address of the page that states the window; null when no page states it.`
+}
+
+// A window worth trusting takes several searches and some judgment between sources.
+const AGING_SEARCH: SearchOptions = { maxUses: 5, effort: 'high', maxTokens: 16_000, timeoutMs: 300_000 }
+
+export function lookupAging(auth: Auth, model: Model, draft: WineDraft): Promise<Result<AgingLookup>> {
+  return searchAndParse(auth, model, agingPrompt(draft), AgingLookup, AGING_SEARCH)
 }
 
 const WineCompletions = z.object({
