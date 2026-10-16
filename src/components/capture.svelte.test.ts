@@ -140,7 +140,7 @@ it('A grape lookup answering after the label read changed the wine is dropped', 
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
   answer({ ok: true, data: label })
   await waitFor(() => expect(name().value).toBe('Chablis'))
-  found({ ok: true, data: { grapes: ['Merlot'], confidence: 'printed-source' } })
+  found({ ok: true, data: { grapes: [{ name: 'Merlot', percent: null }], confidence: 'printed-source', sourceUrl: null } })
   await new Promise((resolve) => setTimeout(resolve))
 
   expect((screen.getByRole('button', { name: 'Look up grapes online' }) as HTMLButtonElement).disabled).toBe(false)
@@ -165,7 +165,7 @@ it('A grape lookup answering during the label read is dropped', async () => {
   await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))
 
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
-  found({ ok: true, data: { grapes: ['Merlot'], confidence: 'printed-source' } })
+  found({ ok: true, data: { grapes: [{ name: 'Merlot', percent: null }], confidence: 'printed-source', sourceUrl: null } })
   await new Promise((resolve) => setTimeout(resolve))
   expect(screen.queryByRole('button', { name: 'Remove Merlot' })).toBeNull()
 

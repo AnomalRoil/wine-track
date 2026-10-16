@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import type { Completion } from './csvImport'
-import type { GrapeShares } from './grapes'
+import { isShare, type GrapeShares } from './grapes'
 import type { Model } from './settings.svelte'
 import { STANDARD_SIZE_CL, type WineColor } from './types'
 
@@ -19,8 +19,9 @@ const WineExtraction = z.object({
 export type WineExtraction = z.infer<typeof WineExtraction>
 
 const GrapeLookup = z.object({
-  grapes: z.array(z.string()),
+  grapes: z.array(z.object({ name: z.string(), percent: z.number().nullable() })),
   confidence: z.enum(['printed-source', 'typical-blend', 'unknown']),
+  sourceUrl: z.string().nullable(),
 })
 export type GrapeLookup = z.infer<typeof GrapeLookup>
 
@@ -252,18 +253,54 @@ async function searchAndParse<S extends z.ZodType>(
   }
 }
 
-export function lookupGrapes(auth: Auth, model: Model, draft: WineDraft): Promise<Result<GrapeLookup>> {
-  return searchAndParse(
-    auth,
-    model,
-    `What grape varieties (encépagement) is this wine made from?
+export function grapePrompt(draft: WineDraft): string {
+  return `What grape varieties (encépagement) is this wine made from, and in what proportions?
 <wine>${wineQuery(draft)}</wine>
 ${DATA_ONLY}
-Search the web for this specific wine. Report confidence "printed-source" only when a
-source states this wine's varieties, "typical-blend" when inferred from what is typical
-for the appellation, "unknown" when you found nothing reliable (with an empty list).`,
-    GrapeLookup,
-  )
+Search the web for this exact wine and vintage: the producer's technical sheet first, then
+merchants and critics. Blends often change from one vintage to the next.
+- grapes: each variety with its percent of the blend as the source states it for this wine
+  (and vintage, when the source gives one); percent null when no source states it. Never
+  estimate a percentage.
+- sourceUrl: the page that states the varieties, or null.
+- confidence: "printed-source" only when a source states this wine's varieties,
+  "typical-blend" when inferred from what is typical for the appellation (then every
+  percent is null), "unknown" when you found nothing reliable (with an empty list).`
+}
+
+/** What a grape lookup fills in the form; shares only when the source states them. */
+export interface GrapesFound {
+  grapes: string[]
+  grapeShares: GrapeShares
+  /** An http(s) link to the source, or null. */
+  sourceUrl: string | null
+}
+
+/** A link a page may open: http or https only. */
+export function webUrl(raw: string | null): string | null {
+  if (!raw) return null
+  try {
+    const url = new URL(raw.trim())
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null
+  } catch {
+    return null
+  }
+}
+
+export function readGrapeLookup(data: GrapeLookup): GrapesFound {
+  const grapes: string[] = []
+  const grapeShares: GrapeShares = {}
+  for (const { name, percent } of data.grapes) {
+    const grape = name.trim()
+    if (!grape || grapes.includes(grape)) continue
+    grapes.push(grape)
+    if (data.confidence === 'printed-source' && percent !== null && isShare(percent)) grapeShares[grape] = Math.round(percent * 10) / 10
+  }
+  return { grapes, grapeShares, sourceUrl: webUrl(data.sourceUrl) }
+}
+
+export function lookupGrapes(auth: Auth, model: Model, draft: WineDraft): Promise<Result<GrapeLookup>> {
+  return searchAndParse(auth, model, grapePrompt(draft), GrapeLookup)
 }
 
 export function lookupAging(auth: Auth, model: Model, draft: WineDraft): Promise<Result<AgingLookup>> {
