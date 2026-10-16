@@ -48,12 +48,14 @@ const PREFIX = new RegExp(String.raw`^\(?\s*${SHARE}\s*\)?\s*(.+)$`)
 /**
  * Reads "Merlot 60%, Cabernet Franc 40%", "60 % Merlot; 40 % Cabernet Franc" or a plain
  * list. A comma inside or leading a share ("87,5%", ",5%") is a decimal mark, unless it
- * follows a name ("Merlot,5% Malbec"); an invalid share is dropped and its grape kept. A single grape at 100% gets no share, as effectiveShares implies it.
+ * follows a name ("Merlot,5% Malbec") or follows a space with a name after the share
+ * ("Merlot ,40% Malbec"). An invalid share is dropped and its grape kept. A single grape
+ * at 100% gets no share, as effectiveShares implies it.
  */
 export function parseGrapes(raw: string): { grapes: string[]; grapeShares: GrapeShares } {
   const grapes: string[] = []
   const grapeShares: GrapeShares = {}
-  for (const item of raw.split(/[;|]|(?<=[^\d\s;|(\-−]),|,(?!\d+\s*%)/)) {
+  for (const item of raw.split(/[;|]|(?<=[^\d\s;|(\-−]),|,(?!\d+\s*%)|(?<=\s),(?=\d+(?:[.,]\d+)?\s*%\s*[^\s,;|)%])/)) {
     const text = item.trim()
     const suffix = SUFFIX.exec(text)
     const prefix = suffix ? null : PREFIX.exec(text)

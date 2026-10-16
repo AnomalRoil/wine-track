@@ -84,6 +84,8 @@ describe('parseGrapes', () => {
     { name: 'a share starting with a decimal comma before the name', raw: ',5% Merlot; 99,5% Cabernet Franc', grapes: blend, shares: { Merlot: 0.5, 'Cabernet Franc': 99.5 } },
     { name: 'a share starting with a decimal comma after the name', raw: 'Merlot ,5%, Cabernet Franc (,5 %)', grapes: blend, shares: { Merlot: 0.5, 'Cabernet Franc': 0.5 } },
     { name: 'a negative share starting with a decimal comma', raw: 'Merlot -,5%; −,5% Malbec', grapes: ['Merlot', 'Malbec'], shares: {} },
+    { name: 'a spaced comma before a share and a name separates grapes', raw: '60% Merlot ,40% Cabernet Franc', grapes: blend, shares: { Merlot: 60, 'Cabernet Franc': 40 } },
+    { name: 'decimal commas in shares before the name', raw: '87,5% Merlot, 12,5% Cabernet Franc', grapes: blend, shares: { Merlot: 87.5, 'Cabernet Franc': 12.5 } },
     { name: 'a comma right after a name separates grapes', raw: 'Merlot,5% Malbec', grapes: ['Merlot', 'Malbec'], shares: { Malbec: 5 } },
     { name: 'a share that rounds to 0 is dropped', raw: 'Merlot 0.04%', grapes: ['Merlot'], shares: {} },
     { name: 'repeats are dropped', raw: 'Merlot 60%, Merlot 40%', grapes: ['Merlot'], shares: { Merlot: 60 } },
