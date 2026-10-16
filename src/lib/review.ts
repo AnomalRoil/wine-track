@@ -62,9 +62,10 @@ export function resolve(draft: WineDraft, list: readonly Suggestion[] = [], with
   return next
 }
 
-/** Sets the status of `target`, or of every suggestion when `target` is null. */
+/** Sets the status of `target`, or of every suggestion shown when `target` is null; hidden alternatives keep theirs. */
 export function setStatus(list: readonly Suggestion[], target: Suggestion | null, status: SuggestionStatus): Suggestion[] {
-  return list.map((s) => (target === null || s === target ? { ...s, status } : s))
+  const targets = target === null ? active(list) : [target]
+  return list.map((s) => (targets.includes(s) ? { ...s, status } : s))
 }
 
 /** Accepts every pending suggestion shown. */

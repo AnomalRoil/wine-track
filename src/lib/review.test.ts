@@ -71,6 +71,11 @@ describe('status changes', () => {
   const list = [grapes, country]
   it('sets one suggestion', () => expect(setStatus(list, country, 'rejected').map((s) => s.status)).toEqual(['pending', 'rejected']))
   it('sets every field', () => expect(setStatus(list, null, 'accepted').map((s) => s.status)).toEqual(['accepted', 'accepted']))
+  it('rejects a line without its hidden alternatives', () => {
+    const rejected = setStatus([country, pending({ field: 'country', value: 'Suisse' })], null, 'rejected')
+    expect(rejected.map((s) => s.status)).toEqual(['rejected', 'pending'])
+    expect(active(rejected)).toEqual([pending({ field: 'country', value: 'Suisse' })])
+  })
   it('accepts pending only', () =>
     expect(acceptPending([grapes, { ...country, status: 'rejected' }]).map((s) => s.status)).toEqual(['accepted', 'rejected']))
   it('counts pending', () => expect(pendingCount([grapes, { ...country, status: 'accepted' }])).toBe(1))
