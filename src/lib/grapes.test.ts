@@ -72,6 +72,10 @@ describe('parseGrapes', () => {
     { name: 'an invalid share keeps the grape', raw: 'Merlot 150%, Cabernet Franc 0%', grapes: blend, shares: {} },
     { name: 'a number without % is part of the name', raw: 'Cépage 2', grapes: ['Cépage 2'], shares: {} },
     { name: 'a share alone is skipped', raw: '60%, Merlot', grapes: ['Merlot'], shares: {} },
+    { name: 'shares before the name, no space after commas', raw: '60% Merlot,40% Cabernet Franc', grapes: blend, shares: { Merlot: 60, 'Cabernet Franc': 40 } },
+    { name: 'mixed forms, no space after the comma', raw: 'Merlot 60%,40% Cabernet Franc', grapes: blend, shares: { Merlot: 60, 'Cabernet Franc': 40 } },
+    { name: 'a single grape at 100% has no share', raw: 'Chardonnay 100%', grapes: ['Chardonnay'], shares: {} },
+    { name: 'a single grape below 100% keeps its share', raw: 'Syrah 95%', grapes: ['Syrah'], shares: { Syrah: 95 } },
     { name: 'repeats are dropped', raw: 'Merlot 60%, Merlot 40%', grapes: ['Merlot'], shares: { Merlot: 60 } },
   ]
   for (const c of cases) {
@@ -81,5 +85,6 @@ describe('parseGrapes', () => {
   it('reads what formatGrapes writes', () => {
     const shares = { Merlot: 62.5, 'Cabernet Franc': 37.5 }
     expect(parseGrapes(formatGrapes(blend, shares))).toEqual({ grapes: blend, grapeShares: shares })
+    expect(parseGrapes(formatGrapes(['Chardonnay'], {}))).toEqual({ grapes: ['Chardonnay'], grapeShares: {} })
   })
 })

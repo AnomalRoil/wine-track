@@ -44,7 +44,10 @@
 
   let lookingUp = $state(false)
   let lookupNote = $state<string | null>(null)
-  let lookupSource = $state<string | null>(null)
+  // The source only vouches for the blend it returned; hide it once that blend is edited.
+  let lookupSource = $state<{ url: string; blend: string } | null>(null)
+  const blend = $derived(JSON.stringify(draft.grapes.map((g) => [g, draft.grapeShares[g]])))
+  const sourceUrl = $derived(lookupSource?.blend === blend ? lookupSource.url : null)
   const total = $derived(sharesTotal(draft.grapes, draft.grapeShares))
   let grapeInput: ChipInput
   let suggestions = $state.raw<Scored[]>([])
@@ -119,7 +122,7 @@
     draft.grapes = found.grapes
     draft.grapeShares = found.grapeShares
     touch('grapes', 'grapeShares')
-    lookupSource = found.sourceUrl
+    lookupSource = found.sourceUrl ? { url: found.sourceUrl, blend } : null
     if (result.data.confidence === 'typical-blend') lookupNote = t('form.lookupTypical')
   }
 
@@ -209,11 +212,11 @@
   {#if total !== null && total !== 100}
     <p class="warn">{t('form.sharesTotal', { total: total.toLocaleString(settings.locale) })}</p>
   {/if}
-  {#if lookupNote || lookupSource}
+  {#if lookupNote || sourceUrl}
     <p class="muted">
       {lookupNote ?? ''}
-      {#if lookupSource}
-        <a href={lookupSource} target="_blank" rel="noopener noreferrer">{t('form.lookupSource', { site: new URL(lookupSource).hostname })}</a>
+      {#if sourceUrl}
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{t('form.lookupSource', { site: new URL(sourceUrl).hostname })}</a>
       {/if}
     </p>
   {/if}
