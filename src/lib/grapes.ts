@@ -1,17 +1,18 @@
 /** Percentage of the blend per grape, keyed by the name as listed in `grapes`; absent when unknown. */
 export type GrapeShares = Record<string, number>
 
-/** True for a percentage a grape can take: above 0, at most 100. */
-export function isShare(n: number): boolean {
-  return Number.isFinite(n) && n > 0 && n <= 100
+/** The percentage rounded to one decimal, or null unless it is above 0 and at most 100. */
+export function toShare(n: number): number | null {
+  const rounded = Math.round(n * 10) / 10
+  return Number.isFinite(rounded) && rounded > 0 && rounded <= 100 ? rounded : null
 }
 
 /** The shares of grapes still listed, rounded to one decimal; invalid ones are dropped. */
 export function cleanShares(grapes: readonly string[], shares: GrapeShares): GrapeShares {
   const out: GrapeShares = {}
   for (const grape of grapes) {
-    const share = shares[grape]
-    if (Object.hasOwn(shares, grape) && isShare(share)) out[grape] = Math.round(share * 10) / 10
+    const share = Object.hasOwn(shares, grape) ? toShare(shares[grape]) : null
+    if (share !== null) out[grape] = share
   }
   return out
 }
@@ -40,7 +41,7 @@ export function shareLabel(share: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(share / 100)
 }
 
-const SHARE = String.raw`(\d+(?:[.,]\d+)?)\s*%`
+const SHARE = String.raw`([-−]?\d+(?:[.,]\d+)?)\s*%`
 const SUFFIX = new RegExp(String.raw`^(.*?)\s*\(?\s*${SHARE}\s*\)?$`)
 const PREFIX = new RegExp(String.raw`^\(?\s*${SHARE}\s*\)?\s*(.+)$`)
 
@@ -56,11 +57,11 @@ export function parseGrapes(raw: string): { grapes: string[]; grapeShares: Grape
     const text = item.trim()
     const suffix = SUFFIX.exec(text)
     const prefix = suffix ? null : PREFIX.exec(text)
-    const name = (suffix ? suffix[1] : prefix ? prefix[2] : text).trim()
+    const name = (suffix ? suffix[1].replace(/[\s:–—-]+$/, '') : prefix ? prefix[2] : text).trim()
     if (!name || grapes.includes(name)) continue
     grapes.push(name)
-    const share = Number((suffix?.[2] ?? prefix?.[1] ?? '').replace(',', '.'))
-    if ((suffix || prefix) && isShare(share)) grapeShares[name] = Math.round(share * 10) / 10
+    const share = suffix || prefix ? toShare(Number((suffix?.[2] ?? prefix![1]).replace(',', '.').replace('−', '-'))) : null
+    if (share !== null) grapeShares[name] = share
   }
   if (grapes.length === 1 && grapeShares[grapes[0]] === 100) return { grapes, grapeShares: {} }
   return { grapes, grapeShares }

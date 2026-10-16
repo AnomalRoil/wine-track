@@ -9,6 +9,7 @@ describe('cleanShares', () => {
     { name: 'drops a grape no longer listed', grapes: ['Merlot'], shares: { Merlot: 60, Syrah: 40 }, want: { Merlot: 60 } },
     { name: 'drops zero, negative and above 100', grapes: ['A', 'B', 'C'], shares: { A: 0, B: -5, C: 101 }, want: {} },
     { name: 'drops NaN', grapes: ['A'], shares: { A: NaN }, want: {} },
+    { name: 'drops a share that rounds to 0', grapes: ['A', 'B'], shares: { A: 0.04, B: 0.05 }, want: { B: 0.1 } },
     { name: 'rounds to one decimal', grapes: ['A'], shares: { A: 12.345 }, want: { A: 12.3 } },
     { name: 'ignores inherited keys', grapes: ['constructor'], shares: {}, want: {} },
   ]
@@ -76,11 +77,19 @@ describe('parseGrapes', () => {
     { name: 'mixed forms, no space after the comma', raw: 'Merlot 60%,40% Cabernet Franc', grapes: blend, shares: { Merlot: 60, 'Cabernet Franc': 40 } },
     { name: 'a single grape at 100% has no share', raw: 'Chardonnay 100%', grapes: ['Chardonnay'], shares: {} },
     { name: 'a single grape below 100% keeps its share', raw: 'Syrah 95%', grapes: ['Syrah'], shares: { Syrah: 95 } },
+    { name: 'separator before the share', raw: 'Merlot - 60%, Cabernet Franc: 40%', grapes: blend, shares: { Merlot: 60, 'Cabernet Franc': 40 } },
+    { name: 'a negative share keeps the grape', raw: 'Merlot -5%, −10% Cabernet Franc', grapes: blend, shares: {} },
+    { name: 'a share that rounds to 0 is dropped', raw: 'Merlot 0.04%', grapes: ['Merlot'], shares: {} },
     { name: 'repeats are dropped', raw: 'Merlot 60%, Merlot 40%', grapes: ['Merlot'], shares: { Merlot: 60 } },
   ]
   for (const c of cases) {
     it(c.name, () => expect(parseGrapes(c.raw)).toEqual({ grapes: c.grapes, grapeShares: c.shares }))
   }
+
+  it('cleans idempotently', () => {
+    const once = cleanShares(['A', 'B'], { A: 0.04, B: 12.345 })
+    expect(cleanShares(['A', 'B'], once)).toEqual(once)
+  })
 
   it('reads what formatGrapes writes', () => {
     const shares = { Merlot: 62.5, 'Cabernet Franc': 37.5 }

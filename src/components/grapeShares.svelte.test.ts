@@ -67,6 +67,19 @@ it('fills the shares a source states and links to it', async () => {
   expect(link.rel).toContain('noopener')
 })
 
+it('keeps a share typed while the lookup runs', async () => {
+  let answer!: (value: Awaited<ReturnType<typeof lookupGrapes>>) => void
+  vi.mocked(lookupGrapes).mockReturnValue(new Promise((resolve) => (answer = resolve)))
+  form(['Merlot', 'Malbec'])
+  await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))
+  await fireEvent.input(share('Merlot'), { target: { value: '70' } })
+
+  answer({ ok: true, data: { grapes: [{ name: 'Syrah', percent: 100 }], confidence: 'printed-source', sourceUrl: null } })
+  await new Promise((resolve) => setTimeout(resolve))
+  expect(share('Merlot').value).toBe('70')
+  expect(screen.queryByLabelText('Percentage of Syrah')).toBeNull()
+})
+
 it('hides the source once the blend is edited', async () => {
   vi.mocked(lookupGrapes).mockResolvedValue({
     ok: true,

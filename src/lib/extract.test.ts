@@ -190,8 +190,8 @@ describe('readGrapeLookup', () => {
     },
     {
       name: 'drops missing and out-of-range shares',
-      data: { grapes: [{ name: 'Merlot', percent: null }, { name: 'Malbec', percent: 120 }, { name: '', percent: 5 }], confidence: 'printed-source', sourceUrl: null },
-      want: { grapes: ['Merlot', 'Malbec'], grapeShares: {}, sourceUrl: null },
+      data: { grapes: [{ name: 'Merlot', percent: null }, { name: 'Malbec', percent: 120 }, { name: 'Syrah', percent: 0.04 }, { name: '', percent: 5 }], confidence: 'printed-source', sourceUrl: null },
+      want: { grapes: ['Merlot', 'Malbec', 'Syrah'], grapeShares: {}, sourceUrl: null },
     },
     {
       name: 'drops a link that is not http',

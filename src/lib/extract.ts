@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import type { Completion } from './csvImport'
-import { isShare, type GrapeShares } from './grapes'
+import { toShare, type GrapeShares } from './grapes'
 import type { Model } from './settings.svelte'
 import { STANDARD_SIZE_CL, type WineColor } from './types'
 
@@ -294,7 +294,8 @@ export function readGrapeLookup(data: GrapeLookup): GrapesFound {
     const grape = name.trim()
     if (!grape || grapes.includes(grape)) continue
     grapes.push(grape)
-    if (data.confidence === 'printed-source' && percent !== null && isShare(percent)) grapeShares[grape] = Math.round(percent * 10) / 10
+    const share = data.confidence === 'printed-source' && percent !== null ? toShare(percent) : null
+    if (share !== null) grapeShares[grape] = share
   }
   return { grapes, grapeShares, sourceUrl: webUrl(data.sourceUrl) }
 }

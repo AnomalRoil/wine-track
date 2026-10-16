@@ -92,7 +92,7 @@
   // A pending lookup is dropped when the wine it asks about or its grapes change meanwhile,
   // or when another request starts filling the draft.
   let lookups = 0
-  const asked = $derived(`${lookupKey(draft)}\n${draft.grapes.join('\n')}`)
+  const asked = $derived(`${lookupKey(draft)}\n${blend}`)
   $effect(() => {
     void asked
     void busy
