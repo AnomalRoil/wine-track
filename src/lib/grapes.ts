@@ -41,7 +41,7 @@ export function shareLabel(share: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(share / 100)
 }
 
-const SHARE = String.raw`([-−]?\d+(?:[.,]\d+)?)\s*%`
+const SHARE = String.raw`([-−]?(?:\d+(?:[.,]\d+)?|\.\d+))\s*%`
 const SUFFIX = new RegExp(String.raw`^(.*?)\s*\(?\s*${SHARE}\s*\)?$`)
 const PREFIX = new RegExp(String.raw`^\(?\s*${SHARE}\s*\)?\s*(.+)$`)
 
