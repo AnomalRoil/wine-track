@@ -6,7 +6,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import { thisYear } from '../lib/due'
-  import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive } from '../lib/filters'
+  import { distinctGrapes, distinctTags, emptyFilter, filterWines, isFilterActive, regionTree } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, placementLabel, rackName, slotLabel, wineLabel } from '../lib/labels'
   import { pushEntry, skipStale } from '../lib/navigation'
@@ -243,7 +243,7 @@
         {t('rack.showing', { name: wineLabel(wines.get(focusWineId)!) })}<Icon name="close" size={18} />
       </button>
     {:else}
-      <FilterBar bind:filter grapes={distinctGrapes(store.wines)} tags={distinctTags(store.wines)} />
+      <FilterBar bind:filter grapes={distinctGrapes(store.wines)} regions={regionTree(store.wines)} tags={distinctTags(store.wines)} />
     {/if}
     {#if highlight}<p class="muted status">{t('rack.matches', { n: matches })}</p>{/if}
   {/if}

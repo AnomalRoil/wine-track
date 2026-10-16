@@ -1,6 +1,6 @@
 <script lang="ts">
   import { PHASES, type Phase } from '../lib/aging'
-  import { emptyFilter, isFilterActive, SORT_KEYS, type SortKey, type WineFilter } from '../lib/filters'
+  import { emptyFilter, isFilterActive, SORT_KEYS, type RegionEntry, type SortKey, type WineFilter } from '../lib/filters'
   import { t } from '../lib/i18n.svelte'
   import { cellarName } from '../lib/labels'
   import { sortedCellars } from '../lib/store.svelte'
@@ -11,8 +11,9 @@
     filter = $bindable(),
     sort = $bindable(),
     grapes,
+    regions,
     tags,
-  }: { filter: WineFilter; sort?: SortKey; grapes: string[]; tags: string[] } = $props()
+  }: { filter: WineFilter; sort?: SortKey; grapes: string[]; regions: RegionEntry[]; tags: string[] } = $props()
 
   let expanded = $state(false)
 
@@ -103,6 +104,18 @@
         <option value={grape}>{grape}</option>
       {/each}
     </select>
+    {#if regions.length > 0}
+      <label for="region">{t('list.region')}</label>
+      <select id="region" bind:value={filter.region}>
+        <option value={null}>{t('list.anyRegion')}</option>
+        {#each regions as region (region.name)}
+          <option value={region.name}>{region.name}</option>
+          {#each region.appellations as appellation (appellation)}
+            <option value={appellation}>{'\u2003' + appellation}</option>
+          {/each}
+        {/each}
+      </select>
+    {/if}
     {#if sortedCellars().length > 1}
       <label for="cellar">{t('list.cellar')}</label>
       <select id="cellar" bind:value={filter.cellarId}>

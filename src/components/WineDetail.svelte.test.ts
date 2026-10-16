@@ -118,3 +118,21 @@ it('keeps the code an import gave the wine while its editor was open', async () 
   await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
   expect(store.wines[0]).toMatchObject({ name: 'Renamed', lwin: '1066553' })
 })
+
+it('shows the appellation before the region and saves an edited one', async () => {
+  store.wines = [makeWine({ vintage: 2016, appellation: 'Pauillac', region: 'Bordeaux', country: 'France' })]
+  render(WineDetail, { wineId: 'w1', onclose: () => {} })
+  expect(document.querySelector('.where')?.textContent).toBe('2016 · Pauillac · Bordeaux, France')
+  await fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
+  await fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+  const appellation = screen.getByLabelText<HTMLInputElement>('Appellation')
+  expect(appellation.value).toBe('Pauillac')
+  await fireEvent.input(appellation, { target: { value: 'Saint-Julien' } })
+
+  await fireEvent.click(button('Save'))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(store.wines[0].appellation).toBe('Saint-Julien'))
+  expect(store.wines[0].region).toBe('Bordeaux')
+})
