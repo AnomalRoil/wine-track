@@ -1,6 +1,7 @@
 import { MAX_YEAR, MIN_YEAR, NO_AGING, WINDOW_KEYS } from './aging'
 import { parseCsv } from './csv'
 import type { WineDraft } from './extract'
+import { parseGrapes } from './grapes'
 import * as core from './messages/core'
 import { BOTTLE_SIZES, STANDARD_SIZE_CL, WINE_COLORS, type Aging, type Cellar, type Movement, type Wine, type WineColor } from './types'
 
@@ -278,7 +279,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
         name,
         producer,
         vintage: vintage ?? null,
-        grapes: parseList(get('grapes')),
+        ...parseGrapes(get('grapes')),
         region: get('region'),
         country: get('country'),
         color: color ?? 'other',

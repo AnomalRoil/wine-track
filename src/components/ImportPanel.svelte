@@ -6,6 +6,7 @@
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
+  import { formatGrapes } from '../lib/grapes'
   import { cellarName } from '../lib/labels'
   import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
   import { findLwin, matchLwin } from '../lib/lwinData.svelte'
@@ -248,7 +249,7 @@
         </ul>
       {:else}
         <div class="muted">
-          {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
+          {[row.draft.region, row.draft.country, formatGrapes(row.draft.grapes, row.draft.grapeShares)].filter(Boolean).join(' · ')}
           {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
         </div>
         {#if lwinMatches.has(row.line) && (match.kind === 'new' || unfilled.has(row.line))}

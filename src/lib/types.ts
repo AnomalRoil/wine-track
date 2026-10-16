@@ -1,3 +1,4 @@
+import type { GrapeShares } from './grapes'
 import type { SCALES, Shade } from './tasting'
 
 export type WineColor =
@@ -83,6 +84,8 @@ export interface Wine extends Aging {
   /** Millésime; null for non-vintage wines. */
   vintage: number | null
   grapes: string[]
+  /** Percentages the user or a source gave, by grape name. */
+  grapeShares: GrapeShares
   /** Region or appellation, free text. */
   region: string
   country: string

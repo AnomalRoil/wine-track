@@ -2,6 +2,7 @@ import * as db from './db'
 import { defaultCellar, normalizeCellar, normalizeWine } from './migrate'
 import { canRecord, canRemoveCellar, cellarBottles, computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
+import { cleanShares } from './grapes'
 import { planImport, type ImportPlan, type ImportRow, type PlanContext } from './csvImport'
 import { approvedDrops, canPlace, cellarLosing, freedSlots, holds, outside, place, planMove, stalePlacements, type Slot } from './racks'
 import { serial } from './serial'
@@ -134,6 +135,8 @@ export function patchWine(id: string, patch: (wine: Wine) => Partial<Wine>, sinc
     const i = store.wines.findIndex((w) => w.id === id)
     if (i < 0) return false
     const wine = { ...store.wines[i], ...patch($state.snapshot(store.wines[i])) }
+    // An edit of the grapes alone must not leave shares of grapes it removed.
+    wine.grapeShares = cleanShares(wine.grapes, wine.grapeShares)
     await db.putWine($state.snapshot(wine))
     store.wines[i] = wine
     return true
@@ -160,6 +163,7 @@ export function addWine(wine: Wine, photo: Photo | null, movements: Movement[], 
     if (since !== generation) return false
     const wineIds = new Set([...store.wines.map((w) => w.id), wine.id])
     if (!canRecord(stock, movements, wineIds, new Set(store.cellars.map((c) => c.id)))) return false
+    wine = { ...wine, grapeShares: cleanShares(wine.grapes, wine.grapeShares) }
     try {
       await db.putWine($state.snapshot(wine), photo, movements)
     } catch {

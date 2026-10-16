@@ -57,6 +57,20 @@ function row(fields: string, header = 'name,producer,vintage,quantity,size_cl,co
   return parsed.rows[0]
 }
 
+describe('parseImport grapes', () => {
+  const cases: { name: string; cell: string; grapes: string[]; shares: Record<string, number> }[] = [
+    { name: 'plain list', cell: 'Merlot, Cabernet Franc', grapes: ['Merlot', 'Cabernet Franc'], shares: {} },
+    { name: 'with shares', cell: 'Merlot 60%, Cabernet Franc 40%', grapes: ['Merlot', 'Cabernet Franc'], shares: { Merlot: 60, 'Cabernet Franc': 40 } },
+    { name: 'decimal comma', cell: 'Merlot 87,5%; Malbec 12,5%', grapes: ['Merlot', 'Malbec'], shares: { Merlot: 87.5, Malbec: 12.5 } },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const { draft, errors } = row(`Clos,"${c.cell}"`, 'name,grapes')
+      expect([draft.grapes, draft.grapeShares, errors]).toEqual([c.grapes, c.shares, []])
+    })
+  }
+})
+
 describe('parseImport', () => {
   it('reads the template columns', () => {
     const parsed = parseImport(
@@ -76,6 +90,7 @@ describe('parseImport', () => {
             producer: 'Dom Y',
             vintage: 2018,
             grapes: ['Mourvèdre', 'Grenache'],
+            grapeShares: {},
             region: 'Bandol',
             country: 'France',
             color: 'red',

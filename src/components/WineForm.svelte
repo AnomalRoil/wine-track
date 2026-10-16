@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import { canLookupGrapes, lookupGrapes, lookupKey, type FailureKind, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, lookupGrapes, lookupKey, readGrapeLookup, type FailureKind, type WineDraft } from '../lib/extract'
   import { distinctGrapes, distinctTags } from '../lib/filters'
+  import { sharesTotal } from '../lib/grapes'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
   import { applyLwin, displayName, lwinFields, type LwinWine, type Scored } from '../lib/lwin'
@@ -43,6 +44,11 @@
 
   let lookingUp = $state(false)
   let lookupNote = $state<string | null>(null)
+  // The source only vouches for the blend it returned; hide it once that blend is edited.
+  let lookupSource = $state<{ url: string; blend: string } | null>(null)
+  const blend = $derived(JSON.stringify(draft.grapes.map((g) => [g, draft.grapeShares[g]])))
+  const sourceUrl = $derived(lookupSource?.blend === blend ? lookupSource.url : null)
+  const total = $derived(sharesTotal(draft.grapes, draft.grapeShares))
   let grapeInput: ChipInput
   let suggestions = $state.raw<Scored[]>([])
   let searches = 0
@@ -86,7 +92,7 @@
   // A pending lookup is dropped when the wine it asks about or its grapes change meanwhile,
   // or when another request starts filling the draft.
   let lookups = 0
-  const asked = $derived(`${lookupKey(draft)}\n${draft.grapes.join('\n')}`)
+  const asked = $derived(`${lookupKey(draft)}\n${blend}`)
   $effect(() => {
     void asked
     void busy
@@ -99,6 +105,7 @@
   async function doLookup() {
     lookingUp = true
     lookupNote = null
+    lookupSource = null
     const current = lookups
     const result = await lookupGrapes(settings, settings.model, $state.snapshot(draft))
     if (current !== lookups) return
@@ -107,12 +114,15 @@
       lookupNote = failureText(result.kind, result.detail)
       return
     }
-    if (result.data.confidence === 'unknown' || result.data.grapes.length === 0) {
+    const found = readGrapeLookup(result.data)
+    if (result.data.confidence === 'unknown' || found.grapes.length === 0) {
       lookupNote = t('form.lookupUnknown')
       return
     }
-    draft.grapes = result.data.grapes
-    touch('grapes')
+    draft.grapes = found.grapes
+    draft.grapeShares = found.grapeShares
+    touch('grapes', 'grapeShares')
+    lookupSource = found.sourceUrl ? { url: found.sourceUrl, blend } : null
     if (result.data.confidence === 'typical-blend') lookupNote = t('form.lookupTypical')
   }
 
@@ -187,8 +197,9 @@
   <ChipInput
     bind:this={grapeInput}
     bind:values={draft.grapes}
+    bind:shares={draft.grapeShares}
     id="grape-input"
-    onchange={() => touch('grapes')}
+    onchange={() => touch('grapes', 'grapeShares')}
     placeholder={t('form.addGrape')}
     suggestions={distinctGrapes(store.wines)}
   />
@@ -198,8 +209,16 @@
     disabled={lookingUp || busy || !canLookupGrapes(draft)}
     onclick={doLookup}
   />
-  {#if lookupNote}
-    <p class="muted">{lookupNote}</p>
+  {#if total !== null && total !== 100}
+    <p class="warn">{t('form.sharesTotal', { total: total.toLocaleString(settings.locale) })}</p>
+  {/if}
+  {#if lookupNote || sourceUrl}
+    <p class="muted">
+      {lookupNote ?? ''}
+      {#if sourceUrl}
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{t('form.lookupSource', { site: new URL(sourceUrl).hostname })}</a>
+      {/if}
+    </p>
   {/if}
 
   <label for="region">{t('form.region')}</label>
