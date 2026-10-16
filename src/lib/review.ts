@@ -86,7 +86,8 @@ export function formatValue(s: Suggestion): string {
 
 /**
  * Replaces `target`'s value by what the user typed and accepts it. An empty
- * entry rejects the suggestion; an invalid color or code returns null.
+ * entry rejects the suggestion; an invalid color or code, or grapes text that
+ * names no grape, returns null.
  */
 export function edit(list: readonly Suggestion[], target: Suggestion, raw: string): Suggestion[] | null {
   const text = raw.trim()
@@ -94,6 +95,7 @@ export function edit(list: readonly Suggestion[], target: Suggestion, raw: strin
   let patch: { value: WineDraft[ReviewField]; grapeShares?: GrapeShares }
   if (target.field === 'grapes') {
     const { grapes, grapeShares } = parseGrapes(text)
+    if (grapes.length === 0) return null
     patch = { value: grapes, grapeShares }
   } else if (target.field === 'color') {
     if (!WINE_COLORS.includes(text as WineColor)) return null

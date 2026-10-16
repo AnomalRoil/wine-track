@@ -104,6 +104,8 @@ describe('edit', () => {
     { name: 'valid code', field: 'lwin', raw: '1066540', want: pending({ field: 'lwin', value: '1066540', status: 'accepted', edited: true }) },
     { name: 'invalid code', field: 'lwin', raw: '12', want: null },
     { name: 'six-digit code', field: 'lwin', raw: '106655', want: null },
+    { name: 'percent with no grape', field: 'grapes', raw: '60%', want: null },
+    { name: 'separators only', field: 'grapes', raw: ' , ; ', want: null },
   ]
   for (const c of cases) {
     it(c.name, () => {
