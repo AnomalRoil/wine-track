@@ -1,4 +1,4 @@
-import type { Aging, TasteProfile, WineColor } from './types'
+import type { Aging, TasteProfile, WindowSource, WineColor } from './types'
 
 export const PHASES = ['youth', 'maturity', 'peak', 'decline'] as const
 export type Phase = (typeof PHASES)[number]
@@ -12,6 +12,7 @@ export const NO_AGING: Aging = {
   servingMaxC: null,
   decantMinutes: null,
   profile: null,
+  windowSource: null,
 }
 
 /** Fills aging fields missing from wines stored before they existed. */
@@ -144,7 +145,36 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n))
 }
 
-/** Cleans looked-up aging advice: whole years within MIN_YEAR–MAX_YEAR, ordered temperatures, profile axes within 0–10. */
+/** `url` when it is an http(s) address, so a stored link never runs script; null otherwise. */
+export function webUrl(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const parsed = new URL(url.trim())
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : null
+  } catch {
+    return null
+  }
+}
+
+/** "domaine.example" for a source link: the host, without "www."; null unless `url` is a web address. */
+export function sourceHost(url: string | null): string | null {
+  const href = webUrl(url)
+  return href && new URL(href).hostname.replace(/^www\./, '')
+}
+
+function hasWindow(a: Pick<Aging, (typeof WINDOW_KEYS)[number]>): boolean {
+  return bounds(a).length > 0
+}
+
+/** The source of a window the user just edited by hand: theirs, or none once every year is cleared. */
+export function handSource(a: Pick<Aging, (typeof WINDOW_KEYS)[number]>): WindowSource | null {
+  return hasWindow(a) ? { kind: 'user', url: null } : null
+}
+
+/**
+ * Cleans aging advice before it is stored: whole years within MIN_YEAR–MAX_YEAR, ordered temperatures,
+ * profile axes within 0–10, and a source only for a window that has years, linking only to a web page.
+ */
 export function cleanAging(a: Aging): Aging {
   const temps = [a.servingMinC, a.servingMaxC]
   const [servingMinC, servingMaxC] =
@@ -158,23 +188,33 @@ export function cleanAging(a: Aging): Aging {
     acidity: axis(p.acidity),
     fizz: axis(p.fizz),
   }
-  return {
+  const window = {
     drinkFrom: year(a.drinkFrom),
     peakFrom: year(a.peakFrom),
     peakUntil: year(a.peakUntil),
     drinkUntil: year(a.drinkUntil),
+  }
+  const source = a.windowSource
+  return {
+    ...window,
     servingMinC,
     servingMaxC,
     decantMinutes: a.decantMinutes === null ? null : Math.max(0, Math.round(a.decantMinutes)),
     profile,
+    windowSource: source && hasWindow(window) ? { kind: source.kind, url: webUrl(source.url) } : null,
   }
 }
 
-/** Fills `current` with every value a lookup found, keeping what it did not find. */
+/**
+ * Fills `current` with every value a lookup found, keeping what it did not find.
+ * A found window replaces the current one whole, so its source never covers years it did not state.
+ */
 export function mergeAging(current: Aging, found: Aging): Aging {
   const merged = { ...current }
+  const window: (keyof Aging)[] = [...WINDOW_KEYS, 'windowSource']
+  const takeWindow = hasWindow(found)
   for (const key of Object.keys(NO_AGING) as (keyof Aging)[]) {
-    if (found[key] !== null) Object.assign(merged, { [key]: found[key] })
+    if (window.includes(key) ? takeWindow : found[key] !== null) Object.assign(merged, { [key]: found[key] })
   }
   return merged
 }

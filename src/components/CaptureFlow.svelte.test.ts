@@ -64,3 +64,14 @@ it('drops a duplicate an import coded meanwhile and keeps the draft for a retry'
   expect(store.wines.map((w) => w.lwin)).toEqual(['1066553', '1066540'])
   expect(store.movements.filter((m) => m.wineId === store.wines[1].id)).toHaveLength(1)
 })
+
+it('records where the captured bottles were bought', async () => {
+  const onsaved = vi.fn()
+  render(CaptureFlow, { onsaved, intoCellar: 'home' })
+  await fireEvent.input(screen.getByLabelText('Wine name'), { target: { value: 'Other' } })
+  await fireEvent.input(screen.getByLabelText('Bought at'), { target: { value: 'Cave Bérard ' } })
+  await fireEvent.click(button('Save'))
+
+  await vi.waitFor(() => expect(onsaved).toHaveBeenCalled())
+  expect(store.movements).toEqual([expect.objectContaining({ kind: 'add', quantity: 1, place: 'Cave Bérard' })])
+})

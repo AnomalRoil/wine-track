@@ -17,10 +17,12 @@
   import { downloadFile } from '../lib/download'
   import { addYears, thisYear, today } from '../lib/due'
   import { changedFields, emptyDraft, type WineDraft } from '../lib/extract'
+  import { effectiveShares, shareLabel } from '../lib/grapes'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, rackName, sizeLabel, slotLabel, wineLabel } from '../lib/labels'
   import { money } from '../lib/money'
+  import { placeLine } from '../lib/place'
   import { placementsOf } from '../lib/racks'
   import { settings } from '../lib/settings.svelte'
   import { averageBuyPrice, bottlesOf } from '../lib/stock'
@@ -102,6 +104,7 @@
   )
   const serving = $derived(wine && formatServing(wine.servingMinC, wine.servingMaxC, settings.tempUnit))
   const movements = $derived(movementsFor(wineId).length)
+  const shares = $derived(wine ? effectiveShares(wine.grapes, wine.grapeShares) : {})
 
   $effect(() => {
     const id = wine?.photoId
@@ -124,12 +127,11 @@
   }
 
   function editable(w: Wine): WineDraft {
-    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
-    return { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin }
+    const { name, producer, vintage, grapes, grapeShares, region, appellation, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
+    return { name, producer, vintage, grapes, grapeShares, region, appellation, country, color, sizeCl, tags, lwin }
   }
 
   function startEdit() {
-    menu = false
     if (!wine) return
     opened = editable(wine)
     draft = editable(wine)
@@ -175,7 +177,6 @@
   }
 
   async function del() {
-    menu = false
     if (!wine) return
     if (!confirm(t('detail.deleteConfirm', { n: tastings.length }))) return
     await removeWine(wine.id)
@@ -228,18 +229,17 @@
     >
       <Icon name="heart" filled={wine.wished} />
     </button>
-    <button class="icon" aria-label={t('nav.moreActions')} aria-expanded={menu} onclick={() => (menu = !menu)}>
-      <Icon name="more" />
-    </button>
-    {#if menu}
-      <button class="scrim" tabindex="-1" aria-label={t('rack.close')} onclick={() => (menu = false)}></button>
-      <div class="menu" role="menu">
-        <button role="menuitem" disabled={store.restoring} onclick={startEdit}><Icon name="edit" size={20} />{t('detail.edit')}</button>
-        {#if wine.drinkBy || wine.tasteAgainOn}
+    <button class="edit" aria-label={t('form.editWine')} disabled={store.restoring} onclick={startEdit}><Icon name="edit" size={20} />{t('detail.edit')}</button>
+    {#if wine.drinkBy || wine.tasteAgainOn}
+      <button class="icon" aria-label={t('nav.moreActions')} aria-expanded={menu} onclick={() => (menu = !menu)}>
+        <Icon name="more" />
+      </button>
+      {#if menu}
+        <button class="scrim" tabindex="-1" aria-label={t('rack.close')} onclick={() => (menu = false)}></button>
+        <div class="menu" role="menu">
           <button role="menuitem" onclick={() => exportIcs(wine)}><Icon name="calendar" size={20} />{t('detail.calendar')}</button>
-        {/if}
-        <button role="menuitem" class="delete" onclick={del}><Icon name="close" size={20} />{t('detail.delete')}</button>
-      </div>
+        </div>
+      {/if}
     {/if}
   </header>
 
@@ -259,13 +259,13 @@
     <div class="titles">
       {#if wine.name && wine.producer && wine.producer !== wine.name}<span class="producer">{wine.producer}</span>{/if}
       <h1>{wine.name || wine.producer}</h1>
-      {#if wine.vintage || wine.region || wine.country}
-        <span class="where">{[wine.vintage, [wine.region, wine.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</span>
+      {#if wine.vintage || placeLine(wine)}
+        <span class="where">{[wine.vintage, placeLine(wine)].filter(Boolean).join(' · ')}</span>
       {/if}
     </div>
     <div class="tags">
       <span class="chip">{t(`color.${wine.color}`)}</span>
-      {#each wine.grapes as grape (grape)}<span class="chip">{grape}</span>{/each}
+      {#each wine.grapes as grape (grape)}<span class="chip">{grape}{#if Object.hasOwn(shares, grape)}<span class="share">{shareLabel(shares[grape], settings.locale)}</span>{/if}</span>{/each}
       <span class="chip">{sizeLabel(wine.sizeCl)}</span>
       {#if wine.lwin}<span class="chip">{t('lwin.code', { code: wine.lwin })}</span>{/if}
       {#each wine.tags as tag (tag)}<span class="chip">#{tag}</span>{/each}
@@ -411,9 +411,17 @@
       {/if}
     {/if}
   </div>
+
+  <button class="danger delete" onclick={del}>{t('detail.deleteWine')}</button>
 {/if}
 
 <style>
+  .share {
+    margin-left: 0.3rem;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
   .grow {
     flex: 1;
   }
@@ -470,8 +478,14 @@
     font-weight: 500;
   }
 
-  .menu .delete {
-    color: var(--error);
+  .bar .edit {
+    margin: 0 4px;
+    color: var(--on-surface);
+  }
+
+  .delete {
+    display: flex;
+    margin: 24px auto 8px;
   }
 
   @keyframes open {

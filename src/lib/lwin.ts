@@ -1,5 +1,6 @@
 import { fold, matchCandidate, matchRow, matchWine } from './csvImport'
 import type { WineDraft } from './extract'
+import { shownAppellation } from './place'
 import type { Wine, WineColor } from './types'
 
 /**
@@ -200,7 +201,7 @@ function sameColor(a: WineColor, b: WineColor): boolean {
 export function match(index: LwinIndex, draft: WineDraft, limit: number): Scored[] {
   const meaningful = (ws: string[]) => ws.filter((w) => !index.generic.has(w))
   const named = meaningful(words(`${draft.producer} ${draft.name}`))
-  const mentioned = new Set([...named, ...words(draft.region)])
+  const mentioned = new Set([...named, ...words(`${draft.appellation} ${draft.region}`)])
   const producerKey = meaningful(words(draft.producer)).join(' ')
   const name = words(draft.name).join(' ')
   // Only the name classifies the wine: "Gran" in a producer's name is no Gran Reserva.
@@ -256,12 +257,23 @@ export function displayName(wine: Pick<LwinWine, 'producer' | 'label'>): string 
   return wine.producer ? `${wine.producer}, ${wine.label}` : wine.label
 }
 
+/** The wine's sub-region, or '' when it only repeats the region (Champagne, Champagne). */
+function appellationOf(wine: Pick<LwinWine, 'region' | 'subRegion'>): string {
+  return shownAppellation({ appellation: wine.subRegion, region: wine.region })
+}
+
+/** `draft` with the region and appellation taken in turn, dropping an appellation that repeats the region. */
+function withPlace(draft: WineDraft, region: string, appellation: string): WineDraft {
+  return { ...draft, region, appellation: shownAppellation({ appellation, region }) ? appellation : draft.appellation }
+}
+
 /** Draft fields applyLwin(draft, wine) takes from `wine`, which a label read then keeps. */
 export function lwinFields(wine: LwinWine): (keyof WineDraft)[] {
   const given: [keyof WineDraft, unknown][] = [
     ['name', wine.label],
     ['producer', wine.producer],
-    ['region', wine.subRegion || wine.region],
+    ['region', wine.region],
+    ['appellation', appellationOf(wine)],
     ['country', wine.country],
     ['color', lwinColor(wine) !== 'other'],
   ]
@@ -276,32 +288,23 @@ export function applyLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   const color = lwinColor(wine)
   const keep = color === 'other' || (draft.color !== 'other' && sameColor(draft.color, color))
   return {
-    ...draft,
+    ...withPlace(draft, wine.region || draft.region, appellationOf(wine) || draft.appellation),
     name: wine.label || draft.name,
     producer: wine.producer || draft.producer,
-    region: wine.subRegion || wine.region || draft.region,
     country: wine.country || draft.country,
     color: keep ? draft.color : color,
     lwin: wine.lwin,
   }
 }
 
-/** Fills the region, country, colour and code a file left empty. */
+/** Fills the region, appellation, country, colour and code a file left empty. */
 export function completeFromLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   return {
-    ...draft,
-    region: draft.region || wine.subRegion || wine.region,
+    ...withPlace(draft, draft.region || wine.region, draft.appellation || appellationOf(wine)),
     country: draft.country || wine.country,
     color: draft.color === 'other' ? lwinColor(wine) : draft.color,
     lwin: draft.lwin ?? wine.lwin,
   }
-}
-
-/** Undoes completeFromLwin(original, wine) on `draft`, keeping the fields changed since. */
-export function undoLwinCompletion(draft: WineDraft, original: WineDraft, wine: LwinWine): WineDraft {
-  const filled = completeFromLwin(original, wine)
-  const back = <K extends 'region' | 'country' | 'color' | 'lwin'>(k: K) => (draft[k] === filled[k] ? original[k] : draft[k])
-  return { ...draft, region: back('region'), country: back('country'), color: back('color'), lwin: back('lwin') }
 }
 
 /** A wine of the collection that `draft` repeats, by the rule of matchWine. */

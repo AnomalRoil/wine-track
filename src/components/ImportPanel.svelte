@@ -1,35 +1,55 @@
 <script lang="ts">
   import { decodeText } from '../lib/csv'
   import { templateCsv } from '../lib/csvExport'
-  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type ImportPlan, type ImportRow, type RowMatch } from '../lib/csvImport'
+  import { applyCompletion, COLUMNS, emptiedCount, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type EmptiedCell, type ImportPlan, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
+  import { formatGrapes } from '../lib/grapes'
   import { cellarName } from '../lib/labels'
-  import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
+  import { completeFromLwin, confidentMatch, displayName, type LwinWine } from '../lib/lwin'
   import { findLwin, matchLwin } from '../lib/lwinData.svelte'
+  import { placeLine } from '../lib/place'
+  import { acceptPending, merge, pendingCount, resolve, suggestions, type Suggestion } from '../lib/review'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
+  import { STANDARD_SIZE_CL } from '../lib/types'
+  import CompletionReview from './CompletionReview.svelte'
   import Icon from './Icon.svelte'
   import NeedsKey from './NeedsKey.svelte'
 
   let rows = $state.raw<ImportRow[] | null>(null)
   let ignored = $state.raw<string[]>([])
   let message = $state<string | null>(null)
-  let completed = $state.raw(new Set<number>())
   let progress = $state<{ done: number; total: number } | null>(null)
   let completeError = $state<{ kind: FailureKind; detail?: string } | null>(null)
   let committing = $state(false)
-  /** Database wines of the rows lacking a region or country, by line: by code, or else by name. */
+  /** Database wines of the rows lacking a region, appellation or country, by line: by code, or else by name. */
   let lwinMatches = $state.raw(new Map<number, LwinWine>())
-  /** Drafts as read from the file, for the rows filled in from the database. */
-  let unfilled = $state.raw(new Map<number, ImportRow['draft']>())
+  /** Completed fields by line; `rows` keeps the drafts as read from the file. */
+  let review = $state.raw(new Map<number, Suggestion[]>())
+  /** Lines Claude answered, so none is sent twice in one import. */
+  let asked = $state.raw(new Set<number>())
   let generation = 0
 
+  function withDrafts(withPending: boolean): ImportRow[] | null {
+    return (
+      rows &&
+      rows.map((r) => {
+        const draft = resolve(r.draft, review.get(r.line), withPending)
+        return draft === r.draft ? r : { ...r, draft }
+      })
+    )
+  }
+  /** Rows as they would be imported: only accepted fields applied. */
+  const accepted = $derived(withDrafts(false))
+  /** Rows with every field not rejected, so a completion skips what is already proposed. */
+  const proposed = $derived(withDrafts(true))
+
   const plan = $derived(
-    rows &&
-      planImport(rows, store.wines, {
+    accepted &&
+      planImport(accepted, store.wines, {
         cellars: store.cellars,
         defaultCellarName: t('cellar.default'),
         date: today(),
@@ -42,16 +62,26 @@
     for (const m of plan?.matches ?? []) c[m.kind]++
     return c
   })
-  const incomplete = $derived(rows && plan ? incompleteRows(rows, plan) : [])
+  const incomplete = $derived(proposed && plan ? incompleteRows(proposed, plan).filter((r) => !asked.has(r.line)) : [])
+  /** Lines whose completion the user reviews: new wines, and rows with an accepted field to undo. */
+  const reviewable = $derived(
+    new Set(
+      (rows ?? [])
+        .filter((r, i) => review.has(r.line) && (plan!.matches[i].kind === 'new' || review.get(r.line)!.some((s) => s.status === 'accepted')))
+        .map((r) => r.line),
+    ),
+  )
+  const pending = $derived([...reviewable].reduce((n, line) => n + pendingCount(review.get(line)!), 0))
   const validRows = $derived((rows?.length ?? 0) - counts.invalid)
+  const emptied = $derived(rows ? emptiedCount(rows) : { rows: 0, fields: 0 })
 
   function reset() {
     generation++
     rows = null
     ignored = []
-    completed = new Set()
     lwinMatches = new Map()
-    unfilled = new Map()
+    review = new Map()
+    asked = new Set()
     progress = null
     completeError = null
   }
@@ -87,7 +117,7 @@
   }
 
   async function suggestMatches(gen: number) {
-    const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
+    const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.appellation || !r.draft.country))
     if (todo.length === 0) return
     const coded = todo.filter((r) => r.draft.lwin !== null)
     const byCode = coded.length > 0 ? await findLwin(coded.map((r) => r.draft.lwin!)) : []
@@ -103,20 +133,28 @@
       if (wine) found.set(r.line, wine)
     })
     lwinMatches = found
+    propose(todo.filter((r) => found.has(r.line)).map((r) => [r.line, suggestions(r.draft, completeFromLwin(r.draft, found.get(r.line)!), 'lwin')]))
   }
 
-  function toggleMatch(line: number, on: boolean) {
+  function propose(entries: [number, Suggestion[]][]) {
+    const next = new Map(review)
+    for (const [line, list] of entries) {
+      const merged = merge(next.get(line) ?? [], list)
+      if (merged.length > 0) next.set(line, merged)
+    }
+    review = next
+  }
+
+  function setReview(line: number, list: Suggestion[]) {
     if (committing) return
-    const original = unfilled.get(line)
-    const wine = lwinMatches.get(line)!
-    const next = new Map(unfilled)
-    if (on) next.set(line, rows!.find((r) => r.line === line)!.draft)
-    else next.delete(line)
-    unfilled = next
-    rows = rows!.map((r) => {
-      if (r.line !== line) return r
-      return { ...r, draft: on ? completeFromLwin(r.draft, wine) : undoLwinCompletion(r.draft, original!, wine) }
-    })
+    review = new Map(review).set(line, list)
+  }
+
+  function acceptAll() {
+    if (committing) return
+    const next = new Map(review)
+    for (const line of reviewable) next.set(line, acceptPending(next.get(line)!))
+    review = next
   }
 
   async function complete() {
@@ -130,34 +168,34 @@
     progress = { done: 0, total: todo.length }
     for (let i = 0; i < todo.length; i += COMPLETION_BATCH) {
       const batch = todo.slice(i, i + COMPLETION_BATCH)
-      const result = await completeWines(settings, settings.model, batch.map((r) => r.draft))
+      // Only accepted values go to Claude, so a pending suggestion neither leaks nor blocks its answer.
+      const sent = new Map(accepted!.map((r) => [r.line, r.draft]))
+      const result = await completeWines(settings, settings.model, batch.map((r) => sent.get(r.line)!))
       if (gen !== generation) return
       if (!result.ok) {
         completeError = result
         break
       }
-      const byLine = new Map(batch.map((r, j) => [r.line, result.data[j]]))
-      const filled: number[] = []
-      rows = rows!.map((r) => {
-        const completion = byLine.get(r.line)
-        if (!completion) return r
-        const draft = applyCompletion(r.draft, completion)
-        if (draft === r.draft) return r
-        filled.push(r.line)
-        return { ...r, draft }
-      })
-      completed = new Set([...completed, ...filled])
+      // Fields accepted while the batch ran are compared with the current state.
+      const current = new Map(accepted!.map((r) => [r.line, r.draft]))
+      propose(
+        batch.map((r, j): [number, Suggestion[]] => {
+          const draft = current.get(r.line)!
+          return [r.line, suggestions(draft, applyCompletion(draft, result.data[j]), 'claude')]
+        }),
+      )
+      asked = new Set([...asked, ...batch.map((r) => r.line)])
       progress = { done: i + batch.length, total: todo.length }
     }
     progress = null
   }
 
   async function commit() {
-    if (!rows || committing) return
+    if (!accepted || committing) return
     committing = true
     let done: ImportPlan
     try {
-      done = await applyImport(rows, {
+      done = await applyImport(accepted, {
         defaultCellarName: t('cellar.default'),
         date: today(),
         now: Date.now(),
@@ -179,6 +217,12 @@
   function label(row: ImportRow, match: RowMatch): string {
     const d = (match.kind === 'existing' && store.wines.find((w) => w.id === match.wineId)) || row.draft
     return [d.producer, d.name, d.vintage].filter(Boolean).join(' · ')
+  }
+
+  function emptiedText(cell: EmptiedCell): string {
+    const params = { value: cell.value, reason: t(`io.error.${cell.reason}`), size: STANDARD_SIZE_CL, color: t('color.other') }
+    const outcome = cell.reason === 'vintage' || cell.reason === 'quantity' || cell.reason === 'size' || cell.reason === 'color' ? cell.reason : null
+    return t(outcome ? `io.emptied.${outcome}` : 'io.emptied', params)
   }
 
   function destination(row: ImportRow): string {
@@ -210,6 +254,18 @@
   {#if ignored.length > 0}
     <p class="muted">{t('io.ignored', { columns: ignored.join(', ') })}</p>
   {/if}
+  {#if emptied.fields > 0}
+    <details class="emptied-list">
+      <summary>{t('io.emptiedSummary', emptied)}</summary>
+      <ul>
+        {#each rows.filter((r) => r.errors.length === 0 && r.emptied.length > 0) as row (row.line)}
+          {#each row.emptied as cell (cell.column)}
+            <li>{t('io.line', { n: row.line })}: {emptiedText(cell)}</li>
+          {/each}
+        {/each}
+      </ul>
+    </details>
+  {/if}
 
   {#if incomplete.length > 0 || progress}
     <div class="card">
@@ -225,6 +281,13 @@
     </div>
   {/if}
 
+  {#if pending > 0}
+    <div class="card row review">
+      <p>{t('io.review.pending', { n: pending })}</p>
+      <button class="tonal" disabled={committing} onclick={acceptAll}><Icon name="check" size={20} />{t('io.review.acceptAll')}</button>
+    </div>
+  {/if}
+
   <div class="row actions">
     <button class="primary" disabled={validRows === 0 || progress !== null || committing} onclick={commit}>
       {t('io.commit', { n: validRows })}
@@ -232,7 +295,7 @@
     <button onclick={reset} disabled={committing}>{t('form.cancel')}</button>
   </div>
 
-  {#each rows as row, i (row.line)}
+  {#each accepted! as row, i (row.line)}
     {@const match = plan.matches[i]}
     <div class="card line" class:invalid={match.kind === 'invalid'}>
       <div class="row head">
@@ -243,29 +306,29 @@
       </div>
       <div class="name">{label(row, match) || '—'}</div>
       {#if match.kind === 'invalid'}
-        <ul>
+        <ul class="errors">
           {#each row.errors as error (error)}<li>{t(`io.error.${error}`)}</li>{/each}
         </ul>
       {:else}
+        {#if row.emptied.length > 0}
+          <ul class="emptied">
+            {#each row.emptied as cell (cell.column)}<li>{emptiedText(cell)}</li>{/each}
+          </ul>
+        {/if}
         <div class="muted">
-          {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
-          {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
+          {[placeLine(row.draft), formatGrapes(row.draft.grapes, row.draft.grapeShares)].filter(Boolean).join(' · ')}
         </div>
-        {#if lwinMatches.has(row.line) && (match.kind === 'new' || unfilled.has(row.line))}
-          <label class="lwin">
-            <input
-              type="checkbox"
-              checked={unfilled.has(row.line)}
-              disabled={committing}
-              onchange={(e) => toggleMatch(row.line, e.currentTarget.checked)}
-            />
-            {t('lwin.importMatch', { name: displayName(lwinMatches.get(row.line)!) })}
-          </label>
+        {#if reviewable.has(row.line)}
+          {#if lwinMatches.has(row.line)}
+            <div class="muted lwin"><Icon name="sparkle" size={14} />{t('lwin.importMatch', { name: displayName(lwinMatches.get(row.line)!) })}</div>
+          {/if}
+          <CompletionReview suggestions={review.get(row.line)!} disabled={committing} onchange={(list) => setReview(row.line, list)} />
         {/if}
         {#if row.quantity > 0}
           <div class="muted">{t('io.bottlesTo', { n: row.quantity, cellar: destination(row) })}</div>
-        {:else if row.notes}
-          <div class="muted">{t('io.notesDropped')}</div>
+        {:else}
+          {#if row.notes || row.place}<div class="muted">{t('io.notesDropped')}</div>{/if}
+          {#if row.price !== null}<div class="muted">{t('io.priceDropped')}</div>{/if}
         {/if}
       {/if}
     </div>
@@ -313,8 +376,23 @@
 
   .status.invalid,
   .error-text,
-  ul {
+  .errors {
     color: var(--error);
+  }
+
+  .emptied,
+  .emptied-list {
+    color: var(--tertiary);
+    overflow-wrap: anywhere;
+  }
+
+  .emptied-list {
+    margin: 0.5rem 0;
+  }
+
+  .emptied-list summary {
+    cursor: pointer;
+    font-weight: 600;
   }
 
   ul {
@@ -323,15 +401,24 @@
     font-size: 0.85rem;
   }
 
-  .badge {
-    white-space: nowrap;
+  .review {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+  }
+
+  .review p {
+    margin: 0;
+    flex: 1 1 12rem;
   }
 
   .lwin {
     display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    margin: 0.35rem 0 0;
+    gap: 0.35rem;
+    align-items: center;
+    margin-top: 0.35rem;
   }
 
   .pulse {
