@@ -29,11 +29,13 @@ export function suggestions(draft: WineDraft, completed: WineDraft, source: Sugg
 
 /**
  * Adds `incoming` to `current`. A suggestion replaces only a rejected one from
- * the same source; one from another source is kept as an alternative for the field.
+ * the same source; one from another source is kept as an alternative for the
+ * field unless a suggestion not rejected already proposes its value.
  */
 export function merge(current: readonly Suggestion[], incoming: readonly Suggestion[]): Suggestion[] {
   const next = [...current]
   for (const s of incoming) {
+    if (next.some((c) => c.field === s.field && c.status !== 'rejected' && same(c.value, s.value))) continue
     const i = next.findIndex((c) => c.field === s.field && c.source === s.source)
     if (i < 0) next.push(s)
     else if (next[i].status === 'rejected') next[i] = s

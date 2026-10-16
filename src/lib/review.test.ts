@@ -31,6 +31,7 @@ describe('merge', () => {
   const cases: { name: string; current: Suggestion[]; incoming: Suggestion[]; want: Suggestion[] }[] = [
     { name: 'adds new fields in order', current: [country], incoming: [grapes], want: [grapes, country] },
     { name: 'keeps another source as an alternative', current: [country], incoming: [claudeCountry], want: [country, claudeCountry] },
+    { name: 'skips another source proposing the same value', current: [country], incoming: [pending({ field: 'country', value: 'France' })], want: [country] },
     { name: 'keeps a pending one from the same source', current: [claudeCountry], incoming: [pending({ field: 'country', value: 'Suisse' })], want: [claudeCountry] },
     { name: 'keeps an accepted one', current: [{ ...claudeCountry, status: 'accepted' }], incoming: [claudeCountry], want: [{ ...claudeCountry, status: 'accepted' }] },
     { name: 'replaces a rejected one', current: [{ ...claudeCountry, status: 'rejected' }], incoming: [pending({ field: 'country', value: 'Suisse' })], want: [pending({ field: 'country', value: 'Suisse' })] },
