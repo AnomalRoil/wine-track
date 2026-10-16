@@ -185,7 +185,7 @@
 
   function emptiedText(cell: EmptiedCell): string {
     const params = { value: cell.value, reason: t(`io.error.${cell.reason}`), size: STANDARD_SIZE_CL, color: t('color.other') }
-    const outcome = cell.reason === 'quantity' || cell.reason === 'size' || cell.reason === 'color' ? cell.reason : null
+    const outcome = cell.reason === 'vintage' || cell.reason === 'quantity' || cell.reason === 'size' || cell.reason === 'color' ? cell.reason : null
     return t(outcome ? `io.emptied.${outcome}` : 'io.emptied', params)
   }
 
@@ -289,8 +289,9 @@
         {/if}
         {#if row.quantity > 0}
           <div class="muted">{t('io.bottlesTo', { n: row.quantity, cellar: destination(row) })}</div>
-        {:else if row.notes}
-          <div class="muted">{t('io.notesDropped')}</div>
+        {:else}
+          {#if row.notes}<div class="muted">{t('io.notesDropped')}</div>{/if}
+          {#if row.price !== null}<div class="muted">{t('io.priceDropped')}</div>{/if}
         {/if}
       {/if}
     </div>

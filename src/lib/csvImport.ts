@@ -359,6 +359,8 @@ export interface MatchRow {
   name: string
   vintage: number | null
   sizeCl: number
+  /** Its vintage or size was not understood, so they may not be its own. */
+  unsure?: boolean
 }
 
 /** A wine a row can match; `names` holds every nameKey it is known by. */
@@ -367,6 +369,7 @@ export interface MatchCandidate {
   names: string[]
   vintage: number | null
   sizeCl: number
+  unsure?: boolean
 }
 
 type Matchable = Pick<WineDraft, 'name' | 'producer' | 'vintage' | 'sizeCl' | 'lwin'>
@@ -388,6 +391,8 @@ export function matchCandidate(w: Matchable): MatchCandidate {
  *
  *   row code | candidate                  | result
  *   ---------+----------------------------+--------------------------------------
+ *   unsure   | any                        | new wine
+ *   any      | unsure                     | new wine
  *   X        | code X, any name           | earliest such candidate
  *   X        | no code, same name         | earliest such candidate; caller gives it X
  *   none     | no code, same name         | earliest such candidate
@@ -398,7 +403,8 @@ export function matchCandidate(w: Matchable): MatchCandidate {
  * `row.name` to its names, so later rows see both.
  */
 export function matchWine<C extends MatchCandidate>(row: MatchRow, candidates: readonly C[]): C | undefined {
-  const fits = candidates.filter((c) => c.vintage === row.vintage && c.sizeCl === row.sizeCl)
+  if (row.unsure) return undefined
+  const fits = candidates.filter((c) => !c.unsure && c.vintage === row.vintage && c.sizeCl === row.sizeCl)
   const named = fits.filter((c) => c.names.includes(row.name))
   if (row.lwin !== null) return fits.find((c) => c.lwin === row.lwin) ?? named.find((c) => c.lwin === null)
   return named.find((c) => c.lwin === null) ?? named[0]
@@ -455,7 +461,8 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       plan.matches.push({ kind: 'invalid' })
       continue
     }
-    const wanted = matchRow(row.draft)
+    const unsure = row.emptied.some((c) => c.column === 'vintage' || c.column === 'size_cl')
+    const wanted = { ...matchRow(row.draft), unsure }
     const candidates = group(row.draft)
     const same = matchWine(wanted, candidates)
     let wineId: string
@@ -483,7 +490,7 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
         ...NO_AGING,
         ...row.window,
       }
-      candidates.push({ ...matchCandidate(row.draft), wineId, planned: { line: row.line, wine } })
+      candidates.push({ ...matchCandidate(row.draft), unsure, wineId, planned: { line: row.line, wine } })
       plan.matches.push({ kind: 'new' })
       plan.wines.push(wine)
     }

@@ -161,7 +161,7 @@ it('imports rows with values it does not understand, listing what it emptied', a
   expect(await screen.findByText('1 line is imported with 3 emptied fields.')).toBeTruthy()
   const list = document.querySelector('details.emptied-list')!
   expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
-    'Line 2: “20x9” left empty. The vintage must be a year, or empty or NV for a non-vintage wine.',
+    'Line 2: “20x9” left empty, so this line makes a new wine without a vintage. The vintage must be a year, or empty or NV for a non-vintage wine.',
     'Line 2: “six” left empty, so no bottles are added. The quantity must be a whole number.',
     'Line 2: “cheap” left empty. The purchase price must be a number.',
   ])
@@ -181,4 +181,10 @@ it('shows no emptied summary when every value is understood', async () => {
   await load('name,vintage\nClos,2019')
   await screen.findByText('Line 2')
   expect(document.querySelector('details.emptied-list')).toBeNull()
+})
+
+it('says when a line without bottles drops its price', async () => {
+  render(ImportPanel)
+  await load('name,quantity,purchase price\nClos,six,45\nPlain,1,10')
+  expect(await screen.findAllByText('Prices are kept with added bottles only; this line adds none, so its price is not imported.')).toHaveLength(1)
 })

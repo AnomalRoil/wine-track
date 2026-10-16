@@ -14,6 +14,7 @@ import {
   planImport,
   type ImportRow,
   type PlanContext,
+  type RowMatch,
 } from './csvImport'
 import { emptyDraft } from './extract'
 import { computeStock, bottlesOf } from './stock'
@@ -401,6 +402,9 @@ describe('matchWine', () => {
     { name: 'no code, uncoded with same name', row: {}, candidate: {}, match: true },
     { name: 'no code, uncoded with other name', row: {}, candidate: { names: ['other'] }, match: false },
     { name: 'no vintage on both', row: { vintage: null }, candidate: { vintage: null }, match: true },
+    { name: 'unsure row', row: { unsure: true }, candidate: {}, match: false },
+    { name: 'unsure candidate', row: {}, candidate: { unsure: true }, match: false },
+    { name: 'unsure row, same code', row: { lwin: '1', unsure: true }, candidate: { lwin: '1' }, match: false },
   ]
   for (const c of single) {
     const candidate = wine('a', c.candidate)
@@ -635,6 +639,20 @@ describe('planImport with emptied cells', () => {
       expect(plan.matches).toEqual([{ kind: c.kind }])
       if (c.movement) expect(plan.movements).toMatchObject([c.movement])
       else expect(plan.movements).toEqual([])
+    })
+  }
+
+  const nv = makeWine({ id: 'nv', name: 'A', producer: '', vintage: null, sizeCl: 75 })
+  const matching: { name: string; lines: string[]; want: RowMatch[] }[] = [
+    { name: 'emptied vintage does not add to a non-vintage wine', lines: ['A,,20x9,1,,,'], want: [{ kind: 'new' }] },
+    { name: 'emptied size does not add to a 75 cl wine', lines: ['A,,,1,big,,'], want: [{ kind: 'new' }] },
+    { name: 'two emptied vintages make two wines', lines: ['A,,20x9,1,,,', 'A,,2O19,1,,,'], want: [{ kind: 'new' }, { kind: 'new' }] },
+    { name: 'a valid non-vintage row skips an emptied one', lines: ['A,,20x9,1,,,', 'A,,,1,,,'], want: [{ kind: 'new' }, { kind: 'existing', wineId: 'nv' }] },
+    { name: 'an emptied price still matches', lines: ['A,,,1,,,abc'], want: [{ kind: 'existing', wineId: 'nv' }] },
+  ]
+  for (const c of matching) {
+    it(c.name, () => {
+      expect(planImport(c.lines.map((l) => row(l)), [nv], ctx).matches).toEqual(c.want)
     })
   }
 })
