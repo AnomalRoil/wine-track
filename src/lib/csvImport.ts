@@ -370,7 +370,7 @@ export interface MatchRow {
   name: string
   vintage: number | null
   sizeCl: number
-  /** Its vintage or size was not understood, so they may not be its own. */
+  /** Its vintage, size or code was not understood, so they may not be its own. */
   unsure?: boolean
 }
 
@@ -472,7 +472,8 @@ export function planImport(rows: ImportRow[], existing: Wine[], ctx: PlanContext
       plan.matches.push({ kind: 'invalid' })
       continue
     }
-    const unsure = row.emptied.some((c) => c.column === 'vintage' || c.column === 'size_cl')
+    // A code the review filled in replaces the one emptied.
+    const unsure = row.emptied.some((c) => c.column === 'vintage' || c.column === 'size_cl' || (c.column === 'lwin' && row.draft.lwin === null))
     const wanted = { ...matchRow(row.draft), unsure }
     const candidates = group(row.draft)
     const same = matchWine(wanted, candidates)

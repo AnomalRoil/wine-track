@@ -698,4 +698,15 @@ describe('planImport with emptied cells', () => {
       expect(planImport(c.lines.map((l) => row(l)), [nv], ctx).matches).toEqual(c.want)
     })
   }
+  describe('emptied code', () => {
+    const header = 'name,producer,vintage,lwin'
+    const coded = makeWine({ id: 'coded', name: 'Chablis', producer: 'Dauvissat', vintage: 2019, sizeCl: 75, lwin: '1066540' })
+    it('does not add to a same-named wine with a code', () =>
+      expect(planImport([row('Chablis,Dauvissat,2019,106655', header)], [coded], ctx).matches).toEqual([{ kind: 'new' }]))
+    it('matches once the review fills in the code', () => {
+      const corrected = row('Chablis,Dauvissat,2019,106655', header)
+      corrected.draft.lwin = '1066540'
+      expect(planImport([corrected], [coded], ctx).matches).toEqual([{ kind: 'existing', wineId: 'coded' }])
+    })
+  })
 })
