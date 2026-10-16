@@ -60,8 +60,8 @@ function row(fields: string, header = 'name,producer,vintage,quantity,size_cl,co
 describe('parseImport', () => {
   it('reads the template columns', () => {
     const parsed = parseImport(
-      'cellar,name,producer,vintage,quantity,size_cl,color,region,country,grapes,purchase_price,notes,tags\n' +
-        'Garage,Clos X,Dom Y,2018,6,150,red,Bandol,France,"Mourvèdre, Grenache",32.5,from the fair,"gift; party"',
+      'cellar,name,producer,vintage,quantity,size_cl,color,region,appellation,country,grapes,purchase_price,notes,tags\n' +
+        'Garage,Clos X,Dom Y,2018,6,150,red,Provence,Bandol,France,"Mourvèdre, Grenache",32.5,from the fair,"gift; party"',
       2026,
     )
     expect(parsed).toEqual({
@@ -76,7 +76,8 @@ describe('parseImport', () => {
             producer: 'Dom Y',
             vintage: 2018,
             grapes: ['Mourvèdre', 'Grenache'],
-            region: 'Bandol',
+            region: 'Provence',
+            appellation: 'Bandol',
             country: 'France',
             color: 'red',
             sizeCl: 150,
@@ -187,6 +188,24 @@ describe('parseImport drinking window', () => {
   it('reads French and German headers', () => {
     expect(row('A,2025,2040', 'nom,à boire à partir de,trinken bis').window).toEqual({ ...none, drinkFrom: 2025, drinkUntil: 2040 })
   })
+})
+
+describe('parseImport place headers', () => {
+  const placeHeaders: { header: string; want: { region: string; appellation: string } }[] = [
+    { header: 'Region', want: { region: 'X', appellation: '' } },
+    { header: 'Anbaugebiet', want: { region: 'X', appellation: '' } },
+    { header: 'Région / appellation', want: { region: 'X', appellation: '' } },
+    { header: 'Appellation', want: { region: '', appellation: 'X' } },
+    { header: 'AOC', want: { region: '', appellation: 'X' } },
+    { header: 'AOP', want: { region: '', appellation: 'X' } },
+    { header: 'Sub-region', want: { region: '', appellation: 'X' } },
+    { header: 'Sous-région', want: { region: '', appellation: 'X' } },
+  ]
+  for (const c of placeHeaders) {
+    it(`reads ${c.header}`, () => {
+      expect(row('A,X', `name,${c.header}`).draft).toMatchObject(c.want)
+    })
+  }
 })
 
 describe('parseImport size headers with a cl unit', () => {

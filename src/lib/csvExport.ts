@@ -32,6 +32,7 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
       wine.sizeCl,
       wine.color,
       wine.region,
+      wine.appellation,
       wine.country,
       wine.grapes.join(', '),
       price === undefined ? null : Math.round(price * 100) / 100,
