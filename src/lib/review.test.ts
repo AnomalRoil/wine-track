@@ -20,6 +20,7 @@ describe('suggestions', () => {
       completed: { ...draft, country: 'France', grapes: ['Chardonnay'] },
       want: [grapes, { ...country, source: 'claude' }],
     },
+    { name: 'appellation after region', completed: { ...draft, appellation: 'Chablis Grand Cru', country: 'France' }, want: [pending({ field: 'appellation', value: 'Chablis Grand Cru' }), { ...country, source: 'claude' }] },
     { name: 'code and color', completed: { ...draft, lwin: '1066553', color: 'white' }, want: [pending({ field: 'color', value: 'white' }), pending({ field: 'lwin', value: '1066553' })] },
   ]
   for (const c of cases) it(c.name, () => expect(suggestions(draft, c.completed, 'claude')).toEqual(c.want))
