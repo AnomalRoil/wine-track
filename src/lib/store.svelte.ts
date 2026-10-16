@@ -1,5 +1,5 @@
 import * as db from './db'
-import { defaultCellar, normalizeCellar, normalizeWine } from './migrate'
+import { defaultCellar, normalizeCellar, normalizeMovement, normalizeWine } from './migrate'
 import { canRecord, canRemoveCellar, cellarBottles, computeStock, emptyCellar, withinStock } from './stock'
 import { today } from './due'
 import { planImport, type ImportPlan, type ImportRow, type PlanContext } from './csvImport'
@@ -79,7 +79,13 @@ export function restore(data: db.Data, photos: Photo[]): Promise<void> {
 export function backupSnapshot(): Promise<{ data: db.Data; photos: Photo[] }> {
   return writes(async () => {
     const { data, photos } = await db.snapshot()
-    const normalized = { ...data, wines: data.wines.map(normalizeWine), tastings: data.tastings.map(normalizeTasting), cellars: data.cellars.map(normalizeCellar) }
+    const normalized = {
+      ...data,
+      wines: data.wines.map(normalizeWine),
+      tastings: data.tastings.map(normalizeTasting),
+      cellars: data.cellars.map(normalizeCellar),
+      movements: data.movements.map(normalizeMovement),
+    }
     return { data: normalized, photos }
   })
 }
@@ -93,7 +99,7 @@ async function load(): Promise<void> {
   store.wines = all.wines.map(normalizeWine)
   store.tastings = all.tastings.map(normalizeTasting)
   store.cellars = all.cellars.map(normalizeCellar)
-  store.movements = all.movements
+  store.movements = all.movements.map(normalizeMovement)
   const cellarIds = new Set(all.cellars.map((c) => c.id))
   const orphans = all.racks.filter((r) => !cellarIds.has(r.cellarId))
   for (const r of orphans) await db.deleteRack(r.id)
@@ -295,6 +301,7 @@ export function drink(placement: Placement): Promise<boolean> {
       cellarId: rack.cellarId,
       toCellarId: null,
       unitPrice: null,
+      place: '',
       note: '',
     }
     return recordMovements([consume], [placement.id], [])

@@ -23,6 +23,7 @@
   let toCellarId = $state(cellars.find((c) => c.id !== cellarId)?.id ?? cellars[0].id)
   let reason = $state<MovementKind>('consume')
   let unitPrice = $state<number | null>(null)
+  let place = $state('')
   let date = $state(today())
   let note = $state('')
   let saving = $state(false)
@@ -75,6 +76,7 @@
       cellarId,
       toCellarId: mode === 'transfer' ? toCellarId : null,
       unitPrice: mode === 'add' ? (unitPrice ?? null) : null,
+      place: mode === 'add' ? place.trim() : '',
       note: note.trim(),
     }
     let saved: boolean
@@ -113,6 +115,11 @@
       </div>
     {/if}
   </div>
+
+  {#if mode === 'add'}
+    <label for="mv-place">{t('stock.place')}</label>
+    <input id="mv-place" type="text" bind:value={place} />
+  {/if}
 
   {#if cellars.length > 1}
     <label for="mv-cellar">{t('stock.cellar')}</label>

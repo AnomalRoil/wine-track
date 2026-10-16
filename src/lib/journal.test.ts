@@ -6,7 +6,7 @@ import type { Tasting } from './types'
 
 const wines = [makeWine({ id: 'w1', name: 'Chablis' }), makeWine({ id: 'w2', name: 'Margaux' })]
 const movements = [
-  makeMovement({ id: 'm1', wineId: 'w1', date: '2026-01-01' }),
+  makeMovement({ id: 'm1', wineId: 'w1', date: '2026-01-01', place: 'Cave Bérard' }),
   makeMovement({ id: 'm2', wineId: 'w2', date: '2026-03-01', kind: 'gift', note: 'for Sam' }),
   makeMovement({ id: 'm3', wineId: 'gone', date: '2026-02-01' }),
 ]
@@ -34,6 +34,7 @@ describe('journal', () => {
     { name: 'wine name', search: 'chablis', want: ['t1', 'm1'] },
     { name: 'wine name with accents', search: 'Châblis', want: ['t1', 'm1'] },
     { name: 'movement note', search: 'sam', want: ['m2'] },
+    { name: 'purchase place', search: 'berard', want: ['m1'] },
     { name: 'tasting notes', search: 'FLINT', want: ['t1'] },
     { name: 'tasting people', search: 'ana', want: ['t2'] },
     { name: 'tasting place', search: 'lyon', want: ['t2'] },

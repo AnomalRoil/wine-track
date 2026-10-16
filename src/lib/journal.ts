@@ -19,7 +19,7 @@ export function journal(wines: Wine[], movements: Movement[], tastings: Tasting[
   ]
   const matching = entries.filter((e) => {
     const w = e.wine
-    const text = e.type === 'movement' ? [e.movement.note] : tastingText(e.tasting)
+    const text = e.type === 'movement' ? [e.movement.note, e.movement.place] : tastingText(e.tasting)
     return matchesSearch([w?.name, w?.producer, w?.vintage, ...text], search)
   })
   // Entries carry only a day; reversing first keeps the latest-recorded on top within a day.

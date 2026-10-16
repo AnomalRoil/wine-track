@@ -29,6 +29,7 @@ export function migrateWinesV1(old: WineV1[]): { wines: Wine[]; movements: Movem
         cellarId: DEFAULT_CELLAR_ID,
         toCellarId: null,
         unitPrice: null,
+        place: '',
         note: '',
       })
     }
@@ -39,6 +40,11 @@ export function migrateWinesV1(old: WineV1[]): { wines: Wine[]; movements: Movem
 /** Fills fields added to cellars after they were first stored. */
 export function normalizeCellar(cellar: Omit<Cellar, 'storage'> & Partial<Cellar>): Cellar {
   return { ...cellar, storage: cellar.storage ?? {} }
+}
+
+/** Fills fields added to movements after they were first stored. */
+export function normalizeMovement(movement: Omit<Movement, 'place'> & Partial<Movement>): Movement {
+  return { place: '', ...movement }
 }
 
 /** Fills fields added to wines after they were first stored. */

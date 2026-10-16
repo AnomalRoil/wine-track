@@ -5,7 +5,7 @@ import { exportCsv, templateCsv } from './csvExport'
 import { parseImport, planImport } from './csvImport'
 import { makeMovement as mv, makeWine } from './testing'
 
-const HEADER = ['cellar', 'name', 'producer', 'vintage', 'quantity', 'size (cl)', 'color', 'region', 'country', 'grapes', 'purchase price', 'notes', 'tags', 'drink from', 'peak from', 'peak until', 'drink until', 'lwin']
+const HEADER = ['cellar', 'name', 'producer', 'vintage', 'quantity', 'size (cl)', 'color', 'region', 'country', 'grapes', 'purchase price', 'purchase place', 'notes', 'tags', 'drink from', 'peak from', 'peak until', 'drink until', 'lwin']
 const cellsOf = (text: string) => parseCsv(text).map((r) => r.cells)
 
 const cellars = [
@@ -19,8 +19,8 @@ const wines = [
   makeWine({ id: 'w3', name: 'Gone', producer: 'Abel', sizeCl: 1500 }),
 ]
 const movements = [
-  mv({ id: '1', wineId: 'w1', quantity: 4, cellarId: 'main', unitPrice: 10, note: 'fair' }),
-  mv({ id: '2', wineId: 'w1', quantity: 2, cellarId: 'b', unitPrice: 15 }),
+  mv({ id: '1', wineId: 'w1', quantity: 4, cellarId: 'main', unitPrice: 10, place: 'Lavinia', note: 'fair' }),
+  mv({ id: '2', wineId: 'w1', quantity: 2, cellarId: 'b', unitPrice: 15, place: 'Domaine' }),
   mv({ id: '3', wineId: 'w2', quantity: 1, cellarId: 'b' }),
   mv({ id: '4', wineId: 'w3', quantity: 1, cellarId: 'b' }),
   mv({ id: '5', wineId: 'w3', kind: 'consume', quantity: 1, cellarId: 'b' }),
@@ -32,10 +32,10 @@ describe('exportCsv', () => {
   it('writes one row per wine and cellar, then wines out of stock', () => {
     expect(cellsOf(csv)).toEqual([
       HEADER,
-      ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', '', '', 'Syrah, Grenache', '11.67', 'fair', 'party', '2024', '', '2032', '', '1066553'],
-      ['Garage', "'=Formula", 'Abel', '', '1', '75', 'white', '', '', '', '', '', '', '', '', '', '', ''],
-      ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', '', '', 'Syrah, Grenache', '11.67', '', 'party', '2024', '', '2032', '', '1066553'],
-      ['', 'Gone', 'Abel', '2020', '0', '1500', 'red', '', '', '', '', '', '', '', '', '', '', ''],
+      ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', '', '', 'Syrah, Grenache', '11.67', 'Lavinia', 'fair', 'party', '2024', '', '2032', '', '1066553'],
+      ['Garage', "'=Formula", 'Abel', '', '1', '75', 'white', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', '', '', 'Syrah, Grenache', '11.67', 'Domaine', '', 'party', '2024', '', '2032', '', '1066553'],
+      ['', 'Gone', 'Abel', '2020', '0', '1500', 'red', '', '', '', '', '', '', '', '', '', '', '', ''],
     ])
   })
 
@@ -47,6 +47,7 @@ describe('exportCsv', () => {
     expect(parsed.rows[1].draft.name).toBe('=Formula')
     expect(parsed.rows.map((r) => r.draft.lwin)).toEqual(['1066553', null, '1066553', null])
     expect(plan.cellars).toEqual([])
+    expect(plan.movements.map((m) => m.place)).toEqual(['Lavinia', '', 'Domaine'])
     expect(parsed.rows[0].window).toEqual({ drinkFrom: 2024, peakFrom: null, peakUntil: 2032, drinkUntil: null })
   })
 })

@@ -60,8 +60,8 @@ function row(fields: string, header = 'name,producer,vintage,quantity,size_cl,co
 describe('parseImport', () => {
   it('reads the template columns', () => {
     const parsed = parseImport(
-      'cellar,name,producer,vintage,quantity,size_cl,color,region,country,grapes,purchase_price,notes,tags\n' +
-        'Garage,Clos X,Dom Y,2018,6,150,red,Bandol,France,"Mourvèdre, Grenache",32.5,from the fair,"gift; party"',
+      'cellar,name,producer,vintage,quantity,size_cl,color,region,country,grapes,purchase_price,purchase place,notes,tags\n' +
+        'Garage,Clos X,Dom Y,2018,6,150,red,Bandol,France,"Mourvèdre, Grenache",32.5,Lavinia,from the fair,"gift; party"',
       2026,
     )
     expect(parsed).toEqual({
@@ -85,6 +85,7 @@ describe('parseImport', () => {
           },
           quantity: 6,
           price: 32.5,
+          place: 'Lavinia',
           notes: 'from the fair',
           window: { drinkFrom: null, peakFrom: null, peakUntil: null, drinkUntil: null },
           errors: [],
@@ -249,8 +250,8 @@ describe('planImport', () => {
   }
   const existing = [makeWine({ id: 'old', name: 'Clos X', producer: 'Dom Y', vintage: 2018, sizeCl: 75 })]
   const text = [
-    'cellar,name,producer,vintage,quantity,size_cl,purchase_price,notes',
-    'cave,clos x,DOM Y,2018,2,,20,restock', // existing wine, cellar matched case-insensitively
+    'cellar,name,producer,vintage,quantity,size_cl,purchase_price,notes,gekauft bei',
+    'cave,clos x,DOM Y,2018,2,,20,restock,Weinhaus', // existing wine, cellar matched case-insensitively
     ',New,,2020,3,,,', // first cellar
     'Garage,New,,2020,1,,,', // repeat of the previous row, new cellar
     'garage,Other,,,0,,,', // new wine without stock
@@ -276,7 +277,7 @@ describe('planImport', () => {
     expect(plan.cellars).toEqual([{ id: 'id4', name: 'Garage', position: 2, storage: {} }])
   })
 
-  it('records additions with price and note', () => {
+  it('records additions with price, place and note', () => {
     expect(plan.movements[0]).toEqual({
       id: 'id1',
       wineId: 'old',
@@ -286,6 +287,7 @@ describe('planImport', () => {
       cellarId: 'cave',
       toCellarId: null,
       unitPrice: 20,
+      place: 'Weinhaus',
       note: 'restock',
     })
     const stock = computeStock(plan.movements)

@@ -178,6 +178,7 @@ export const en = {
   'stock.cellar': 'Cellar',
   'stock.to': 'To cellar',
   'stock.unitPrice': 'Price per bottle',
+  'stock.place': 'Bought at',
   'stock.reason': 'Reason',
   'stock.date': 'Date',
   'stock.note': 'Note',
@@ -191,6 +192,7 @@ export const en = {
   'stock.move': 'Move',
 
   'movement.add': 'Added',
+  'movement.place': 'bought at {place}',
   'movement.consume': 'Drunk',
   'movement.gift': 'Gifted',
   'movement.adjust': 'Stock adjustment',
@@ -405,6 +407,7 @@ export const fr: Messages<typeof en> = {
   'stock.cellar': 'Cave',
   'stock.to': 'Vers la cave',
   'stock.unitPrice': 'Prix par bouteille',
+  'stock.place': 'Acheté chez',
   'stock.reason': 'Motif',
   'stock.date': 'Date',
   'stock.note': 'Note',
@@ -418,6 +421,7 @@ export const fr: Messages<typeof en> = {
   'stock.move': 'Déplacer',
 
   'movement.add': 'Ajouté',
+  'movement.place': 'acheté chez {place}',
   'movement.consume': 'Bu',
   'movement.gift': 'Offert',
   'movement.adjust': 'Ajustement de stock',
@@ -634,6 +638,7 @@ export const de: Messages<typeof en> = {
   'stock.cellar': 'Keller',
   'stock.to': 'In Keller',
   'stock.unitPrice': 'Preis pro Flasche',
+  'stock.place': 'Gekauft bei',
   'stock.reason': 'Grund',
   'stock.date': 'Datum',
   'stock.note': 'Notiz',
@@ -647,6 +652,7 @@ export const de: Messages<typeof en> = {
   'stock.move': 'Umlagern',
 
   'movement.add': 'Hinzugefügt',
+  'movement.place': 'gekauft bei {place}',
   'movement.consume': 'Getrunken',
   'movement.gift': 'Verschenkt',
   'movement.adjust': 'Bestandskorrektur',
