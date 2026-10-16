@@ -17,7 +17,7 @@ function tasting(overrides: Partial<Tasting>): Tasting {
   return { id: 't1', wineId: 'w1', date: '2026-01-01', rating: 3, notes: '', ...overrides }
 }
 
-const chablis = wine({ id: 'w1', name: 'Chablis', producer: 'Dauvissat', vintage: 2020, grapes: ['Chardonnay'], color: 'white', region: 'Burgundy', appellation: 'Chablis', country: 'France', tags: ['Fish'], createdAt: 1, drinkFrom: 2021, drinkUntil: 2025 })
+const chablis = wine({ id: 'w1', name: 'Chablis', producer: 'Dauvissat', vintage: 2020, grapes: ['Chardonnay'], color: 'white', region: 'Burgundy', appellation: 'Chablis Grand Cru', country: 'France', tags: ['Fish'], createdAt: 1, drinkFrom: 2021, drinkUntil: 2025 })
 const margaux = wine({ id: 'w2', name: 'Château Margaux', producer: 'Margaux', vintage: 2015, grapes: ['Cabernet Sauvignon', 'Merlot'], color: 'red', region: 'Bordeaux', appellation: 'Margaux', country: 'France', value: 500, createdAt: 2, drinkFrom: 2022, peakFrom: 2026, peakUntil: 2040 })
 const champagne = wine({ id: 'w3', name: 'Brut Réserve', producer: 'Billecart', vintage: null, grapes: ['chardonnay', 'Pinot Noir'], color: 'sparkling', country: 'France', tags: ['fish', 'Party'], wished: true, value: 45, createdAt: 3 })
 const wines = [chablis, margaux, champagne]
@@ -40,7 +40,7 @@ describe('filterWines', () => {
     { name: 'emptied cellar', patch: { cellarId: 'other' }, want: [] },
     { name: 'tag is case-insensitive', patch: { tag: 'FISH' }, want: ['w1', 'w3'] },
     { name: 'search by tag', patch: { search: 'party' }, want: ['w3'] },
-    { name: 'search by appellation', patch: { search: 'chablis' }, want: ['w1'] },
+    { name: 'search by appellation', patch: { search: 'grand cru' }, want: ['w1'] },
     { name: 'search by region', patch: { search: 'burgundy' }, want: ['w1'] },
     { name: 'region', patch: { region: 'Bordeaux' }, want: ['w2'] },
     { name: 'appellation is case-insensitive', patch: { region: 'margaux' }, want: ['w2'] },
