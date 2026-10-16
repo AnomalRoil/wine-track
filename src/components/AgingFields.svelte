@@ -92,6 +92,7 @@
   onclick={lookup}
 />
 {#if lookupNote}<p class="muted">{lookupNote}</p>{/if}
+{#if aging.windowSource}<WindowSource source={aging.windowSource} />{/if}
 
 <div class="grid">
   {#each WINDOW_KEYS as key (key)}
@@ -108,7 +109,6 @@
     </div>
   {/each}
 </div>
-{#if aging.windowSource}<WindowSource source={aging.windowSource} />{/if}
 {#if !isWindowOrdered(aging)}<p class="warn">{t('aging.unordered')}</p>{/if}
 
 <span class="label">{t('aging.serving')} (°{settings.tempUnit})</span>
