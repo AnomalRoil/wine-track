@@ -69,7 +69,7 @@ it('completes a coded row from its own code and keeps that code', async () => {
   expect(findLwin).toHaveBeenCalledWith(['1066553'])
   expect(vi.mocked(matchLwin).mock.calls.map(([drafts]) => drafts.map((d) => d.name))).toEqual([['Chablis']])
   const [rows] = vi.mocked(applyImport).mock.calls[0]
-  expect(rows[0].draft).toMatchObject({ lwin: '1066553', region: 'Chablis', country: 'France' })
+  expect(rows[0].draft).toMatchObject({ lwin: '1066553', region: 'Burgundy', appellation: 'Chablis', country: 'France' })
 })
 
 it('matches by name a coded row whose code is unknown', async () => {
@@ -125,7 +125,7 @@ async function startCompletion() {
   await load(`name\n${Array.from({ length: 9 }, (_, i) => `Wine ${i}`).join('\n')}`)
   await fireEvent.click(await screen.findByRole('button', { name: 'Complete with Claude (9)' }))
   await vi.waitFor(() => expect(completeWines).toHaveBeenCalledTimes(1))
-  const batch = Array.from({ length: 8 }, () => ({ grapes: ['Merlot'], region: 'Bordeaux', country: 'France' }))
+  const batch = Array.from({ length: 8 }, () => ({ grapes: ['Merlot'], region: 'Bordeaux', appellation: null, country: 'France' }))
   return () => finish({ ok: true, data: batch })
 }
 

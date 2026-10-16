@@ -140,3 +140,20 @@ it('keeps the menu for the calendar export only', async () => {
   await fireEvent.click(button('More actions'))
   expect(screen.getAllByRole('menuitem').map((m) => m.textContent?.trim())).toEqual(['Add to calendar (.ics)'])
 })
+
+it('shows the appellation before the region and saves an edited one', async () => {
+  store.wines = [makeWine({ vintage: 2016, appellation: 'Pauillac', region: 'Bordeaux', country: 'France' })]
+  render(WineDetail, { wineId: 'w1', onclose: () => {} })
+  expect(document.querySelector('.where')?.textContent).toBe('2016 · Pauillac · Bordeaux, France')
+  await openEditor()
+  const appellation = screen.getByLabelText<HTMLInputElement>('Appellation')
+  expect(appellation.value).toBe('Pauillac')
+  await fireEvent.input(appellation, { target: { value: 'Saint-Julien' } })
+
+  await fireEvent.click(button('Save'))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(store.wines[0].appellation).toBe('Saint-Julien'))
+  expect(store.wines[0].region).toBe('Bordeaux')
+})

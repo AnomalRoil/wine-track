@@ -5,7 +5,7 @@ import { exportCsv, templateCsv } from './csvExport'
 import { parseImport, planImport } from './csvImport'
 import { makeMovement as mv, makeWine } from './testing'
 
-const HEADER = ['cellar', 'name', 'producer', 'vintage', 'quantity', 'size (cl)', 'color', 'region', 'country', 'grapes', 'purchase price', 'purchase place', 'notes', 'tags', 'drink from', 'peak from', 'peak until', 'drink until', 'lwin']
+const HEADER = ['cellar', 'name', 'producer', 'vintage', 'quantity', 'size (cl)', 'color', 'region', 'appellation', 'country', 'grapes', 'purchase price', 'purchase place', 'notes', 'tags', 'drink from', 'peak from', 'peak until', 'drink until', 'lwin']
 const cellsOf = (text: string) => parseCsv(text).map((r) => r.cells)
 
 const cellars = [
@@ -14,7 +14,7 @@ const cellars = [
 ]
 const name = (id: string) => cellars.find((c) => c.id === id)!.name || 'My cellar'
 const wines = [
-  makeWine({ id: 'w1', name: 'Clos', producer: 'Zed', grapes: ['Syrah', 'Grenache'], grapeShares: { Syrah: 70, Grenache: 30 }, tags: ['party'], sizeCl: 150, drinkFrom: 2024, peakUntil: 2032, lwin: '1066553' }),
+  makeWine({ id: 'w1', name: 'Clos', producer: 'Zed', region: 'Rhône', appellation: 'Cornas', country: 'France', grapes: ['Syrah', 'Grenache'], grapeShares: { Syrah: 70, Grenache: 30 }, tags: ['party'], sizeCl: 150, drinkFrom: 2024, peakUntil: 2032, lwin: '1066553' }),
   makeWine({ id: 'w2', name: '=Formula', producer: 'Abel', vintage: null, color: 'white' }),
   makeWine({ id: 'w3', name: 'Gone', producer: 'Abel', sizeCl: 1500 }),
 ]
@@ -32,10 +32,10 @@ describe('exportCsv', () => {
   it('writes one row per wine and cellar, then wines out of stock', () => {
     expect(cellsOf(csv)).toEqual([
       HEADER,
-      ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', '', '', 'Syrah 70%, Grenache 30%', '11.67', 'Lavinia', 'fair', 'party', '2024', '', '2032', '', '1066553'],
-      ['Garage', "'=Formula", 'Abel', '', '1', '75', 'white', '', '', '', '', '', '', '', '', '', '', '', ''],
-      ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', '', '', 'Syrah 70%, Grenache 30%', '11.67', 'Domaine', '', 'party', '2024', '', '2032', '', '1066553'],
-      ['', 'Gone', 'Abel', '2020', '0', '1500', 'red', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', 'Rhône', 'Cornas', 'France', 'Syrah 70%, Grenache 30%', '11.67', 'Lavinia', 'fair', 'party', '2024', '', '2032', '', '1066553'],
+      ['Garage', "'=Formula", 'Abel', '', '1', '75', 'white', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+      ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', 'Rhône', 'Cornas', 'France', 'Syrah 70%, Grenache 30%', '11.67', 'Domaine', '', 'party', '2024', '', '2032', '', '1066553'],
+      ['', 'Gone', 'Abel', '2020', '0', '1500', 'red', '', '', '', '', '', '', '', '', '', '', '', '', ''],
     ])
   })
 
@@ -50,6 +50,7 @@ describe('exportCsv', () => {
     const plan = planImport(parsed.rows, wines, { cellars, defaultCellarName: 'My cellar', date: '', now: 0, newId: () => 'new' })
     expect(plan.matches.map((m) => m.kind)).toEqual(['existing', 'existing', 'existing', 'existing'])
     expect(parsed.rows[1].draft.name).toBe('=Formula')
+    expect(parsed.rows[0].draft).toMatchObject({ region: 'Rhône', appellation: 'Cornas', country: 'France' })
     expect(parsed.rows.map((r) => r.draft.lwin)).toEqual(['1066553', null, '1066553', null])
     expect(plan.cellars).toEqual([])
     expect(plan.movements.map((m) => m.place)).toEqual(['Lavinia', '', 'Domaine'])

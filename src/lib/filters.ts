@@ -19,6 +19,8 @@ export interface WineFilter {
   vintageMin: number | null
   vintageMax: number | null
   grape: string | null
+  /** A region or an appellation; matches wines naming it as either. */
+  region: string | null
   minRating: number | null
   ownedOnly: boolean
   wishedOnly: boolean
@@ -35,6 +37,7 @@ export function emptyFilter(): WineFilter {
     vintageMin: null,
     vintageMax: null,
     grape: null,
+    region: null,
     minRating: null,
     ownedOnly: false,
     wishedOnly: false,
@@ -51,6 +54,7 @@ export function isFilterActive(f: WineFilter): boolean {
     f.vintageMin !== null ||
     f.vintageMax !== null ||
     f.grape !== null ||
+    f.region !== null ||
     f.minRating !== null ||
     f.ownedOnly ||
     f.wishedOnly ||
@@ -93,6 +97,7 @@ export function filterWines(wines: Wine[], ctx: FilterContext, f: WineFilter): W
     if (f.vintageMin !== null && (w.vintage === null || w.vintage < f.vintageMin)) return false
     if (f.vintageMax !== null && (w.vintage === null || w.vintage > f.vintageMax)) return false
     if (f.grape !== null && !hasName(w.grapes, f.grape)) return false
+    if (f.region !== null && !hasName([w.region.trim(), w.appellation.trim()], f.region)) return false
     if (f.phases.length > 0) {
       const phase = phaseOf(w, ctx.year)
       if (phase === null || !f.phases.includes(phase)) return false
@@ -101,7 +106,7 @@ export function filterWines(wines: Wine[], ctx: FilterContext, f: WineFilter): W
       const r = ratings.get(w.id)
       if (r === undefined || r < f.minRating!) return false
     }
-    if (!matchesSearch([w.name, w.producer, w.region, w.country, ...w.grapes, ...w.tags, w.vintage], f.search)) return false
+    if (!matchesSearch([w.name, w.producer, w.appellation, w.region, w.country, ...w.grapes, ...w.tags, w.vintage], f.search)) return false
     return true
   })
 }
@@ -157,4 +162,43 @@ function distinctNames(lists: string[][]): string[] {
     }
   }
   return [...seen.values()].sort((a, b) => a.localeCompare(b))
+}
+
+export interface RegionEntry {
+  name: string
+  /** Appellations of wines in this region, sorted. */
+  appellations: string[]
+}
+
+/**
+ * Regions with their appellations, for the filter dropdown, merged case-insensitively
+ * under the first spelling seen. An appellation without a region stands as a region,
+ * unless it is listed under one: the filter matches either field.
+ */
+export function regionTree(wines: Wine[]): RegionEntry[] {
+  const regions = new Map<string, { name: string; appellations: Map<string, string> }>()
+  const add = (name: string) => {
+    const k = name.toLowerCase()
+    let r = regions.get(k)
+    if (!r) regions.set(k, (r = { name, appellations: new Map() }))
+    return r
+  }
+  for (const w of wines) {
+    const region = w.region.trim()
+    const appellation = w.appellation.trim()
+    if (!region) {
+      if (appellation) add(appellation)
+      continue
+    }
+    const r = add(region)
+    const k = appellation.toLowerCase()
+    if (appellation && k !== region.toLowerCase() && !r.appellations.has(k)) r.appellations.set(k, appellation)
+  }
+  const nested = new Set([...regions.values()].flatMap((r) => [...r.appellations.keys()]))
+  const sorted = (names: Iterable<string>) => [...names].sort((a, b) => a.localeCompare(b))
+  return [...regions.entries()]
+    .filter(([k, r]) => r.appellations.size > 0 || !nested.has(k))
+    .map(([, r]) => r)
+    .map((r) => ({ name: r.name, appellations: sorted(r.appellations.values()) }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }

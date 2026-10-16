@@ -8,6 +8,8 @@ import type { Tasting } from './types'
 const wine = makeWine({
   id: 'w1',
   name: 'Chablis',
+  region: 'Burgundy',
+  appellation: 'Chablis Premier Cru',
   photoId: 'p1',
   grapes: ['Chardonnay', 'Aligoté'],
   grapeShares: { Chardonnay: 87.5, 'Aligoté': 12.5 },
@@ -66,6 +68,13 @@ describe('backup', () => {
     expect(parseBackup(json)?.movements).toEqual([makeMovement({ unitPrice: 12.5 })])
   })
 
+  it('gives wines from a backup made before appellations no appellation', () => {
+    const { appellation, ...older } = wine
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [older], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(appellation).not.toBe('')
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, appellation: '' }])
+  })
+
   it('reads a version 2 backup made before racks existed', () => {
     const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [wine], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
     const parsed = parseBackup(json)
@@ -93,9 +102,9 @@ describe('backup', () => {
     const parsed = parseBackup(json)
     expect(parsed?.version).toBe(2)
     expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0, storage: {} }])
-    expect(parsed?.wines.map((w) => [w.id, w.sizeCl, w.tags, w.wished, w.value, w.drinkFrom, w.profile])).toEqual([
-      ['w1', 75, [], false, null, null, null],
-      ['w2', 75, [], false, null, null, null],
+    expect(parsed?.wines.map((w) => [w.id, w.appellation, w.sizeCl, w.tags, w.wished, w.value, w.drinkFrom, w.profile])).toEqual([
+      ['w1', '', 75, [], false, null, null, null],
+      ['w2', '', 75, [], false, null, null, null],
     ])
     expect(parsed?.wines[0]).not.toHaveProperty('bottlesOwned')
     expect(parsed?.wines[0].grapeShares).toEqual({})

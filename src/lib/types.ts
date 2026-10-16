@@ -86,8 +86,10 @@ export interface Wine extends Aging {
   grapes: string[]
   /** Percentages the user or a source gave, by grape name. */
   grapeShares: GrapeShares
-  /** Region or appellation, free text. */
+  /** Wine region, e.g. Bordeaux; free text. */
   region: string
+  /** Appellation or sub-region within the region, e.g. Pauillac; free text, '' when unknown. */
+  appellation: string
   country: string
   color: WineColor
   sizeCl: number

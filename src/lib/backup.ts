@@ -37,6 +37,7 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   lwin: z.string().regex(/^\d{7}$/).nullable().default(null),
   // Out-of-range shares are dropped when the store loads the wines.
   grapeShares: z.record(z.string(), z.number()).default({}),
+  appellation: z.string().default(''),
   // Aging fields arrived within version 2: older backups lack them.
   drinkFrom: year,
   peakFrom: year,

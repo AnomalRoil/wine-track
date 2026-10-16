@@ -5,6 +5,7 @@
     distinctTags,
     emptyFilter,
     filterWines,
+    regionTree,
     sortWines,
     type FilterContext,
     type SortKey,
@@ -33,6 +34,7 @@
   })
   const visible = $derived(sortWines(filterWines(store.wines, ctx, filter), ctx, sort))
   const grapes = $derived(distinctGrapes(store.wines))
+  const regions = $derived(regionTree(store.wines))
   const tags = $derived(distinctTags(store.wines))
   const sum = $derived(totals(store.wines, store.movements, ctx.stock))
 </script>
@@ -46,7 +48,7 @@
   {/if}
 </header>
 
-<FilterBar bind:filter bind:sort {grapes} {tags} />
+<FilterBar bind:filter bind:sort {grapes} {regions} {tags} />
 
 {#if store.wines.length === 0}
   <p class="muted center">{t('list.empty')}</p>

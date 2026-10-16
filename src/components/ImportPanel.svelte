@@ -10,6 +10,7 @@
   import { cellarName } from '../lib/labels'
   import { completeFromLwin, confidentMatch, displayName, undoLwinCompletion, type LwinWine } from '../lib/lwin'
   import { findLwin, matchLwin } from '../lib/lwinData.svelte'
+  import { placeLine } from '../lib/place'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
   import Icon from './Icon.svelte'
@@ -22,7 +23,7 @@
   let progress = $state<{ done: number; total: number } | null>(null)
   let completeError = $state<{ kind: FailureKind; detail?: string } | null>(null)
   let committing = $state(false)
-  /** Database wines of the rows lacking a region or country, by line: by code, or else by name. */
+  /** Database wines of the rows lacking a region, appellation or country, by line: by code, or else by name. */
   let lwinMatches = $state.raw(new Map<number, LwinWine>())
   /** Drafts as read from the file, for the rows filled in from the database. */
   let unfilled = $state.raw(new Map<number, ImportRow['draft']>())
@@ -88,7 +89,7 @@
   }
 
   async function suggestMatches(gen: number) {
-    const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.country))
+    const todo = rows!.filter((r) => r.errors.length === 0 && (!r.draft.region || !r.draft.appellation || !r.draft.country))
     if (todo.length === 0) return
     const coded = todo.filter((r) => r.draft.lwin !== null)
     const byCode = coded.length > 0 ? await findLwin(coded.map((r) => r.draft.lwin!)) : []
@@ -249,7 +250,7 @@
         </ul>
       {:else}
         <div class="muted">
-          {[row.draft.region, row.draft.country, formatGrapes(row.draft.grapes, row.draft.grapeShares)].filter(Boolean).join(' · ')}
+          {[placeLine(row.draft), formatGrapes(row.draft.grapes, row.draft.grapeShares)].filter(Boolean).join(' · ')}
           {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
         </div>
         {#if lwinMatches.has(row.line) && (match.kind === 'new' || unfilled.has(row.line))}

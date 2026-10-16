@@ -22,6 +22,7 @@
   import { t } from '../lib/i18n.svelte'
   import { cellarName, rackName, sizeLabel, slotLabel, wineLabel } from '../lib/labels'
   import { money } from '../lib/money'
+  import { placeLine } from '../lib/place'
   import { placementsOf } from '../lib/racks'
   import { settings } from '../lib/settings.svelte'
   import { averageBuyPrice, bottlesOf } from '../lib/stock'
@@ -126,8 +127,8 @@
   }
 
   function editable(w: Wine): WineDraft {
-    const { name, producer, vintage, grapes, grapeShares, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
-    return { name, producer, vintage, grapes, grapeShares, region, country, color, sizeCl, tags, lwin }
+    const { name, producer, vintage, grapes, grapeShares, region, appellation, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
+    return { name, producer, vintage, grapes, grapeShares, region, appellation, country, color, sizeCl, tags, lwin }
   }
 
   function startEdit() {
@@ -258,8 +259,8 @@
     <div class="titles">
       {#if wine.name && wine.producer && wine.producer !== wine.name}<span class="producer">{wine.producer}</span>{/if}
       <h1>{wine.name || wine.producer}</h1>
-      {#if wine.vintage || wine.region || wine.country}
-        <span class="where">{[wine.vintage, [wine.region, wine.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</span>
+      {#if wine.vintage || placeLine(wine)}
+        <span class="where">{[wine.vintage, placeLine(wine)].filter(Boolean).join(' · ')}</span>
       {/if}
     </div>
     <div class="tags">

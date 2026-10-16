@@ -10,7 +10,8 @@ describe('toWineDraft', () => {
         producer: 'Dauvissat',
         vintage: 2020,
         grapes: [' Chardonnay ', ''],
-        region: 'Chablis',
+        appellation: 'Chablis Premier Cru',
+        region: 'Burgundy',
         country: 'France',
         color: 'white',
         volumeCl: 150,
@@ -21,7 +22,8 @@ describe('toWineDraft', () => {
       vintage: 2020,
       grapes: ['Chardonnay'],
       grapeShares: {},
-      region: 'Chablis',
+      region: 'Burgundy',
+      appellation: 'Chablis Premier Cru',
       country: 'France',
       color: 'white',
       sizeCl: 150,
@@ -37,6 +39,7 @@ describe('toWineDraft', () => {
         producer: null,
         vintage: null,
         grapes: [],
+        appellation: null,
         region: null,
         country: null,
         color: 'unknown',
@@ -56,7 +59,8 @@ describe('mergeExtraction', () => {
     producer: 'Dauvissat',
     vintage: 2020,
     grapes: ['Chardonnay'],
-    region: 'Chablis',
+    appellation: 'Chablis',
+    region: 'Burgundy',
     country: 'France',
     color: 'white',
     volumeCl: 150,
@@ -100,6 +104,13 @@ describe('mergeExtraction', () => {
       want: { ...toWineDraft(label), name: '' },
     },
     {
+      name: 'typed appellation kept, region read',
+      draft: { ...emptyDraft(), appellation: 'Chablis Grand Cru' },
+      touched: new Set(['appellation']),
+      extraction: label,
+      want: { ...toWineDraft(label), appellation: 'Chablis Grand Cru' },
+    },
+    {
       name: 'cleared field kept',
       draft: { ...emptyDraft(), producer: '' },
       touched: new Set(['producer']),
@@ -117,6 +128,8 @@ describe('mergeExtraction', () => {
 describe('wineQuery', () => {
   it('joins the identifying fields', () => {
     expect(wineQuery({ ...emptyDraft(), producer: 'Dom', name: 'Clos', vintage: 2019, country: 'France' })).toBe('Dom Clos 2019 France')
+    const place = { appellation: 'Pauillac', region: 'Bordeaux', country: 'France' }
+    expect(wineQuery({ ...emptyDraft(), producer: 'Dom', name: 'Clos', ...place })).toBe('Dom Clos Pauillac Bordeaux France')
   })
 
   it('keeps imported text on one line and clips long fields', () => {
@@ -129,8 +142,8 @@ describe('wineQuery', () => {
 
 describe('alignCompletions', () => {
   it('orders answers by index and fills the gaps', () => {
-    const syrah = { grapes: ['Syrah'], region: 'Cornas', country: 'France' }
-    const empty = { grapes: [], region: null, country: null }
+    const syrah = { grapes: ['Syrah'], region: 'Rhône', appellation: 'Cornas', country: 'France' }
+    const empty = { grapes: [], region: null, appellation: null, country: null }
     expect(alignCompletions(3, [{ index: 3, ...syrah }, { index: 9, ...syrah }])).toEqual([empty, empty, syrah])
   })
 })

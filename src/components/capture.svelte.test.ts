@@ -36,6 +36,7 @@ const label: WineExtraction = {
   producer: 'Dauvissat',
   vintage: 2020,
   grapes: ['Chardonnay'],
+  appellation: null,
   region: 'Chablis',
   country: 'France',
   color: 'white',
@@ -83,6 +84,16 @@ it('Reading the label keeps the form and its chosen color', async () => {
   expect(activeColor()).toBe('Red')
   expect((document.querySelector('#size') as HTMLSelectElement).value).toBe('150')
   expect(details.open).toBe(true)
+})
+
+it('Reading the label fills the appellation apart from the region', async () => {
+  const { answer } = await formWithPhoto()
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  answer({ ok: true, data: { ...label, appellation: 'Chablis Premier Cru', region: 'Burgundy' } })
+
+  await waitFor(() => expect(name().value).toBe('Chablis'))
+  expect(screen.getByLabelText<HTMLInputElement>('Appellation').value).toBe('Chablis Premier Cru')
+  expect(screen.getByLabelText<HTMLInputElement>('Region').value).toBe('Burgundy')
 })
 
 it('Reading the label keeps the grape being typed', async () => {

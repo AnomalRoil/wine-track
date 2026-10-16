@@ -74,8 +74,8 @@ describe('parseImport grapes', () => {
 describe('parseImport', () => {
   it('reads the template columns', () => {
     const parsed = parseImport(
-      'cellar,name,producer,vintage,quantity,size_cl,color,region,country,grapes,purchase_price,purchase place,notes,tags\n' +
-        'Garage,Clos X,Dom Y,2018,6,150,red,Bandol,France,"Mourvèdre, Grenache",32.5,Lavinia,from the fair,"gift; party"',
+      'cellar,name,producer,vintage,quantity,size_cl,color,region,appellation,country,grapes,purchase_price,purchase place,notes,tags\n' +
+        'Garage,Clos X,Dom Y,2018,6,150,red,Provence,Bandol,France,"Mourvèdre, Grenache",32.5,Lavinia,from the fair,"gift; party"',
       2026,
     )
     expect(parsed).toEqual({
@@ -91,7 +91,8 @@ describe('parseImport', () => {
             vintage: 2018,
             grapes: ['Mourvèdre', 'Grenache'],
             grapeShares: {},
-            region: 'Bandol',
+            region: 'Provence',
+            appellation: 'Bandol',
             country: 'France',
             color: 'red',
             sizeCl: 150,
@@ -209,6 +210,24 @@ describe('parseImport drinking window', () => {
   it('reads French and German headers', () => {
     expect(row('A,2025,2040', 'nom,à boire à partir de,trinken bis').window).toEqual({ ...none, drinkFrom: 2025, drinkUntil: 2040 })
   })
+})
+
+describe('parseImport place headers', () => {
+  const placeHeaders: { header: string; want: { region: string; appellation: string } }[] = [
+    { header: 'Region', want: { region: 'X', appellation: '' } },
+    { header: 'Anbaugebiet', want: { region: 'X', appellation: '' } },
+    { header: 'Région / appellation', want: { region: 'X', appellation: '' } },
+    { header: 'Appellation', want: { region: '', appellation: 'X' } },
+    { header: 'AOC', want: { region: '', appellation: 'X' } },
+    { header: 'AOP', want: { region: '', appellation: 'X' } },
+    { header: 'Sub-region', want: { region: '', appellation: 'X' } },
+    { header: 'Sous-région', want: { region: '', appellation: 'X' } },
+  ]
+  for (const c of placeHeaders) {
+    it(`reads ${c.header}`, () => {
+      expect(row('A,X', `name,${c.header}`).draft).toMatchObject(c.want)
+    })
+  }
 })
 
 describe('parseImport size headers with a cl unit', () => {
@@ -541,23 +560,24 @@ it('keeps distinct non-Latin wine and cellar names apart', () => {
 })
 
 describe('applyCompletion', () => {
-  const completion = { grapes: [' Syrah '], region: 'Cornas', country: 'France' }
-  const cases: { name: string; draft: Partial<ReturnType<typeof emptyDraft>>; want: [string[], string, string] }[] = [
-    { name: 'fills empty fields', draft: {}, want: [['Syrah'], 'Cornas', 'France'] },
-    { name: 'keeps what the user wrote', draft: { grapes: ['Gamay'], region: 'Morgon' }, want: [['Gamay'], 'Morgon', 'France'] },
+  const completion = { grapes: [' Syrah '], region: 'Rhône', appellation: ' Cornas ', country: 'France' }
+  const cases: { name: string; draft: Partial<ReturnType<typeof emptyDraft>>; want: [string[], string, string, string] }[] = [
+    { name: 'fills empty fields', draft: {}, want: [['Syrah'], 'Rhône', 'Cornas', 'France'] },
+    { name: 'keeps what the user wrote', draft: { grapes: ['Gamay'], region: 'Beaujolais', appellation: 'Morgon' }, want: [['Gamay'], 'Beaujolais', 'Morgon', 'France'] },
+    { name: 'leaves out an appellation the region already holds', draft: { region: 'cornas' }, want: [['Syrah'], 'cornas', '', 'France'] },
   ]
   for (const c of cases) {
     it(c.name, () => {
       const d = applyCompletion({ ...emptyDraft(), ...c.draft }, completion)
-      expect([d.grapes, d.region, d.country]).toEqual(c.want)
+      expect([d.grapes, d.region, d.appellation, d.country]).toEqual(c.want)
     })
   }
   it('returns the same draft when nothing is filled', () => {
     const draft = emptyDraft()
-    expect(applyCompletion(draft, { grapes: [' '], region: null, country: '' })).toBe(draft)
+    expect(applyCompletion(draft, { grapes: [' '], region: null, appellation: ' ', country: '' })).toBe(draft)
   })
   it('accepts unknown answers', () => {
-    expect(applyCompletion(emptyDraft(), { grapes: [], region: null, country: null }).region).toBe('')
+    expect(applyCompletion(emptyDraft(), { grapes: [], region: null, appellation: null, country: null }).region).toBe('')
   })
 })
 

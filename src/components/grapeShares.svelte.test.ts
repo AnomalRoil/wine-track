@@ -129,8 +129,7 @@ it('shows each share on the wine page, a single grape as 100%', () => {
 it('saves a share edited on the wine page', async () => {
   store.wines = [makeWine({ grapes: ['Merlot', 'Malbec'] })]
   render(WineDetail, { wineId: 'w1', onclose: () => {} })
-  await fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
-  await fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit wine' }))
 
   await fireEvent.input(share('Merlot'), { target: { value: '70' } })
   await fireEvent.input(share('Malbec'), { target: { value: '30' } })
