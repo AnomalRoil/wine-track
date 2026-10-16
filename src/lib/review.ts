@@ -1,4 +1,5 @@
 import type { WineDraft } from './extract'
+import { cleanShares, parseGrapes, type GrapeShares } from './grapes'
 import { WINE_COLORS, type WineColor } from './types'
 
 /** Draft fields an import completion can fill, in display order. */
@@ -8,9 +9,11 @@ export type ReviewField = (typeof REVIEW_FIELDS)[number]
 export type SuggestionSource = 'claude' | 'lwin'
 export type SuggestionStatus = 'pending' | 'accepted' | 'rejected'
 
-/** A value a completion proposes for one field of an imported row. */
+/** A value a completion proposes for one field of an imported row; grapes may carry the shares the user typed. */
 export type Suggestion = {
-  [F in ReviewField]: { field: F; value: WineDraft[F]; source: SuggestionSource; status: SuggestionStatus; edited: boolean }
+  [F in ReviewField]: { field: F; value: WineDraft[F]; source: SuggestionSource; status: SuggestionStatus; edited: boolean } & (F extends 'grapes'
+    ? { grapeShares?: GrapeShares }
+    : unknown)
 }[ReviewField]
 
 function same(a: WineDraft[ReviewField], b: WineDraft[ReviewField]): boolean {
@@ -53,7 +56,10 @@ export function active(list: readonly Suggestion[]): Suggestion[] {
 export function resolve(draft: WineDraft, list: readonly Suggestion[] = [], withPending = false): WineDraft {
   const applied = active(list).filter((s) => s.status === 'accepted' || (withPending && s.status === 'pending'))
   if (applied.length === 0) return draft
-  return { ...draft, ...Object.fromEntries(applied.map((s) => [s.field, s.value])) }
+  const next: WineDraft = { ...draft, ...Object.fromEntries(applied.map((s) => [s.field, s.value])) }
+  const grapes = applied.find((s) => s.field === 'grapes')
+  if (grapes) next.grapeShares = grapes.grapeShares ?? {}
+  return next
 }
 
 /** Sets the status of `target`, or of every suggestion when `target` is null. */
@@ -73,7 +79,9 @@ export function pendingCount(list: readonly Suggestion[]): number {
 
 /** A suggestion's value as the user edits it. */
 export function formatValue(s: Suggestion): string {
-  return s.field === 'grapes' ? s.value.join(', ') : (s.value ?? '')
+  if (s.field !== 'grapes') return s.value ?? ''
+  const shares = cleanShares(s.value, s.grapeShares ?? {})
+  return s.value.map((g) => (Object.hasOwn(shares, g) ? `${g} ${shares[g]}%` : g)).join(', ')
 }
 
 /**
@@ -83,14 +91,16 @@ export function formatValue(s: Suggestion): string {
 export function edit(list: readonly Suggestion[], target: Suggestion, raw: string): Suggestion[] | null {
   const text = raw.trim()
   if (text === '') return setStatus(list, target, 'rejected')
-  let value: WineDraft[ReviewField]
-  if (target.field === 'grapes') value = [...new Set(text.split(/[,;|]/).map((g) => g.trim()).filter(Boolean))]
-  else if (target.field === 'color') {
+  let patch: { value: WineDraft[ReviewField]; grapeShares?: GrapeShares }
+  if (target.field === 'grapes') {
+    const { grapes, grapeShares } = parseGrapes(text)
+    patch = { value: grapes, grapeShares }
+  } else if (target.field === 'color') {
     if (!WINE_COLORS.includes(text as WineColor)) return null
-    value = text as WineColor
+    patch = { value: text as WineColor }
   } else if (target.field === 'lwin') {
     if (!/^\d{7}$/.test(text)) return null
-    value = text
-  } else value = text
-  return list.map((s) => (s === target ? ({ ...s, value, status: 'accepted', edited: true } as Suggestion) : s))
+    patch = { value: text }
+  } else patch = { value: text }
+  return list.map((s) => (s === target ? ({ ...s, ...patch, status: 'accepted', edited: true } as Suggestion) : s))
 }

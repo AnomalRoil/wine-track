@@ -58,6 +58,10 @@ describe('resolve', () => {
   ]
   for (const c of cases) it(c.name, () => expect(resolve(draft, c.list, c.withPending)).toEqual(c.want))
 
+  it('applies edited grape shares', () => {
+    const edited = edit([grapes], grapes, 'Merlot 60%, Cabernet Franc 40%')!
+    expect(resolve(draft, edited)).toMatchObject({ grapes: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 } })
+  })
   it('returns the draft itself when nothing applies', () => expect(resolve(draft, [country])).toBe(draft))
   it('applies an alternative once the first is rejected', () =>
     expect(resolve(draft, [{ ...country, status: 'rejected' }, pending({ field: 'country', value: 'Suisse', status: 'accepted' })])).toEqual({ ...draft, country: 'Suisse' }))
@@ -81,7 +85,19 @@ describe('edit', () => {
   const list = [grapes, country, pending({ field: 'color', value: 'white' }), pending({ field: 'lwin', value: '1066553' })]
   const cases: { name: string; field: Suggestion['field']; raw: string; want: Suggestion | null }[] = [
     { name: 'text', field: 'country', raw: ' Suisse ', want: pending({ field: 'country', value: 'Suisse', source: 'lwin', status: 'accepted', edited: true }) },
-    { name: 'grape list', field: 'grapes', raw: 'Merlot; Cabernet Franc, Merlot', want: pending({ field: 'grapes', value: ['Merlot', 'Cabernet Franc'], status: 'accepted', edited: true }) },
+    { name: 'grape list', field: 'grapes', raw: 'Merlot; Cabernet Franc, Merlot', want: pending({ field: 'grapes', value: ['Merlot', 'Cabernet Franc'], grapeShares: {}, status: 'accepted', edited: true }) },
+    {
+      name: 'grape shares',
+      field: 'grapes',
+      raw: 'Merlot 60%, Cabernet Franc 40%',
+      want: pending({ field: 'grapes', value: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 }, status: 'accepted', edited: true }),
+    },
+    {
+      name: 'decimal comma shares',
+      field: 'grapes',
+      raw: 'Merlot 87,5%, Cabernet Franc 12,5%',
+      want: pending({ field: 'grapes', value: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 87.5, 'Cabernet Franc': 12.5 }, status: 'accepted', edited: true }),
+    },
     { name: 'empty rejects', field: 'country', raw: ' ', want: { ...country, status: 'rejected' } },
     { name: 'known color', field: 'color', raw: 'red', want: pending({ field: 'color', value: 'red', status: 'accepted', edited: true }) },
     { name: 'unknown color', field: 'color', raw: 'blue', want: null },
@@ -99,5 +115,7 @@ describe('edit', () => {
 
 describe('formatValue', () => {
   it('joins grapes', () => expect(formatValue(pending({ field: 'grapes', value: ['Merlot', 'Malbec'] }))).toBe('Merlot, Malbec'))
+  it('shows grape shares', () =>
+    expect(formatValue(pending({ field: 'grapes', value: ['Merlot', 'Malbec'], grapeShares: { Merlot: 87.5 } }))).toBe('Merlot 87.5%, Malbec'))
   it('shows a missing code as empty', () => expect(formatValue(pending({ field: 'lwin', value: null }))).toBe(''))
 })
