@@ -206,6 +206,9 @@ describe('sourceHost', () => {
   const cases = [
     { url: 'https://www.domaine.example/vins/2019', want: 'domaine.example' },
     { url: 'https://shop.example.ch/p?id=1', want: 'shop.example.ch' },
+    { url: 'domaine.example', want: null },
+    { url: 'javascript:alert(1)', want: null },
+    { url: null, want: null },
   ]
   it.each(cases)('sourceHost($url) = $want', ({ url, want }) => {
     expect(sourceHost(url)).toBe(want)
@@ -228,8 +231,8 @@ describe('handSource', () => {
 describe('mergeAging', () => {
   it('takes found values and keeps current ones the lookup lacks', () => {
     const current: Aging = { ...full, servingMinC: 14, decantMinutes: 30 }
-    const found: Aging = { ...NO_AGING, drinkFrom: 2025, decantMinutes: 0, profile: { body: 7, tannin: 6, sweetness: 0, acidity: 5, fizz: 0 } }
-    expect(mergeAging(current, found)).toEqual({ ...current, drinkFrom: 2025, decantMinutes: 0, profile: found.profile })
+    const found: Aging = { ...NO_AGING, servingMaxC: 18, decantMinutes: 0, profile: { body: 7, tannin: 6, sweetness: 0, acidity: 5, fizz: 0 } }
+    expect(mergeAging(current, found)).toEqual({ ...current, servingMaxC: 18, decantMinutes: 0, profile: found.profile })
   })
 
   it("takes the lookup's source and keeps the current one when the lookup has none", () => {
@@ -237,6 +240,15 @@ describe('mergeAging', () => {
     const source = { kind: 'critic', url: 'https://critic.example' } as const
     expect(mergeAging(current, { ...NO_AGING, drinkFrom: 2025, windowSource: source }).windowSource).toEqual(source)
     expect(mergeAging(current, { ...NO_AGING, servingMinC: 12 }).windowSource).toEqual(current.windowSource)
+  })
+
+  it('replaces the whole window with a found one, so its source covers only the years it stated', () => {
+    const current: Aging = { ...win(2025, 2028, 2032, 2040), windowSource: { kind: 'user', url: null } }
+    const source = { kind: 'critic', url: 'https://critic.example' } as const
+    expect(mergeAging(current, { ...NO_AGING, drinkUntil: 2050, windowSource: source })).toEqual({
+      ...win(null, null, null, 2050),
+      windowSource: source,
+    })
   })
 })
 
