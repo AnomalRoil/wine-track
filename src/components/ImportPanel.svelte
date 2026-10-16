@@ -383,6 +383,7 @@
   .emptied,
   .emptied-list {
     color: var(--tertiary);
+    overflow-wrap: anywhere;
   }
 
   .emptied-list {
