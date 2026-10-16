@@ -74,7 +74,7 @@ const HEADER_ALIASES: Record<Column, string[]> = {
   country: ['country', 'pays', 'land'],
   grapes: ['grapes', 'grape', 'varieties', 'cepages', 'cepage', 'rebsorten', 'rebsorte'],
   purchase_price: ['purchaseprice', 'price', 'unitprice', 'prix', 'prixdachat', 'kaufpreis', 'preis'],
-  purchase_place: ['purchaseplace', 'boughtat', 'place', 'shop', 'store', 'merchant', 'supplier', 'lieudachat', 'achetechez', 'fournisseur', 'caviste', 'kaufort', 'gekauftbei', 'handler', 'lieferant', 'bezugsquelle'],
+  purchase_place: ['purchaseplace', 'boughtat', 'shop', 'merchant', 'supplier', 'lieudachat', 'achetechez', 'fournisseur', 'caviste', 'kaufort', 'gekauftbei', 'handler', 'lieferant', 'bezugsquelle'],
   notes: ['notes', 'note', 'comment', 'comments', 'commentaire', 'commentaires', 'notizen', 'bemerkung', 'bemerkungen'],
   tags: ['tags', 'tag', 'etiquettes', 'schlagworte', 'schlagworter'],
   drink_from: ['drinkfrom', 'readyfrom', 'aboireapartirde', 'apartirde', 'trinkreifab', 'trinkenab'],

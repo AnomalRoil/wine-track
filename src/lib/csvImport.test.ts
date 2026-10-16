@@ -121,6 +121,12 @@ describe('parseImport', () => {
     })
   })
 
+  it('ignores storage-like headers rather than reading them as the purchase place', () => {
+    const parsed = parseImport('name,place,store\nCuvée,Rack B,Shelf 2', 2026)
+    expect(parsed.ok && parsed.ignored).toEqual(['place', 'store'])
+    expect(parsed.ok && parsed.rows[0].place).toBe('')
+  })
+
   const failures: { name: string; text: string; want: string }[] = [
     { name: 'empty file', text: '', want: 'empty' },
     { name: 'no name or producer column', text: 'vintage,quantity\n2019,1', want: 'no-name-column' },
