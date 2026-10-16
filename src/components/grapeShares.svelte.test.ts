@@ -55,7 +55,7 @@ it('drops the share of a removed grape', async () => {
 it('fills the shares a source states and links to it', async () => {
   vi.mocked(lookupGrapes).mockResolvedValue({
     ok: true,
-    data: { grapes: [{ name: 'Merlot', percent: 80 }, { name: 'Malbec', percent: 20 }], confidence: 'printed-source', sourceUrl: 'https://domaine.example/fiche' },
+    data: { grapes: [{ name: 'Merlot', percent: 80 }, { name: 'Malbec', percent: 20 }], confidence: 'printed-source', sourceUrl: 'https://www.domaine.example/fiche' },
   })
   form([])
   await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))
@@ -63,7 +63,7 @@ it('fills the shares a source states and links to it', async () => {
   await waitFor(() => expect(share('Merlot').value).toBe('80'))
   expect(share('Malbec').value).toBe('20')
   const link = screen.getByRole<HTMLAnchorElement>('link', { name: 'Source: domaine.example' })
-  expect(link.href).toBe('https://domaine.example/fiche')
+  expect(link.href).toBe('https://www.domaine.example/fiche')
   expect(link.rel).toContain('noopener')
 })
 
@@ -83,7 +83,7 @@ it('keeps a share typed while the lookup runs', async () => {
 it('hides the source once the blend is edited', async () => {
   vi.mocked(lookupGrapes).mockResolvedValue({
     ok: true,
-    data: { grapes: [{ name: 'Syrah', percent: 60 }, { name: 'Grenache', percent: 40 }], confidence: 'printed-source', sourceUrl: 'https://domaine.example/fiche' },
+    data: { grapes: [{ name: 'Syrah', percent: 60 }, { name: 'Grenache', percent: 40 }], confidence: 'printed-source', sourceUrl: 'https://www.domaine.example/fiche' },
   })
   form([])
   await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))

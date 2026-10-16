@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte'
   import { canLookupGrapes, lookupGrapes, lookupKey, readGrapeLookup, type FailureKind, type WineDraft } from '../lib/extract'
   import { distinctGrapes, distinctTags } from '../lib/filters'
+  import { sourceHost } from '../lib/aging'
   import { sharesTotal } from '../lib/grapes'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
@@ -217,7 +218,7 @@
     <p class="muted">
       {lookupNote ?? ''}
       {#if sourceUrl}
-        <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{t('form.lookupSource', { site: new URL(sourceUrl).hostname })}</a>
+        <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{t('form.lookupSource', { site: sourceHost(sourceUrl) ?? '' })}</a>
       {/if}
     </p>
   {/if}
