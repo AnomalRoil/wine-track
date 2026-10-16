@@ -8,6 +8,7 @@
   import AgingFields from './AgingFields.svelte'
   import AgingTimeline from './AgingTimeline.svelte'
   import StorageHint from './StorageHint.svelte'
+  import WindowSource from './WindowSource.svelte'
 
   let { wine }: { wine: Wine } = $props()
 
@@ -101,6 +102,7 @@
           <span>{t(`aging.${key}`)} <strong>{wine[key]}</strong></span>
         {/each}
       </p>
+      {#if wine.windowSource}<WindowSource source={wine.windowSource} />{/if}
       <StorageHint wineId={wine.id} until={until} />
     {/if}
     {#if wine.profile}

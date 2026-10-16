@@ -195,7 +195,7 @@ it('A drinking-window lookup answering during the label read is dropped, and wai
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
   found({
     ok: true,
-    data: { drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: null, servingMinC: null, servingMaxC: null, decantMinutes: null, profile: null, confidence: 'similar' },
+    data: { drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: null, servingMinC: null, servingMaxC: null, decantMinutes: null, profile: null, source: 'typical', sourceUrl: null },
   })
   await new Promise((resolve) => setTimeout(resolve))
   expect(document.querySelector<HTMLInputElement>('#aging-drinkFrom')!.value).toBe('')

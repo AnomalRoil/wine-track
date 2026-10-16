@@ -27,6 +27,7 @@ const wine = makeWine({
   servingMaxC: 12,
   decantMinutes: 0,
   profile: { body: 4, tannin: 0, sweetness: 1, acidity: 8, fizz: 0 },
+  windowSource: { kind: 'producer', url: 'https://domaine.example/chablis' },
 })
 const tasting: Tasting = { id: 't1', wineId: 'w1', date: '2026-08-28', rating: 4.5, notes: 'minerality' }
 const photo = { id: 'p1', mediaType: 'image/jpeg', data: 'AAAA' }
@@ -48,7 +49,7 @@ describe('backup', () => {
   })
 
   it('fills aging fields, grape shares and the LWIN missing from an older version 2 backup', () => {
-    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, lwin, grapeShares, ...older } = wine
+    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, windowSource, lwin, grapeShares, ...older } = wine
     const json = JSON.stringify({
       app: 'wine-track',
       version: 2,
@@ -73,6 +74,22 @@ describe('backup', () => {
     const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [older], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
     expect(appellation).not.toBe('')
     expect(parseBackup(json)?.wines).toEqual([{ ...older, appellation: '' }])
+  })
+
+  it('reads a version 2 backup made before window sources existed', () => {
+    const { windowSource, ...older } = wine
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [older], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, windowSource: null }])
+  })
+
+  it.each(['javascript:alert(1)', 'domaine.example/chablis'])('drops a window source link that is not a web address: %s', (url) => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, windowSource: { kind: 'producer', url } }], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.wines[0].windowSource).toEqual({ kind: 'producer', url: null })
+  })
+
+  it('rejects a window source of an unknown kind', () => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, windowSource: { kind: 'oracle', url: null } }], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)).toBeNull()
   })
 
   it('reads a version 2 backup made before racks existed', () => {

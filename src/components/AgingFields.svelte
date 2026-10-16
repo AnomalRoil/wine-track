@@ -1,11 +1,12 @@
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { cleanAging, fromUnit, isWindowOrdered, mergeAging, neutralProfile, profileAxes, toUnit, WINDOW_KEYS } from '../lib/aging'
-  import { canLookupGrapes, lookupAging, lookupKey, type WineDraft } from '../lib/extract'
+  import { fromUnit, handSource, isWindowOrdered, mergeAging, neutralProfile, profileAxes, toUnit, WINDOW_KEYS } from '../lib/aging'
+  import { canLookupGrapes, foundAging, lookupAging, lookupKey, type WineDraft } from '../lib/extract'
   import { t } from '../lib/i18n.svelte'
   import { settings } from '../lib/settings.svelte'
   import type { Aging } from '../lib/types'
   import NeedsKey from './NeedsKey.svelte'
+  import WindowSource from './WindowSource.svelte'
 
   let {
     aging = $bindable(),
@@ -42,6 +43,11 @@
     aging.servingMaxC = celsius(v)
   }
 
+  function setYear(key: (typeof WINDOW_KEYS)[number], v: number | null) {
+    aging[key] = v
+    aging.windowSource = handSource(aging)
+  }
+
   // A pending lookup is dropped when the wine changes, another request starts filling it, or the fields close, so its answer
   // never lands on another wine through the aging binding.
   // Saving the wine replaces its object; only a change of what the lookup asks about counts.
@@ -67,10 +73,10 @@
       lookupNote = t(`extract.${result.kind}`, { detail: result.detail ?? '' })
       return
     }
-    const { confidence, ...found } = result.data
-    lookupNote = t(`aging.confidence.${confidence}`)
-    if (confidence === 'unknown') return
-    aging = mergeAging($state.snapshot(aging), cleanAging(found))
+    const found = foundAging(result.data)
+    lookupNote = t(found ? 'aging.found' : 'aging.notFound')
+    if (!found) return
+    aging = mergeAging($state.snapshot(aging), found)
     tempMin = temp(aging.servingMinC)
     tempMax = temp(aging.servingMaxC)
   }
@@ -89,10 +95,18 @@
   {#each WINDOW_KEYS as key (key)}
     <div>
       <label for="aging-{key}">{t(`aging.${key}`)}</label>
-      <input id="aging-{key}" type="number" inputmode="numeric" min="1800" max="2200" bind:value={aging[key]} />
+      <input
+        id="aging-{key}"
+        type="number"
+        inputmode="numeric"
+        min="1800"
+        max="2200"
+        bind:value={() => aging[key], (v) => setYear(key, v)}
+      />
     </div>
   {/each}
 </div>
+{#if aging.windowSource}<WindowSource source={aging.windowSource} />{/if}
 {#if !isWindowOrdered(aging)}<p class="warn">{t('aging.unordered')}</p>{/if}
 
 <span class="label">{t('aging.serving')} (°{settings.tempUnit})</span>
