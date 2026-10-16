@@ -30,7 +30,7 @@ export const en = {
   'io.error.window': 'Drinking window years must be whole years between 1800 and 2200.',
   'io.error.lwin': 'The LWIN must be a code of 7 digits, or an LWIN-11, 16 or 18.',
   'io.bottlesTo': '{n} {n|bottle|bottles} → {cellar}',
-  'io.notesDropped': 'Notes are kept with added bottles only; this line adds none, so its notes are not imported.',
+  'io.notesDropped': 'Notes and purchase places are kept with added bottles only; this line adds none, so they are not imported.',
   'io.complete': 'Complete with Claude ({n})',
   'io.completeHelp':
     '{n} new {n|wine lacks|wines lack} grapes or a region. Claude can search the web for them with your API key, {size} wines per request. Only empty fields are filled.',
@@ -108,7 +108,7 @@ export const fr: Messages<typeof en> = {
   'io.error.window': 'Les années de la fenêtre de dégustation doivent être des années entières entre 1800 et 2200.',
   'io.error.lwin': 'Le LWIN doit être un code de 7 chiffres, ou un LWIN-11, 16 ou 18.',
   'io.bottlesTo': '{n} {n|bouteille|bouteilles} → {cellar}',
-  'io.notesDropped': 'Les notes sont gardées avec les bouteilles ajoutées ; cette ligne n’en ajoute aucune, ses notes ne sont donc pas importées.',
+  'io.notesDropped': 'Les notes et lieux d’achat sont gardés avec les bouteilles ajoutées ; cette ligne n’en ajoute aucune, ils ne sont donc pas importés.',
   'io.complete': 'Compléter avec Claude ({n})',
   'io.completeHelp':
     '{n} {n|nouveau vin|nouveaux vins} sans cépages ou sans région. Claude peut les chercher sur le web avec votre clé API, {size} vins par requête. Seuls les champs vides sont remplis.',
@@ -186,7 +186,7 @@ export const de: Messages<typeof en> = {
   'io.error.window': 'Die Jahre des Trinkfensters müssen ganze Jahre zwischen 1800 und 2200 sein.',
   'io.error.lwin': 'Der LWIN muss ein Code aus 7 Ziffern sein, oder ein LWIN-11, 16 oder 18.',
   'io.bottlesTo': '{n} {n|Flasche|Flaschen} → {cellar}',
-  'io.notesDropped': 'Notizen werden nur mit zugefügten Flaschen gespeichert; diese Zeile fügt keine hinzu, ihre Notizen werden daher nicht importiert.',
+  'io.notesDropped': 'Notizen und Kauforte werden nur mit zugefügten Flaschen gespeichert; diese Zeile fügt keine hinzu, sie werden daher nicht importiert.',
   'io.complete': 'Mit Claude ergänzen ({n})',
   'io.completeHelp':
     '{n} {n|neuem Wein fehlen|neuen Weinen fehlen} Rebsorten oder Region. Claude kann sie mit Ihrem API-Schlüssel im Web suchen, {size} Weine pro Anfrage. Nur leere Felder werden gefüllt.',

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte'
+  import { matchesSearch } from '../lib/search'
   import type { Wine } from '../lib/types'
   import Sheet from './Sheet.svelte'
   import BottleGlyph from './BottleGlyph.svelte'
@@ -23,11 +24,7 @@
 
   let search = $state('')
 
-  const shown = $derived(
-    placeable.filter(({ wine: w }) =>
-      [w.name, w.producer, w.vintage ?? ''].join(' ').toLowerCase().includes(search.trim().toLowerCase()),
-    ),
-  )
+  const shown = $derived(placeable.filter(({ wine: w }) => matchesSearch([w.name, w.producer, w.vintage], search)))
 
   function picked(e: Event) {
     const input = e.currentTarget as HTMLInputElement

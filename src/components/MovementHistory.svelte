@@ -17,7 +17,8 @@
         ? `${cellarName(m.cellarId)} → ${cellarName(m.toCellarId)}`
         : cellarName(m.cellarId)
     const sign = m.kind === 'add' ? '+' : m.kind === 'transfer' ? '' : '−'
-    return `${t(`movement.${m.kind}`)} ${sign}${m.quantity} · ${where}`
+    const place = m.place ? ` · ${t('movement.place', { place: m.place })}` : ''
+    return `${t(`movement.${m.kind}`)} ${sign}${m.quantity} · ${where}${place}`
   }
 
   /** A deletion that empties some of the wine's slots, waiting for the user to pick which. */

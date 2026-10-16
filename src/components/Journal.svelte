@@ -28,7 +28,8 @@
     if (e.type === 'tasting') return t('journal.tasted')
     const m = e.movement
     const where = m.toCellarId ? `${cellarName(m.cellarId)} → ${cellarName(m.toCellarId)}` : cellarName(m.cellarId)
-    return `${t(`movement.${m.kind}`)} · ${m.quantity} · ${where}`
+    const place = m.place ? ` · ${t('movement.place', { place: m.place })}` : ''
+    return `${t(`movement.${m.kind}`)} · ${m.quantity} · ${where}${place}`
   }
 </script>
 

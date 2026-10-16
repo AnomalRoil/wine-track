@@ -122,6 +122,7 @@ export function emptyCellar(
       cellarId,
       toCellarId: targetId,
       unitPrice: null,
+      place: '',
       note: '',
     })
   }

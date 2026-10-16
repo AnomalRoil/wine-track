@@ -178,6 +178,8 @@ export interface Movement {
   toCellarId: string | null
   /** Price paid per bottle, for additions; null when unknown. */
   unitPrice: number | null
+  /** Where an addition was bought, free text; empty when unknown or not an addition. */
+  place: string
   note: string
 }
 

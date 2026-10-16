@@ -37,6 +37,7 @@ export function makeMovement(overrides: Partial<Movement> = {}): Movement {
     cellarId: 'main',
     toCellarId: null,
     unitPrice: null,
+    place: '',
     note: '',
     ...overrides,
   }
