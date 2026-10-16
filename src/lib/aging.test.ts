@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cleanAging,
+  handSource,
   enteringPhase,
   formatServing,
   fromUnit,
@@ -11,9 +12,11 @@ import {
   phaseOf,
   profileAxes,
   segmentYears,
+  sourceHost,
   timeline,
   toUnit,
   urgency,
+  webUrl,
   withAging,
   type Phase,
 } from './aging'
@@ -156,6 +159,7 @@ describe('cleanAging', () => {
       servingMaxC: 16,
       decantMinutes: -5,
       profile: { body: 12, tannin: 7.6, sweetness: -1, acidity: 5, fizz: 0 },
+      windowSource: null,
     }
     expect(cleanAging(raw)).toEqual({
       drinkFrom: 2024,
@@ -166,7 +170,54 @@ describe('cleanAging', () => {
       servingMaxC: 18,
       decantMinutes: 0,
       profile: { body: 10, tannin: 8, sweetness: 0, acidity: 5, fizz: 0 },
+      windowSource: null,
     })
+  })
+
+  const page = 'https://domaine.example/2019'
+  const sourceCases: { name: string; a: Aging; want: Aging['windowSource'] }[] = [
+    { name: 'kept with a window', a: { ...win(2025, null, null, 2040), windowSource: { kind: 'producer', url: page } }, want: { kind: 'producer', url: page } },
+    { name: 'dropped without a window', a: { ...NO_AGING, servingMinC: 16, windowSource: { kind: 'critic', url: page } }, want: null },
+    { name: 'dropped once every year is out of range', a: { ...win(1700, null, null, null), windowSource: { kind: 'critic', url: page } }, want: null },
+    { name: 'script link removed', a: { ...win(2025, null, null, null), windowSource: { kind: 'merchant', url: 'javascript:alert(1)' } }, want: { kind: 'merchant', url: null } },
+    { name: 'no link kept', a: { ...win(2025, null, null, null), windowSource: { kind: 'typical', url: null } }, want: { kind: 'typical', url: null } },
+  ]
+  it.each(sourceCases)('window source: $name', ({ a, want }) => {
+    expect(cleanAging(a).windowSource).toEqual(want)
+  })
+})
+
+describe('webUrl', () => {
+  const cases: { url: string | null; want: string | null }[] = [
+    { url: null, want: null },
+    { url: '', want: null },
+    { url: ' https://shop.example/wine ', want: 'https://shop.example/wine' },
+    { url: 'http://shop.example', want: 'http://shop.example/' },
+    { url: 'javascript:alert(1)', want: null },
+    { url: 'data:text/html,hi', want: null },
+    { url: 'shop.example/wine', want: null },
+  ]
+  it.each(cases)('webUrl($url) = $want', ({ url, want }) => {
+    expect(webUrl(url)).toBe(want)
+  })
+})
+
+describe('sourceHost', () => {
+  const cases = [
+    { url: 'https://www.domaine.example/vins/2019', want: 'domaine.example' },
+    { url: 'https://shop.example.ch/p?id=1', want: 'shop.example.ch' },
+  ]
+  it.each(cases)('sourceHost($url) = $want', ({ url, want }) => {
+    expect(sourceHost(url)).toBe(want)
+  })
+})
+
+describe('handSource', () => {
+  it('marks a window with years as set by the user', () => {
+    expect(handSource(win(2025, null, null, null))).toEqual({ kind: 'user', url: null })
+  })
+  it('clears the source once every year is cleared', () => {
+    expect(handSource(win(null, null, null, null))).toBeNull()
   })
 
   it('drops years outside the calendar range', () => {
@@ -179,6 +230,13 @@ describe('mergeAging', () => {
     const current: Aging = { ...full, servingMinC: 14, decantMinutes: 30 }
     const found: Aging = { ...NO_AGING, drinkFrom: 2025, decantMinutes: 0, profile: { body: 7, tannin: 6, sweetness: 0, acidity: 5, fizz: 0 } }
     expect(mergeAging(current, found)).toEqual({ ...current, drinkFrom: 2025, decantMinutes: 0, profile: found.profile })
+  })
+
+  it("takes the lookup's source and keeps the current one when the lookup has none", () => {
+    const current: Aging = { ...full, windowSource: { kind: 'user', url: null } }
+    const source = { kind: 'critic', url: 'https://critic.example' } as const
+    expect(mergeAging(current, { ...NO_AGING, drinkFrom: 2025, windowSource: source }).windowSource).toEqual(source)
+    expect(mergeAging(current, { ...NO_AGING, servingMinC: 12 }).windowSource).toEqual(current.windowSource)
   })
 })
 

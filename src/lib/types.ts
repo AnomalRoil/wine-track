@@ -61,6 +61,16 @@ export interface TasteProfile {
   fizz: number
 }
 
+export const WINDOW_SOURCES = ['producer', 'merchant', 'critic', 'typical', 'user'] as const
+/** Who published a drinking window; "typical" is an estimate for the appellation and vintage, "user" a window edited by hand. */
+export type WindowSourceKind = (typeof WINDOW_SOURCES)[number]
+
+export interface WindowSource {
+  kind: WindowSourceKind
+  /** The page the window comes from; null when none was given. */
+  url: string | null
+}
+
 /** Drinking window and serving advice; every field is null when unknown. */
 export interface Aging {
   /** Years: ready to drink from, at peak from/until, drinkable until. */
@@ -74,6 +84,8 @@ export interface Aging {
   /** 0 means no decanting. */
   decantMinutes: number | null
   profile: TasteProfile | null
+  /** Where the window years come from; null when unknown or when there is no window. */
+  windowSource: WindowSource | null
 }
 
 export interface Wine extends Aging {

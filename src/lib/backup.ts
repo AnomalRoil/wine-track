@@ -4,7 +4,7 @@ import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
 import { normalizeTasting, SCALES, SHADES } from './tasting'
 import { MAX_COLUMNS, MAX_DEPTH, MAX_ROWS, slotId } from './racks'
-import { RACK_LAYOUTS, type Photo } from './types'
+import { RACK_LAYOUTS, WINDOW_SOURCES, type Photo } from './types'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
@@ -45,6 +45,10 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   decantMinutes: z.number().int().min(0).nullable().default(null),
   profile: z
     .object({ body: axis, tannin: axis, sweetness: axis, acidity: axis, fizz: axis })
+    .nullable()
+    .default(null),
+  windowSource: z
+    .object({ kind: z.enum(WINDOW_SOURCES), url: z.string().nullable() })
     .nullable()
     .default(null),
 })
