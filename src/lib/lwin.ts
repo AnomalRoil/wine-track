@@ -307,20 +307,6 @@ export function completeFromLwin(draft: WineDraft, wine: LwinWine): WineDraft {
   }
 }
 
-/** Undoes completeFromLwin(original, wine) on `draft`, keeping the fields changed since. */
-export function undoLwinCompletion(draft: WineDraft, original: WineDraft, wine: LwinWine): WineDraft {
-  const filled = completeFromLwin(original, wine)
-  const back = <K extends 'region' | 'appellation' | 'country' | 'color' | 'lwin'>(k: K) => (draft[k] === filled[k] ? original[k] : draft[k])
-  return {
-    ...draft,
-    region: back('region'),
-    appellation: back('appellation'),
-    country: back('country'),
-    color: back('color'),
-    lwin: back('lwin'),
-  }
-}
-
 /** A wine of the collection that `draft` repeats, by the rule of matchWine. */
 export function duplicateOf(draft: WineDraft, wines: Wine[]): Wine | undefined {
   const candidates = wines.map((wine) => ({ ...matchCandidate(wine), wine }))

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, findCodes, lwinFields, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, findCodes, lwinFields, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -269,20 +269,6 @@ describe('completeFromLwin', () => {
 describe('findCodes', () => {
   it('finds each code in order, null for an unknown one', () => {
     expect(findCodes(index, ['1100002', '9999999', '1066540']).map((w) => w?.label ?? null)).toEqual(['Rose', null, 'Chablis'])
-  })
-})
-
-describe('undoLwinCompletion', () => {
-  const original = { ...emptyDraft(), name: 'Clos', color: 'other' as const }
-  const wine = byCode('1066553')
-
-  it('restores the fields it filled', () => {
-    expect(undoLwinCompletion(completeFromLwin(original, wine), original, wine)).toEqual(original)
-  })
-
-  it('keeps what was completed or edited since', () => {
-    const later = { ...completeFromLwin(original, wine), grapes: ['Chardonnay'], color: 'sweet' as const, appellation: 'Chablis Grand Cru' }
-    expect(undoLwinCompletion(later, original, wine)).toEqual({ ...original, grapes: ['Chardonnay'], color: 'sweet', appellation: 'Chablis Grand Cru' })
   })
 })
 
