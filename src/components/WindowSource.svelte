@@ -14,8 +14,10 @@
 </p>
 
 <style>
+  /* Set apart from the window years it describes. */
   .source {
-    margin: 0.4rem 0 0;
+    margin: 0.6rem 0 0;
+    text-align: right;
     font-size: 0.8rem;
     color: var(--on-surface-variant);
     overflow-wrap: anywhere;
