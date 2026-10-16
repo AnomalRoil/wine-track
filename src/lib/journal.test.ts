@@ -32,6 +32,7 @@ describe('journal', () => {
   })
   const searches: { name: string; search: string; want: string[] }[] = [
     { name: 'wine name', search: 'chablis', want: ['t1', 'm1'] },
+    { name: 'wine name with accents', search: 'Châblis', want: ['t1', 'm1'] },
     { name: 'movement note', search: 'sam', want: ['m2'] },
     { name: 'tasting notes', search: 'FLINT', want: ['t1'] },
     { name: 'tasting people', search: 'ana', want: ['t2'] },
