@@ -48,14 +48,16 @@
     aging.windowSource = handSource(aging)
   }
 
-  // A pending lookup is dropped when the wine changes, another request starts filling it, or the fields close, so its answer
-  // never lands on another wine through the aging binding.
+  // A pending lookup is dropped when the wine changes, another request starts filling it, the user edits a field, or the
+  // fields close, so its answer never lands on another wine or overwrites a hand edit.
   // Saving the wine replaces its object; only a change of what the lookup asks about counts.
   let generation = 0
   const key = $derived(lookupKey(wine))
+  const values = $derived(JSON.stringify(aging))
   $effect(() => {
     void key
     void busy
+    void values
     return () => {
       generation++
       lookingUp = false

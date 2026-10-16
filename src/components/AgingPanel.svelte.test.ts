@@ -164,6 +164,30 @@ it('drops the source once every window year is cleared', async () => {
   expect(store.wines[0].windowSource).toBeNull()
 })
 
+it('drops a lookup answer once a field is edited by hand', async () => {
+  settings.apiKey = 'test-key'
+  let answer!: () => void
+  vi.mocked(lookupAging).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        answer = () =>
+          resolve({
+            ok: true,
+            data: { drinkFrom: null, peakFrom: null, peakUntil: null, drinkUntil: 2050, servingMinC: null, servingMaxC: null, decantMinutes: null, profile: null, source: 'critic', sourceUrl: null },
+          })
+      }),
+  )
+  renderPanel()
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Look up online' }))
+  await fireEvent.input(year(/^Peak until/), { target: { value: '2040' } })
+  answer()
+  await new Promise((resolve) => setTimeout(resolve))
+
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Look up online' }).disabled).toBe(false)
+  expect([year(/^Peak until/).value, year(/^Drink until/).value]).toEqual(['2040', ''])
+})
+
 it('changes nothing when the lookup finds nothing reliable', async () => {
   settings.apiKey = 'test-key'
   vi.mocked(lookupAging).mockResolvedValue({
