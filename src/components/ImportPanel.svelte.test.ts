@@ -195,6 +195,8 @@ it('imports an accepted field and restores a rejected one', async () => {
   await fireEvent.click(line(2).getByRole('button', { name: 'Reject Grapes' }))
 
   expect(screen.getByText('3 completed fields await review. Only accepted fields are imported.')).toBeTruthy()
+  await fireEvent.click(line(3).getByRole('button', { name: 'Reject line' }))
+  expect(screen.queryByRole('button', { name: /^Complete with Claude/ })).toBeNull()
   expect(line(2).getByText('Claude · rejected')).toBeTruthy()
   expect((await imported())[0]).toEqual({ grapes: [], region: 'Bordeaux', country: '' })
 })

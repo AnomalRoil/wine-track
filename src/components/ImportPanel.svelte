@@ -57,7 +57,10 @@
     for (const m of plan?.matches ?? []) c[m.kind]++
     return c
   })
-  const incomplete = $derived(proposed && plan ? incompleteRows(proposed, plan) : [])
+  // A line Claude already completed is not sent again, even after its fields are rejected.
+  const incomplete = $derived(
+    proposed && plan ? incompleteRows(proposed, plan).filter((r) => !review.get(r.line)?.some((s) => s.source === 'claude')) : [],
+  )
   /** Lines whose completion the user reviews: new wines, and rows with an accepted field to undo. */
   const reviewable = $derived(
     new Set(
