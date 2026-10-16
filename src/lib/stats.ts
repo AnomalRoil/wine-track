@@ -36,7 +36,7 @@ export function totals(wines: Wine[], movements: Movement[], stock: Stock): Tota
   return out
 }
 
-export const DIMENSIONS = ['color', 'country', 'region', 'grape', 'vintage', 'size', 'cellar'] as const
+export const DIMENSIONS = ['color', 'country', 'region', 'appellation', 'grape', 'vintage', 'size', 'cellar'] as const
 export type Dimension = (typeof DIMENSIONS)[number]
 
 export interface Share {
@@ -82,6 +82,9 @@ export function composition(wines: Wine[], stock: Stock, dimension: Dimension): 
         break
       case 'region':
         entries.push([wine.region, bottles])
+        break
+      case 'appellation':
+        entries.push([wine.appellation, bottles])
         break
       case 'grape':
         if (wine.grapes.length === 0) entries.push(['', bottles])

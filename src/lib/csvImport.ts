@@ -14,6 +14,7 @@ export const COLUMNS = [
   'size_cl',
   'color',
   'region',
+  'appellation',
   'country',
   'grapes',
   'purchase_price',
@@ -37,6 +38,7 @@ export const HEADERS: Record<Column, string> = {
   size_cl: 'size (cl)',
   color: 'color',
   region: 'region',
+  appellation: 'appellation',
   country: 'country',
   grapes: 'grapes',
   purchase_price: 'purchase price',
@@ -68,7 +70,8 @@ const HEADER_ALIASES: Record<Column, string[]> = {
   quantity: ['quantity', 'qty', 'bottles', 'quantite', 'bouteilles', 'menge', 'anzahl', 'flaschen'],
   size_cl: ['sizecl', 'size', 'format', 'volume', 'taille', 'contenance', 'grosse', 'grossecl', 'flaschengrosse'],
   color: ['color', 'colour', 'type', 'couleur', 'farbe', 'typ', 'weintyp'],
-  region: ['region', 'appellation', 'aoc', 'regionappellation', 'anbaugebiet'],
+  region: ['region', 'regionappellation', 'anbaugebiet', 'weinregion'],
+  appellation: ['appellation', 'aoc', 'aop', 'ava', 'doc', 'docg', 'subregion', 'sousregion', 'denomination', 'unterregion', 'bereich'],
   country: ['country', 'pays', 'land'],
   grapes: ['grapes', 'grape', 'varieties', 'cepages', 'cepage', 'rebsorten', 'rebsorte'],
   purchase_price: ['purchaseprice', 'price', 'unitprice', 'prix', 'prixdachat', 'kaufpreis', 'preis'],
@@ -280,6 +283,7 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
         vintage: vintage ?? null,
         grapes: parseList(get('grapes')),
         region: get('region'),
+        appellation: get('appellation'),
         country: get('country'),
         color: color ?? 'other',
         sizeCl: sizeCl ?? STANDARD_SIZE_CL,
@@ -488,6 +492,7 @@ export function incompleteRows(rows: ImportRow[], plan: ImportPlan): ImportRow[]
 export interface Completion {
   grapes: string[]
   region: string | null
+  appellation: string | null
   country: string | null
 }
 
@@ -499,6 +504,12 @@ export function applyCompletion(draft: WineDraft, c: Completion): WineDraft {
     region: draft.region || c.region?.trim() || '',
     country: draft.country || c.country?.trim() || '',
   }
-  const filled = next.grapes.length > draft.grapes.length || next.region !== draft.region || next.country !== draft.country
+  const appellation = draft.appellation || c.appellation?.trim() || ''
+  next.appellation = identity(appellation) === identity(next.region) ? draft.appellation : appellation
+  const filled =
+    next.grapes.length > draft.grapes.length ||
+    next.region !== draft.region ||
+    next.appellation !== draft.appellation ||
+    next.country !== draft.country
   return filled ? next : draft
 }

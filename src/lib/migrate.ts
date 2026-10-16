@@ -9,7 +9,7 @@ export function defaultCellar(): Cellar {
 }
 
 /** A wine as stored before cellars existed: stock was a plain counter. */
-export type WineV1 = Omit<Wine, 'sizeCl' | 'tags' | 'lwin' | 'wished' | 'value' | 'valueHistory' | keyof Aging> & {
+export type WineV1 = Omit<Wine, 'appellation' | 'sizeCl' | 'tags' | 'lwin' | 'wished' | 'value' | 'valueHistory' | keyof Aging> & {
   bottlesOwned: number
 }
 
@@ -18,7 +18,7 @@ export function migrateWinesV1(old: WineV1[]): { wines: Wine[]; movements: Movem
   const wines: Wine[] = []
   const movements: Movement[] = []
   for (const { bottlesOwned, ...rest } of old) {
-    wines.push({ ...rest, ...NO_AGING, sizeCl: STANDARD_SIZE_CL, tags: [], lwin: null, wished: false, value: null, valueHistory: [] })
+    wines.push({ ...rest, ...NO_AGING, appellation: '', sizeCl: STANDARD_SIZE_CL, tags: [], lwin: null, wished: false, value: null, valueHistory: [] })
     if (bottlesOwned > 0) {
       movements.push({
         id: `${rest.id}-v1`,
@@ -42,6 +42,6 @@ export function normalizeCellar(cellar: Omit<Cellar, 'storage'> & Partial<Cellar
 }
 
 /** Fills fields added to wines after they were first stored. */
-export function normalizeWine(wine: Omit<Wine, 'lwin' | keyof Aging> & Partial<Wine>): Wine {
-  return { lwin: null, ...withAging(wine) }
+export function normalizeWine(wine: Omit<Wine, 'lwin' | 'appellation' | keyof Aging> & Partial<Wine>): Wine {
+  return { lwin: null, appellation: '', ...withAging(wine) }
 }

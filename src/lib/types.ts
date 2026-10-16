@@ -83,8 +83,10 @@ export interface Wine extends Aging {
   /** Millésime; null for non-vintage wines. */
   vintage: number | null
   grapes: string[]
-  /** Region or appellation, free text. */
+  /** Wine region, e.g. Bordeaux; free text. */
   region: string
+  /** Appellation or sub-region within the region, e.g. Pauillac; free text, '' when unknown. */
+  appellation: string
   country: string
   color: WineColor
   sizeCl: number
