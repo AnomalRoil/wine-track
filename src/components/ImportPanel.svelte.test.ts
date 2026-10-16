@@ -151,3 +151,34 @@ it('starts no further batch after leaving the screen', async () => {
 
   expect(completeWines).toHaveBeenCalledTimes(1)
 })
+
+it('imports rows with values it does not understand, listing what it emptied', async () => {
+  vi.mocked(applyImport).mockResolvedValue({ matches: [], wines: [], codes: new Map(), cellars: [], movements: [] })
+  render(ImportPanel)
+
+  await load('name,vintage,quantity,purchase price\nClos,20x9,six,cheap\nPlain,2019,1,10\n,2019,1,')
+
+  expect(await screen.findByText('1 line is imported with 3 emptied fields.')).toBeTruthy()
+  const list = document.querySelector('details.emptied-list')!
+  expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+    'Line 2: “20x9” left empty. The vintage must be a year, or empty or NV for a non-vintage wine.',
+    'Line 2: “six” left empty, so no bottles are added. The quantity must be a whole number.',
+    'Line 2: “cheap” left empty. The purchase price must be a number.',
+  ])
+  expect(document.querySelectorAll('.card.line ul.emptied li')).toHaveLength(3)
+  await fireEvent.click(screen.getByRole('button', { name: 'Import 2 lines' }))
+
+  const [rows] = vi.mocked(applyImport).mock.calls[0]
+  expect(rows.map((r) => [r.draft.name, r.draft.vintage, r.quantity, r.price])).toEqual([
+    ['Clos', null, 0, null],
+    ['Plain', 2019, 1, 10],
+    ['', 2019, 1, null],
+  ])
+})
+
+it('shows no emptied summary when every value is understood', async () => {
+  render(ImportPanel)
+  await load('name,vintage\nClos,2019')
+  await screen.findByText('Line 2')
+  expect(document.querySelector('details.emptied-list')).toBeNull()
+})

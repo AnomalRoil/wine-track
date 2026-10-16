@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   identity,
   applyCompletion,
+  type EmptiedCell,
+  emptiedCount,
   incompleteRows,
   matchWine,
   type MatchCandidate,
@@ -16,6 +18,7 @@ import {
 import { emptyDraft } from './extract'
 import { computeStock, bottlesOf } from './stock'
 import { makeWine } from './testing'
+import type { Movement } from './types'
 
 describe('parseNumber', () => {
   const cases: [string, number][] = [
@@ -88,6 +91,7 @@ describe('parseImport', () => {
           notes: 'from the fair',
           window: { drinkFrom: null, peakFrom: null, peakUntil: null, drinkUntil: null },
           errors: [],
+          emptied: [],
         },
       ],
     })
@@ -105,7 +109,8 @@ describe('parseImport', () => {
     it(`reads LWIN ${JSON.stringify(c.raw)}`, () => {
       const r = row(`X,${c.raw}`, 'name,LWIN')
       expect(r.draft.lwin).toBe(c.lwin)
-      expect(r.errors.includes('lwin')).toBe(c.error)
+      expect(r.emptied).toEqual(c.error ? [{ column: 'lwin', value: c.raw, reason: 'lwin' }] : [])
+      expect(r.errors).toEqual([])
     })
   }
 
@@ -139,21 +144,13 @@ describe('parseImport', () => {
     { name: 'zero quantity', fields: 'A,,,0,,,', want: { quantity: 0, errors: [] } },
     { name: 'German color', fields: 'A,,,1,,Weiß,', want: { color: 'white', errors: [] } },
     { name: 'missing name and producer', fields: ',,2019,1,,,', want: { errors: ['missing-name'] } },
-    { name: 'future vintage', fields: 'A,,2031,1,,,', want: { errors: ['vintage'] } },
-    { name: 'fractional quantity', fields: 'A,,,1.5,,,', want: { errors: ['quantity'], quantity: 0 } },
-    { name: 'bad size', fields: 'A,,,1,big,,', want: { errors: ['size'] } },
-    { name: 'unknown color', fields: 'A,,,1,,blue,', want: { errors: ['color'] } },
-    { name: 'bad price', fields: 'A,,,1,,,cheap', want: { errors: ['price'], price: null } },
     { name: 'centiliters below 10 under a cl header', fields: 'A,,,1,5,,', want: { sizeCl: 5, errors: [] } },
     { name: 'known cl format under a cl header', fields: 'A,,,1,1500,,', want: { sizeCl: 1500, errors: [] } },
     { name: 'liters below 1 under a cl header', fields: 'A,,,1,"0,75",,', want: { sizeCl: 75, errors: [] } },
     { name: 'liters with a leading separator', fields: 'A,,,1,.5 l,,', want: { sizeCl: 50, errors: [] } },
-    { name: 'below one centiliter', fields: 'A,,,1,5 ml,,', want: { errors: ['size'] } },
     { name: 'price with a leading separator', fields: 'A,,,1,,,.50', want: { price: 0.5, errors: [] } },
     { name: 'price with a currency before a decimal comma', fields: 'A,,,1,,,"CHF,50"', want: { price: 0.5, errors: [] } },
     { name: 'price with an abbreviated currency before a decimal comma', fields: 'A,,,1,,,"Fr.,50"', want: { price: 0.5, errors: [] } },
-    { name: 'price with a trailing minus', fields: 'A,,,1,,,12-', want: { errors: ['price'] } },
-    { name: 'overflowing price', fields: `A,,,1,,,${'9'.repeat(400)}`, want: { errors: ['price'], price: null } },
   ]
   for (const c of cells) {
     it(c.name, () => {
@@ -167,6 +164,76 @@ describe('parseImport', () => {
   }
 })
 
+describe('parseImport empties cells it does not understand', () => {
+  const header = 'name,producer,vintage,quantity,size_cl,color,purchase_price,drink from,peak until,lwin'
+  type Want = { vintage: number | null; quantity: number; sizeCl: number; color: string; price: number | null; window: Partial<ImportRow['window']>; lwin: string | null }
+  const valid: Want = { vintage: 2019, quantity: 2, sizeCl: 75, color: 'red', price: 10, window: { drinkFrom: 2025, peakUntil: 2030 }, lwin: '1066553' }
+  const cells = ['A', '', '2019', '2', '75', 'red', '10', '2025', '2030', '1066553']
+  const cases: { name: string; column: number; raw: string; want: Partial<Want>; emptied: EmptiedCell[] }[] = [
+    { name: 'valid row', column: 0, raw: 'A', want: {}, emptied: [] },
+    { name: 'future vintage', column: 2, raw: '2031', want: { vintage: null }, emptied: [{ column: 'vintage', value: '2031', reason: 'vintage' }] },
+    { name: 'vintage that is not a year', column: 2, raw: '20x9', want: { vintage: null }, emptied: [{ column: 'vintage', value: '20x9', reason: 'vintage' }] },
+    { name: 'fractional quantity adds no bottles', column: 3, raw: '1.5', want: { quantity: 0 }, emptied: [{ column: 'quantity', value: '1.5', reason: 'quantity' }] },
+    { name: 'negative quantity', column: 3, raw: '-2', want: { quantity: 0 }, emptied: [{ column: 'quantity', value: '-2', reason: 'quantity' }] },
+    { name: 'text quantity', column: 3, raw: 'six', want: { quantity: 0 }, emptied: [{ column: 'quantity', value: 'six', reason: 'quantity' }] },
+    { name: 'unknown size is the standard size', column: 4, raw: 'big', want: { sizeCl: 75 }, emptied: [{ column: 'size_cl', value: 'big', reason: 'size' }] },
+    { name: 'below one centiliter', column: 4, raw: '5 ml', want: { sizeCl: 75 }, emptied: [{ column: 'size_cl', value: '5 ml', reason: 'size' }] },
+    { name: 'unknown color', column: 5, raw: 'blue', want: { color: 'other' }, emptied: [{ column: 'color', value: 'blue', reason: 'color' }] },
+    { name: 'text price', column: 6, raw: 'cheap', want: { price: null }, emptied: [{ column: 'purchase_price', value: 'cheap', reason: 'price' }] },
+    { name: 'price with a trailing minus', column: 6, raw: '12-', want: { price: null }, emptied: [{ column: 'purchase_price', value: '12-', reason: 'price' }] },
+    { name: 'negative price', column: 6, raw: '-3', want: { price: null }, emptied: [{ column: 'purchase_price', value: '-3', reason: 'price' }] },
+    { name: 'overflowing price', column: 6, raw: '9'.repeat(400), want: { price: null }, emptied: [{ column: 'purchase_price', value: '9'.repeat(400), reason: 'price' }] },
+    { name: 'one bad window year keeps the others', column: 7, raw: 'soon', want: { window: { drinkFrom: null, peakUntil: 2030 } }, emptied: [{ column: 'drink_from', value: 'soon', reason: 'window' }] },
+    { name: 'window year out of range', column: 8, raw: '3000', want: { window: { drinkFrom: 2025, peakUntil: null } }, emptied: [{ column: 'peak_until', value: '3000', reason: 'window' }] },
+    { name: 'short LWIN', column: 9, raw: '106655', want: { lwin: null }, emptied: [{ column: 'lwin', value: '106655', reason: 'lwin' }] },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const fields = cells.map((cell, i) => (i === c.column ? `"${c.raw}"` : cell)).join(',')
+      const r = row(fields, header)
+      const want = { ...valid, ...c.want }
+      const got: Want = {
+        vintage: r.draft.vintage,
+        quantity: r.quantity,
+        sizeCl: r.draft.sizeCl,
+        color: r.draft.color,
+        price: r.price,
+        window: { drinkFrom: r.window.drinkFrom, peakUntil: r.window.peakUntil },
+        lwin: r.draft.lwin,
+      }
+      expect(got).toEqual(want)
+      expect(r.emptied).toEqual(c.emptied)
+      expect(r.errors).toEqual([])
+    })
+  }
+
+  it('lists every emptied cell of a row in column order', () => {
+    const r = row('A,,2031,x,big,blue,cheap,soon,later,1', header)
+    expect(r.emptied.map((e) => e.column)).toEqual(['vintage', 'quantity', 'size_cl', 'color', 'purchase_price', 'drink_from', 'peak_until', 'lwin'])
+    expect(r.errors).toEqual([])
+  })
+
+  it('still rejects a row with neither name nor producer', () => {
+    expect(row(',,2031,1,,,,,,', header)).toMatchObject({ errors: ['missing-name'], emptied: [{ column: 'vintage' }] })
+  })
+})
+
+describe('emptiedCount', () => {
+  const header = 'name,vintage,quantity'
+  const cases: { name: string; lines: string[]; want: { rows: number; fields: number } }[] = [
+    { name: 'nothing emptied', lines: ['A,2019,1'], want: { rows: 0, fields: 0 } },
+    { name: 'fields across rows', lines: ['A,2031,x', 'B,2019,1', 'C,1700,1'], want: { rows: 2, fields: 3 } },
+    { name: 'rejected rows do not count', lines: [',2031,x', 'A,2031,1'], want: { rows: 1, fields: 1 } },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const parsed = parseImport([header, ...c.lines].join('\n'), 2026)
+      if (!parsed.ok) throw new Error(parsed.error)
+      expect(emptiedCount(parsed.rows)).toEqual(c.want)
+    })
+  }
+})
+
 describe('parseImport drinking window', () => {
   const header = 'name,drink from,peak from,peak until,drink until'
   const none = { drinkFrom: null, peakFrom: null, peakUntil: null, drinkUntil: null }
@@ -174,7 +241,7 @@ describe('parseImport drinking window', () => {
     { name: 'empty', fields: 'A,,,,', window: none, errors: [] },
     { name: 'full window', fields: 'A,2024,2026,2030,2035', window: { drinkFrom: 2024, peakFrom: 2026, peakUntil: 2030, drinkUntil: 2035 }, errors: [] },
     { name: 'partial window', fields: 'A,,,2030,', window: { ...none, peakUntil: 2030 }, errors: [] },
-    { name: 'not a year', fields: 'A,soon,,,', window: none, errors: ['window'] },
+    { name: 'not a year', fields: 'A,soon,,,', window: none, errors: [] },
     { name: 'years out of order, as the editor allows', fields: 'A,2030,,,2025', window: { ...none, drinkFrom: 2030, drinkUntil: 2025 }, errors: [] },
   ]
   for (const c of cases) {
@@ -229,9 +296,9 @@ describe('parseImport with a leading blank line', () => {
 
 it('reports spreadsheet line numbers across blank lines', () => {
   const parsed = parseImport('name,vintage\nA,2019\n\n\nB,1700', 2026)
-  expect(parsed.ok && parsed.rows.map((r) => [r.line, r.errors])).toEqual([
-    [2, []],
-    [5, ['vintage']],
+  expect(parsed.ok && parsed.rows.map((r) => [r.line, r.emptied.length])).toEqual([
+    [2, 0],
+    [5, 1],
   ])
 })
 
@@ -554,8 +621,20 @@ describe('identity', () => {
   }
 })
 
-it('does not import a row whose price overflows', () => {
-  const plan = planImport([row(`A,,,1,,,${'9'.repeat(400)}`)], [], { cellars: [], defaultCellarName: 'Home', date: '', now: 0, newId: () => 'id' })
-  expect(plan.matches).toEqual([{ kind: 'invalid' }])
-  expect(plan.movements).toEqual([])
+describe('planImport with emptied cells', () => {
+  const ctx = { cellars: [], defaultCellarName: 'Home', date: '2026-10-16', now: 0, newId: () => 'id' }
+  const cases: { name: string; fields: string; kind: string; movement: Partial<Movement> | null }[] = [
+    { name: 'overflowing price imports without a price', fields: `A,,,1,,,${'9'.repeat(400)}`, kind: 'new', movement: { quantity: 1, unitPrice: null } },
+    { name: 'invalid quantity adds no stock', fields: 'A,,,1.5,,,10', kind: 'new', movement: null },
+    { name: 'invalid vintage imports a non-vintage wine', fields: 'A,,2031,2,,,', kind: 'new', movement: { quantity: 2 } },
+    { name: 'missing name is still skipped', fields: ',,2019,1,,,', kind: 'invalid', movement: null },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const plan = planImport([row(c.fields)], [], ctx)
+      expect(plan.matches).toEqual([{ kind: c.kind }])
+      if (c.movement) expect(plan.movements).toMatchObject([c.movement])
+      else expect(plan.movements).toEqual([])
+    })
+  }
 })
