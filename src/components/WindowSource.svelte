@@ -1,14 +1,15 @@
 <script lang="ts">
-  import { sourceHost } from '../lib/aging'
+  import { sourceHost, webUrl } from '../lib/aging'
   import { t } from '../lib/i18n.svelte'
   import type { WindowSource } from '../lib/types'
 
   let { source }: { source: WindowSource } = $props()
+  const href = $derived(webUrl(source.url))
 </script>
 
 <p class="source">
-  {t(`aging.source.${source.kind}`)}{#if source.url}{' · '}<a href={source.url} target="_blank" rel="noopener noreferrer"
-      >{sourceHost(source.url)}</a
+  {t(`aging.source.${source.kind}`)}{#if href}{' · '}<a {href} target="_blank" rel="noopener noreferrer"
+      >{sourceHost(href)}</a
     >{/if}
 </p>
 

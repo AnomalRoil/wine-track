@@ -65,6 +65,11 @@ describe('backup', () => {
     expect(parseBackup(json)?.wines).toEqual([{ ...older, windowSource: null }])
   })
 
+  it.each(['javascript:alert(1)', 'domaine.example/chablis'])('drops a window source link that is not a web address: %s', (url) => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, windowSource: { kind: 'producer', url } }], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.wines[0].windowSource).toEqual({ kind: 'producer', url: null })
+  })
+
   it('rejects a window source of an unknown kind', () => {
     const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, windowSource: { kind: 'oracle', url: null } }], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
     expect(parseBackup(json)).toBeNull()

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_YEAR, MIN_YEAR } from './aging'
+import { MAX_YEAR, MIN_YEAR, webUrl } from './aging'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
 import { normalizeTasting, SCALES, SHADES } from './tasting'
@@ -48,7 +48,7 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
     .nullable()
     .default(null),
   windowSource: z
-    .object({ kind: z.enum(WINDOW_SOURCES), url: z.string().nullable() })
+    .object({ kind: z.enum(WINDOW_SOURCES), url: z.string().nullable().transform(webUrl) })
     .nullable()
     .default(null),
 })

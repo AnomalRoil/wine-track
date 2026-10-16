@@ -156,9 +156,10 @@ export function webUrl(url: string | null): string | null {
   }
 }
 
-/** "domaine.example" for a source link: the host, without "www.". */
-export function sourceHost(url: string): string {
-  return new URL(url).hostname.replace(/^www\./, '')
+/** "domaine.example" for a source link: the host, without "www."; null unless `url` is a web address. */
+export function sourceHost(url: string | null): string | null {
+  const href = webUrl(url)
+  return href && new URL(href).hostname.replace(/^www\./, '')
 }
 
 function hasWindow(a: Pick<Aging, (typeof WINDOW_KEYS)[number]>): boolean {
@@ -204,11 +205,16 @@ export function cleanAging(a: Aging): Aging {
   }
 }
 
-/** Fills `current` with every value a lookup found, keeping what it did not find. */
+/**
+ * Fills `current` with every value a lookup found, keeping what it did not find.
+ * A found window replaces the current one whole, so its source never covers years it did not state.
+ */
 export function mergeAging(current: Aging, found: Aging): Aging {
   const merged = { ...current }
+  const window: (keyof Aging)[] = [...WINDOW_KEYS, 'windowSource']
+  const takeWindow = hasWindow(found)
   for (const key of Object.keys(NO_AGING) as (keyof Aging)[]) {
-    if (found[key] !== null) Object.assign(merged, { [key]: found[key] })
+    if (window.includes(key) ? takeWindow : found[key] !== null) Object.assign(merged, { [key]: found[key] })
   }
   return merged
 }
