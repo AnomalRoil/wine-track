@@ -299,21 +299,22 @@ merchants and critics. Blends often change from one vintage to the next.
 export interface GrapesFound {
   grapes: string[]
   grapeShares: GrapeShares
-  /** An http(s) link to the source, or null. */
+  /** An http(s) link to the source that states the varieties, or null. */
   sourceUrl: string | null
 }
 
 export function readGrapeLookup(data: GrapeLookup): GrapesFound {
   const grapes: string[] = []
   const grapeShares: GrapeShares = {}
+  const printed = data.confidence === 'printed-source'
   for (const { name, percent } of data.grapes) {
     const grape = name.trim()
     if (!grape || grapes.includes(grape)) continue
     grapes.push(grape)
-    const share = data.confidence === 'printed-source' && percent !== null ? toShare(percent) : null
+    const share = printed && percent !== null ? toShare(percent) : null
     if (share !== null) grapeShares[grape] = share
   }
-  return { grapes, grapeShares, sourceUrl: webUrl(data.sourceUrl) }
+  return { grapes, grapeShares, sourceUrl: printed ? webUrl(data.sourceUrl) : null }
 }
 
 export function lookupGrapes(auth: Auth, model: Model, draft: WineDraft): Promise<Result<GrapeLookup>> {

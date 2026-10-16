@@ -197,8 +197,8 @@ describe('readGrapeLookup', () => {
       want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 }, sourceUrl: 'https://example.com/sheet.pdf' },
     },
     {
-      name: 'drops shares of a typical blend',
-      data: { grapes, confidence: 'typical-blend', sourceUrl: null },
+      name: 'drops shares and link of a typical blend',
+      data: { grapes, confidence: 'typical-blend', sourceUrl: 'https://example.com/appellation' },
       want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: {}, sourceUrl: null },
     },
     {
