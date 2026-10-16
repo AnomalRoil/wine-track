@@ -124,8 +124,8 @@
   }
 
   function editable(w: Wine): WineDraft {
-    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
-    return { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin }
+    const { name, producer, vintage, grapes, grapeShares, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
+    return { name, producer, vintage, grapes, grapeShares, region, country, color, sizeCl, tags, lwin }
   }
 
   function startEdit() {

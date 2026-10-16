@@ -20,6 +20,7 @@ describe('toWineDraft', () => {
       producer: 'Dauvissat',
       vintage: 2020,
       grapes: ['Chardonnay'],
+      grapeShares: {},
       region: 'Chablis',
       country: 'France',
       color: 'white',

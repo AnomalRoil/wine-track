@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import type { Completion } from './csvImport'
+import type { GrapeShares } from './grapes'
 import type { Model } from './settings.svelte'
 import { STANDARD_SIZE_CL, type WineColor } from './types'
 
@@ -59,6 +60,7 @@ export interface WineDraft {
   producer: string
   vintage: number | null
   grapes: string[]
+  grapeShares: GrapeShares
   region: string
   country: string
   color: WineColor
@@ -74,6 +76,7 @@ export function emptyDraft(): WineDraft {
     producer: '',
     vintage: null,
     grapes: [],
+    grapeShares: {},
     region: '',
     country: '',
     color: 'red',
@@ -96,6 +99,7 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
     producer: e.producer ?? '',
     vintage: e.vintage,
     grapes: e.grapes.map((g) => g.trim()).filter(Boolean),
+    grapeShares: {},
     region: e.region ?? '',
     country: e.country ?? '',
     color: e.color === 'unknown' ? 'other' : e.color,
@@ -106,7 +110,7 @@ export function toWineDraft(e: WineExtraction | null): WineDraft {
 }
 
 /** Draft fields a label can supply. */
-const LABEL_FIELDS = ['name', 'producer', 'vintage', 'grapes', 'region', 'country', 'color', 'sizeCl'] as const
+const LABEL_FIELDS = ['name', 'producer', 'vintage', 'grapes', 'grapeShares', 'region', 'country', 'color', 'sizeCl'] as const
 
 /**
  * Fills the fields of `draft` not in `touched` with what the label reads.
