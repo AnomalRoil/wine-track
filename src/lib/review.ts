@@ -1,3 +1,4 @@
+import { parseLwinCode } from './csvImport'
 import type { WineDraft } from './extract'
 import { cleanShares, parseGrapes, type GrapeShares } from './grapes'
 import { WINE_COLORS, type WineColor } from './types'
@@ -104,8 +105,9 @@ export function edit(list: readonly Suggestion[], target: Suggestion, raw: strin
     if (!WINE_COLORS.includes(text as WineColor)) return null
     patch = { value: text as WineColor }
   } else if (target.field === 'lwin') {
-    if (!/^\d{7}$/.test(text)) return null
-    patch = { value: text }
+    const lwin = parseLwinCode(text)
+    if (lwin === null) return null
+    patch = { value: lwin }
   } else patch = { value: text }
   return list.map((s) => (s === target ? ({ ...s, ...patch, status: 'accepted', edited: true } as Suggestion) : s))
 }

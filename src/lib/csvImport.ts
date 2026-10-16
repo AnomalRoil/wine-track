@@ -193,7 +193,7 @@ export function parseNumber(raw: string): number {
 }
 
 /** "1066553", "1066553.0" or a longer LWIN (LWIN11, 16, 18) → "1066553"; null otherwise. */
-function parseLwinCode(raw: string): string | null {
+export function parseLwinCode(raw: string): string | null {
   const digits = raw.trim().replace(/\.0+$/, '')
   return /^\d{7}(\d{4}|\d{9}|\d{11})?$/.test(digits) ? digits.slice(0, 7) : null
 }

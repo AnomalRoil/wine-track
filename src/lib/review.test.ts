@@ -108,6 +108,8 @@ describe('edit', () => {
     { name: 'known color', field: 'color', raw: 'red', want: pending({ field: 'color', value: 'red', status: 'accepted', edited: true }) },
     { name: 'unknown color', field: 'color', raw: 'blue', want: null },
     { name: 'valid code', field: 'lwin', raw: '1066540', want: pending({ field: 'lwin', value: '1066540', status: 'accepted', edited: true }) },
+    { name: 'longer code', field: 'lwin', raw: '10665402015', want: pending({ field: 'lwin', value: '1066540', status: 'accepted', edited: true }) },
+    { name: 'spreadsheet code', field: 'lwin', raw: '1066540.0', want: pending({ field: 'lwin', value: '1066540', status: 'accepted', edited: true }) },
     { name: 'invalid code', field: 'lwin', raw: '12', want: null },
     { name: 'six-digit code', field: 'lwin', raw: '106655', want: null },
     { name: 'percent with no grape', field: 'grapes', raw: '60%', want: null },
