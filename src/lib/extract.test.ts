@@ -141,8 +141,8 @@ describe('wineQuery', () => {
 
 describe('alignCompletions', () => {
   it('orders answers by index and fills the gaps', () => {
-    const syrah = { grapes: ['Syrah'], region: 'Cornas', country: 'France' }
-    const empty = { grapes: [], region: null, country: null }
+    const syrah = { grapes: ['Syrah'], region: 'Rhône', appellation: 'Cornas', country: 'France' }
+    const empty = { grapes: [], region: null, appellation: null, country: null }
     expect(alignCompletions(3, [{ index: 3, ...syrah }, { index: 9, ...syrah }])).toEqual([empty, empty, syrah])
   })
 })

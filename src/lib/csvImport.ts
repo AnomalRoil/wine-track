@@ -492,6 +492,7 @@ export function incompleteRows(rows: ImportRow[], plan: ImportPlan): ImportRow[]
 export interface Completion {
   grapes: string[]
   region: string | null
+  appellation: string | null
   country: string | null
 }
 
@@ -503,6 +504,12 @@ export function applyCompletion(draft: WineDraft, c: Completion): WineDraft {
     region: draft.region || c.region?.trim() || '',
     country: draft.country || c.country?.trim() || '',
   }
-  const filled = next.grapes.length > draft.grapes.length || next.region !== draft.region || next.country !== draft.country
+  const appellation = draft.appellation || c.appellation?.trim() || ''
+  next.appellation = identity(appellation) === identity(next.region) ? draft.appellation : appellation
+  const filled =
+    next.grapes.length > draft.grapes.length ||
+    next.region !== draft.region ||
+    next.appellation !== draft.appellation ||
+    next.country !== draft.country
   return filled ? next : draft
 }

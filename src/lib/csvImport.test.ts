@@ -537,23 +537,24 @@ it('keeps distinct non-Latin wine and cellar names apart', () => {
 })
 
 describe('applyCompletion', () => {
-  const completion = { grapes: [' Syrah '], region: 'Cornas', country: 'France' }
-  const cases: { name: string; draft: Partial<ReturnType<typeof emptyDraft>>; want: [string[], string, string] }[] = [
-    { name: 'fills empty fields', draft: {}, want: [['Syrah'], 'Cornas', 'France'] },
-    { name: 'keeps what the user wrote', draft: { grapes: ['Gamay'], region: 'Morgon' }, want: [['Gamay'], 'Morgon', 'France'] },
+  const completion = { grapes: [' Syrah '], region: 'Rhône', appellation: ' Cornas ', country: 'France' }
+  const cases: { name: string; draft: Partial<ReturnType<typeof emptyDraft>>; want: [string[], string, string, string] }[] = [
+    { name: 'fills empty fields', draft: {}, want: [['Syrah'], 'Rhône', 'Cornas', 'France'] },
+    { name: 'keeps what the user wrote', draft: { grapes: ['Gamay'], region: 'Beaujolais', appellation: 'Morgon' }, want: [['Gamay'], 'Beaujolais', 'Morgon', 'France'] },
+    { name: 'leaves out an appellation the region already holds', draft: { region: 'cornas' }, want: [['Syrah'], 'cornas', '', 'France'] },
   ]
   for (const c of cases) {
     it(c.name, () => {
       const d = applyCompletion({ ...emptyDraft(), ...c.draft }, completion)
-      expect([d.grapes, d.region, d.country]).toEqual(c.want)
+      expect([d.grapes, d.region, d.appellation, d.country]).toEqual(c.want)
     })
   }
   it('returns the same draft when nothing is filled', () => {
     const draft = emptyDraft()
-    expect(applyCompletion(draft, { grapes: [' '], region: null, country: '' })).toBe(draft)
+    expect(applyCompletion(draft, { grapes: [' '], region: null, appellation: ' ', country: '' })).toBe(draft)
   })
   it('accepts unknown answers', () => {
-    expect(applyCompletion(emptyDraft(), { grapes: [], region: null, country: null }).region).toBe('')
+    expect(applyCompletion(emptyDraft(), { grapes: [], region: null, appellation: null, country: null }).region).toBe('')
   })
 })
 

@@ -125,7 +125,7 @@ async function startCompletion() {
   await load(`name\n${Array.from({ length: 9 }, (_, i) => `Wine ${i}`).join('\n')}`)
   await fireEvent.click(await screen.findByRole('button', { name: 'Complete with Claude (9)' }))
   await vi.waitFor(() => expect(completeWines).toHaveBeenCalledTimes(1))
-  const batch = Array.from({ length: 8 }, () => ({ grapes: ['Merlot'], region: 'Bordeaux', country: 'France' }))
+  const batch = Array.from({ length: 8 }, () => ({ grapes: ['Merlot'], region: 'Bordeaux', appellation: null, country: 'France' }))
   return () => finish({ ok: true, data: batch })
 }
 

@@ -297,6 +297,7 @@ const WineCompletions = z.object({
       index: z.number().int(),
       grapes: z.array(z.string()),
       region: z.string().nullable(),
+      appellation: z.string().nullable(),
       country: z.string().nullable(),
     }),
   ),
@@ -307,12 +308,12 @@ export const COMPLETION_BATCH = 8
 
 /** Answers in input order; a wine the model skipped gets an empty completion. */
 export function alignCompletions(count: number, answers: z.infer<typeof WineCompletions>['wines']): Completion[] {
-  const out: Completion[] = Array.from({ length: count }, () => ({ grapes: [], region: null, country: null }))
+  const out: Completion[] = Array.from({ length: count }, () => ({ grapes: [], region: null, appellation: null, country: null }))
   for (const { index, ...c } of answers) if (index >= 1 && index <= count) out[index - 1] = c
   return out
 }
 
-/** Looks up grapes, region and country for up to COMPLETION_BATCH wines in one request. */
+/** Looks up grapes, region, appellation and country for up to COMPLETION_BATCH wines in one request. */
 export async function completeWines(auth: Auth, model: Model, drafts: WineDraft[]): Promise<Result<Completion[]>> {
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
@@ -324,8 +325,9 @@ export async function completeWines(auth: Auth, model: Model, drafts: WineDraft[
       messages: [
         {
           role: 'user',
-          content: `For each numbered wine below, give its grape varieties, its region or appellation,
-and its country. Search the web when you are not sure. Use an empty list or null for
+          content: `For each numbered wine below, give its grape varieties, its wider region (e.g.
+"Bordeaux"), its appellation or sub-region (e.g. "Pauillac"; null when it would only
+repeat the region) and its country. Search the web when you are not sure. Use an empty list or null for
 anything you cannot establish; never guess. Answer with the wine's number as index.
 ${DATA_ONLY}
 
