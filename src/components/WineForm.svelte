@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import { canLookupGrapes, lookupGrapes, lookupKey, type FailureKind, type WineDraft } from '../lib/extract'
+  import { canLookupGrapes, lookupGrapes, lookupKey, readGrapeLookup, type FailureKind, type WineDraft } from '../lib/extract'
   import { distinctGrapes, distinctTags } from '../lib/filters'
+  import { sharesTotal } from '../lib/grapes'
   import { t } from '../lib/i18n.svelte'
   import { sizeLabel } from '../lib/labels'
   import { applyLwin, displayName, lwinFields, type LwinWine, type Scored } from '../lib/lwin'
@@ -43,6 +44,8 @@
 
   let lookingUp = $state(false)
   let lookupNote = $state<string | null>(null)
+  let lookupSource = $state<string | null>(null)
+  const total = $derived(sharesTotal(draft.grapes, draft.grapeShares))
   let grapeInput: ChipInput
   let suggestions = $state.raw<Scored[]>([])
   let searches = 0
@@ -99,6 +102,7 @@
   async function doLookup() {
     lookingUp = true
     lookupNote = null
+    lookupSource = null
     const current = lookups
     const result = await lookupGrapes(settings, settings.model, $state.snapshot(draft))
     if (current !== lookups) return
@@ -107,12 +111,15 @@
       lookupNote = failureText(result.kind, result.detail)
       return
     }
-    if (result.data.confidence === 'unknown' || result.data.grapes.length === 0) {
+    const found = readGrapeLookup(result.data)
+    if (result.data.confidence === 'unknown' || found.grapes.length === 0) {
       lookupNote = t('form.lookupUnknown')
       return
     }
-    draft.grapes = result.data.grapes
-    touch('grapes')
+    draft.grapes = found.grapes
+    draft.grapeShares = found.grapeShares
+    touch('grapes', 'grapeShares')
+    lookupSource = found.sourceUrl
     if (result.data.confidence === 'typical-blend') lookupNote = t('form.lookupTypical')
   }
 
@@ -187,8 +194,9 @@
   <ChipInput
     bind:this={grapeInput}
     bind:values={draft.grapes}
+    bind:shares={draft.grapeShares}
     id="grape-input"
-    onchange={() => touch('grapes')}
+    onchange={() => touch('grapes', 'grapeShares')}
     placeholder={t('form.addGrape')}
     suggestions={distinctGrapes(store.wines)}
   />
@@ -198,8 +206,16 @@
     disabled={lookingUp || busy || !canLookupGrapes(draft)}
     onclick={doLookup}
   />
-  {#if lookupNote}
-    <p class="muted">{lookupNote}</p>
+  {#if total !== null && total !== 100}
+    <p class="warn">{t('form.sharesTotal', { total: total.toLocaleString(settings.locale) })}</p>
+  {/if}
+  {#if lookupNote || lookupSource}
+    <p class="muted">
+      {lookupNote ?? ''}
+      {#if lookupSource}
+        <a href={lookupSource} target="_blank" rel="noopener noreferrer">{t('form.lookupSource', { site: new URL(lookupSource).hostname })}</a>
+      {/if}
+    </p>
   {/if}
 
   <label for="region">{t('form.region')}</label>

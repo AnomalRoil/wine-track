@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanShares, effectiveShares, formatGrapes, parseGrapes, sharesTotal, type GrapeShares } from './grapes'
+import { cleanShares, effectiveShares, formatGrapes, parseGrapes, shareLabel, sharesTotal, type GrapeShares } from './grapes'
 
 const blend = ['Merlot', 'Cabernet Franc']
 
@@ -46,6 +46,17 @@ describe('formatGrapes', () => {
     { name: 'no grapes', grapes: [], shares: {}, want: '' },
   ]
   for (const c of cases) it(c.name, () => expect(formatGrapes(c.grapes, c.shares)).toBe(c.want))
+})
+
+describe('shareLabel', () => {
+  const cases: { locale: string; share: number; want: string }[] = [
+    { locale: 'en', share: 60, want: '60%' },
+    { locale: 'en', share: 87.5, want: '87.5%' },
+    { locale: 'fr', share: 87.5, want: '87,5 %' },
+    { locale: 'de', share: 100, want: '100 %' },
+  ]
+  // ICU versions differ on which no-break space precedes %.
+  for (const c of cases) it(`${c.locale} ${c.share}`, () => expect(shareLabel(c.share, c.locale).replace(/[\u00a0\u202f]/g, ' ')).toBe(c.want))
 })
 
 describe('parseGrapes', () => {
