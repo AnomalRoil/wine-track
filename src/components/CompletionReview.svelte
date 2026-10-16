@@ -10,8 +10,8 @@
     onchange,
   }: { suggestions: Suggestion[]; disabled?: boolean; onchange: (next: Suggestion[]) => void } = $props()
 
-  // Raw, so the suggestion keeps its identity for edit().
-  let editing = $state.raw<Suggestion | null>(null)
+  // By field and source: bulk actions replace the suggestion objects while one is edited.
+  let editing = $state<Pick<Suggestion, 'field' | 'source'> | null>(null)
   let value = $state('')
   let invalid = $state(false)
 
@@ -34,15 +34,20 @@
     return parts.filter(Boolean).join(' · ')
   }
 
+  function isEditing(s: Suggestion): boolean {
+    return editing !== null && s.field === editing.field && s.source === editing.source
+  }
+
   function start(s: Suggestion) {
-    editing = s
+    editing = { field: s.field, source: s.source }
     value = formatValue(s)
     invalid = false
   }
 
   function save() {
-    if (!editing) return
-    const next = edit(suggestions, editing, value)
+    const target = suggestions.find(isEditing)
+    if (!target) return
+    const next = edit(suggestions, target, value)
     if (!next) {
       invalid = true
       return
@@ -65,7 +70,7 @@
     <div class="field {s.status}">
       <div class="text">
         <span class="label">{field}</span>
-        {#if editing === s}
+        {#if isEditing(s)}
           {#if s.field === 'color'}
             <select aria-label={field} bind:value {onkeydown}>
               {#each WINE_COLORS as color (color)}<option value={color}>{t(`color.${color}`)}</option>{/each}
@@ -89,7 +94,7 @@
         <span class="source">{origin(s)}</span>
       </div>
       <div class="buttons">
-        {#if editing === s}
+        {#if isEditing(s)}
           <button class="icon" aria-label={t('form.save')} {disabled} onclick={save}><Icon name="check" size={20} /></button>
           <button class="icon" aria-label={t('form.cancel')} onclick={() => (editing = null)}><Icon name="close" size={20} /></button>
         {:else}

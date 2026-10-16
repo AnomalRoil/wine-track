@@ -251,6 +251,20 @@ it('imports a field edited by hand', async () => {
   expect((await imported())[1]).toEqual({ grapes: ['Merlot', 'Cabernet Franc'], region: '', country: 'Frankreich' })
 })
 
+it.each(['Accept line', 'Accept all'])('keeps an open edit through %s', async (bulk) => {
+  render(ImportPanel)
+  await loadCompleted()
+
+  await fireEvent.click(line(3).getByRole('button', { name: 'Edit Grapes' }))
+  await fireEvent.input(line(3).getByRole('textbox', { name: 'Grapes' }), { target: { value: 'Malbec' } })
+  await fireEvent.click(bulk === 'Accept all' ? screen.getByRole('button', { name: bulk }) : line(3).getByRole('button', { name: bulk }))
+  const input = line(3).getByRole<HTMLInputElement>('textbox', { name: 'Grapes' })
+  expect(input.value).toBe('Malbec')
+  await fireEvent.keyDown(input, { key: 'Enter' })
+
+  expect((await imported())[1].grapes).toEqual(['Malbec'])
+})
+
 it('accepts every pending field at once', async () => {
   render(ImportPanel)
   await loadCompleted()
