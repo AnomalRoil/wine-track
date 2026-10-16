@@ -1,7 +1,7 @@
 <script lang="ts">
   import { decodeText } from '../lib/csv'
   import { templateCsv } from '../lib/csvExport'
-  import { applyCompletion, COLUMNS, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type ImportPlan, type ImportRow, type RowMatch } from '../lib/csvImport'
+  import { applyCompletion, COLUMNS, emptiedCount, HEADERS, incompleteRows, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS, parseImport, planImport, type EmptiedCell, type ImportPlan, type ImportRow, type RowMatch } from '../lib/csvImport'
   import { downloadFile } from '../lib/download'
   import { today } from '../lib/due'
   import { COMPLETION_BATCH, completeWines, type FailureKind } from '../lib/extract'
@@ -11,6 +11,7 @@
   import { findLwin, matchLwin } from '../lib/lwinData.svelte'
   import { settings } from '../lib/settings.svelte'
   import { applyImport, sortedCellars, store } from '../lib/store.svelte'
+  import { STANDARD_SIZE_CL } from '../lib/types'
   import Icon from './Icon.svelte'
   import NeedsKey from './NeedsKey.svelte'
 
@@ -44,6 +45,7 @@
   })
   const incomplete = $derived(rows && plan ? incompleteRows(rows, plan) : [])
   const validRows = $derived((rows?.length ?? 0) - counts.invalid)
+  const emptied = $derived(rows ? emptiedCount(rows) : { rows: 0, fields: 0 })
 
   function reset() {
     generation++
@@ -181,6 +183,12 @@
     return [d.producer, d.name, d.vintage].filter(Boolean).join(' · ')
   }
 
+  function emptiedText(cell: EmptiedCell): string {
+    const params = { value: cell.value, reason: t(`io.error.${cell.reason}`), size: STANDARD_SIZE_CL, color: t('color.other') }
+    const outcome = cell.reason === 'vintage' || cell.reason === 'quantity' || cell.reason === 'size' || cell.reason === 'color' ? cell.reason : null
+    return t(outcome ? `io.emptied.${outcome}` : 'io.emptied', params)
+  }
+
   function destination(row: ImportRow): string {
     return row.cellar || cellarName(sortedCellars()[0].id)
   }
@@ -209,6 +217,18 @@
   {/if}
   {#if ignored.length > 0}
     <p class="muted">{t('io.ignored', { columns: ignored.join(', ') })}</p>
+  {/if}
+  {#if emptied.fields > 0}
+    <details class="emptied-list">
+      <summary>{t('io.emptiedSummary', emptied)}</summary>
+      <ul>
+        {#each rows.filter((r) => r.errors.length === 0 && r.emptied.length > 0) as row (row.line)}
+          {#each row.emptied as cell (cell.column)}
+            <li>{t('io.line', { n: row.line })}: {emptiedText(cell)}</li>
+          {/each}
+        {/each}
+      </ul>
+    </details>
   {/if}
 
   {#if incomplete.length > 0 || progress}
@@ -243,10 +263,15 @@
       </div>
       <div class="name">{label(row, match) || '—'}</div>
       {#if match.kind === 'invalid'}
-        <ul>
+        <ul class="errors">
           {#each row.errors as error (error)}<li>{t(`io.error.${error}`)}</li>{/each}
         </ul>
       {:else}
+        {#if row.emptied.length > 0}
+          <ul class="emptied">
+            {#each row.emptied as cell (cell.column)}<li>{emptiedText(cell)}</li>{/each}
+          </ul>
+        {/if}
         <div class="muted">
           {[row.draft.region, row.draft.country, row.draft.grapes.join(', ')].filter(Boolean).join(' · ')}
           {#if completed.has(row.line)}<span class="badge"><Icon name="sparkle" size={14} />{t('io.completed')}</span>{/if}
@@ -264,8 +289,9 @@
         {/if}
         {#if row.quantity > 0}
           <div class="muted">{t('io.bottlesTo', { n: row.quantity, cellar: destination(row) })}</div>
-        {:else if row.notes}
-          <div class="muted">{t('io.notesDropped')}</div>
+        {:else}
+          {#if row.notes}<div class="muted">{t('io.notesDropped')}</div>{/if}
+          {#if row.price !== null}<div class="muted">{t('io.priceDropped')}</div>{/if}
         {/if}
       {/if}
     </div>
@@ -313,8 +339,22 @@
 
   .status.invalid,
   .error-text,
-  ul {
+  .errors {
     color: var(--error);
+  }
+
+  .emptied,
+  .emptied-list {
+    color: var(--tertiary);
+  }
+
+  .emptied-list {
+    margin: 0.5rem 0;
+  }
+
+  .emptied-list summary {
+    cursor: pointer;
+    font-weight: 600;
   }
 
   ul {

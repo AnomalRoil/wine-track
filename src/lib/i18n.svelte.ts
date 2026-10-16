@@ -38,12 +38,11 @@ export function t(key: MessageKey, params?: Record<string, string | number>): st
   if (params) {
     let rules = pluralRules.get(settings.locale)
     if (!rules) pluralRules.set(settings.locale, (rules = new Intl.PluralRules(settings.locale)))
-    msg = msg.replace(/\{(\w+)\|([^|}]*)\|([^}]*)\}/g, (_, name: string, one: string, other: string) =>
-      rules.select(Number(params[name])) === 'one' ? one : other,
-    )
-    for (const [name, value] of Object.entries(params)) {
-      msg = msg.replaceAll(`{${name}}`, String(value))
-    }
+    // One pass, so a value containing "{name}" is not filled in turn.
+    msg = msg.replace(/\{(\w+)(?:\|([^|}]*)\|([^}]*))?\}/g, (match, name: string, one?: string, other?: string) => {
+      if (one === undefined) return name in params ? String(params[name]) : match
+      return rules.select(Number(params[name])) === 'one' ? one : other!
+    })
   }
   return msg
 }
