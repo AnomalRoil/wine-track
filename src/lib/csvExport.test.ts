@@ -41,7 +41,7 @@ describe('exportCsv', () => {
 
   it('writes a single grape as the whole wine', () => {
     const single = exportCsv([makeWine({ grapes: ['Chardonnay'] })], [], cellars, name)
-    expect(cellsOf(single)[1][9]).toBe('Chardonnay 100%')
+    expect(cellsOf(single)[1][10]).toBe('Chardonnay 100%')
   })
 
   it('reimports onto the same wines', () => {

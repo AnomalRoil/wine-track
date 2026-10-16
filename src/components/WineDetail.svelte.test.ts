@@ -145,7 +145,7 @@ it('shows the appellation before the region and saves an edited one', async () =
   store.wines = [makeWine({ vintage: 2016, appellation: 'Pauillac', region: 'Bordeaux', country: 'France' })]
   render(WineDetail, { wineId: 'w1', onclose: () => {} })
   expect(document.querySelector('.where')?.textContent).toBe('2016 · Pauillac · Bordeaux, France')
-  await openEditor()
+  await fireEvent.click(button('Edit wine'))
   const appellation = screen.getByLabelText<HTMLInputElement>('Appellation')
   expect(appellation.value).toBe('Pauillac')
   await fireEvent.input(appellation, { target: { value: 'Saint-Julien' } })
