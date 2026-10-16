@@ -87,7 +87,7 @@ it('WineForm offers the grape lookup only with a key', async () => {
   await waitFor(() => expect(lookup.getAttribute('aria-disabled')).toBeNull())
   expect(lookup.isConnected).toBe(true)
   expect(screen.queryByText(/Needs an Anthropic API key/)).toBeNull()
-  vi.mocked(lookupGrapes).mockResolvedValue({ ok: true, data: { grapes: ['Chardonnay'], confidence: 'printed-source' } })
+  vi.mocked(lookupGrapes).mockResolvedValue({ ok: true, data: { grapes: [{ name: 'Chardonnay', percent: null }], confidence: 'printed-source', sourceUrl: null } })
   await fireEvent.click(lookup)
   expect(lookupGrapes).toHaveBeenCalledOnce()
 })

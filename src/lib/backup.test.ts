@@ -9,6 +9,8 @@ const wine = makeWine({
   id: 'w1',
   name: 'Chablis',
   photoId: 'p1',
+  grapes: ['Chardonnay', 'Aligoté'],
+  grapeShares: { Chardonnay: 87.5, 'Aligoté': 12.5 },
   tags: ['Fish'],
   lwin: '1066540',
   value: 30,
@@ -43,8 +45,8 @@ describe('backup', () => {
     expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo, tastingPhoto] })
   })
 
-  it('fills aging fields and the LWIN missing from an older version 2 backup', () => {
-    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, lwin, ...older } = wine
+  it('fills aging fields, grape shares and the LWIN missing from an older version 2 backup', () => {
+    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, lwin, grapeShares, ...older } = wine
     const json = JSON.stringify({
       app: 'wine-track',
       version: 2,
@@ -55,7 +57,7 @@ describe('backup', () => {
       movements: [],
       photos: [],
     })
-    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING, lwin: null }])
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING, lwin: null, grapeShares: {} }])
   })
 
   it('gives movements from an older version 2 backup an empty purchase place', () => {
@@ -96,6 +98,7 @@ describe('backup', () => {
       ['w2', 75, [], false, null, null, null],
     ])
     expect(parsed?.wines[0]).not.toHaveProperty('bottlesOwned')
+    expect(parsed?.wines[0].grapeShares).toEqual({})
     expect(parsed?.movements).toEqual([
       makeMovement({ id: 'w1-v1', wineId: 'w1', date: '2026-08-28', quantity: 3, cellarId: 'main' }),
     ])

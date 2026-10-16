@@ -14,7 +14,7 @@ const cellars = [
 ]
 const name = (id: string) => cellars.find((c) => c.id === id)!.name || 'My cellar'
 const wines = [
-  makeWine({ id: 'w1', name: 'Clos', producer: 'Zed', grapes: ['Syrah', 'Grenache'], tags: ['party'], sizeCl: 150, drinkFrom: 2024, peakUntil: 2032, lwin: '1066553' }),
+  makeWine({ id: 'w1', name: 'Clos', producer: 'Zed', grapes: ['Syrah', 'Grenache'], grapeShares: { Syrah: 70, Grenache: 30 }, tags: ['party'], sizeCl: 150, drinkFrom: 2024, peakUntil: 2032, lwin: '1066553' }),
   makeWine({ id: 'w2', name: '=Formula', producer: 'Abel', vintage: null, color: 'white' }),
   makeWine({ id: 'w3', name: 'Gone', producer: 'Abel', sizeCl: 1500 }),
 ]
@@ -32,11 +32,16 @@ describe('exportCsv', () => {
   it('writes one row per wine and cellar, then wines out of stock', () => {
     expect(cellsOf(csv)).toEqual([
       HEADER,
-      ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', '', '', 'Syrah, Grenache', '11.67', 'Lavinia', 'fair', 'party', '2024', '', '2032', '', '1066553'],
+      ['My cellar', 'Clos', 'Zed', '2020', '4', '150', 'red', '', '', 'Syrah 70%, Grenache 30%', '11.67', 'Lavinia', 'fair', 'party', '2024', '', '2032', '', '1066553'],
       ['Garage', "'=Formula", 'Abel', '', '1', '75', 'white', '', '', '', '', '', '', '', '', '', '', '', ''],
-      ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', '', '', 'Syrah, Grenache', '11.67', 'Domaine', '', 'party', '2024', '', '2032', '', '1066553'],
+      ['Garage', 'Clos', 'Zed', '2020', '2', '150', 'red', '', '', 'Syrah 70%, Grenache 30%', '11.67', 'Domaine', '', 'party', '2024', '', '2032', '', '1066553'],
       ['', 'Gone', 'Abel', '2020', '0', '1500', 'red', '', '', '', '', '', '', '', '', '', '', '', ''],
     ])
+  })
+
+  it('writes a single grape as the whole wine', () => {
+    const single = exportCsv([makeWine({ grapes: ['Chardonnay'] })], [], cellars, name)
+    expect(cellsOf(single)[1][9]).toBe('Chardonnay 100%')
   })
 
   it('reimports onto the same wines', () => {
@@ -48,6 +53,7 @@ describe('exportCsv', () => {
     expect(parsed.rows.map((r) => r.draft.lwin)).toEqual(['1066553', null, '1066553', null])
     expect(plan.cellars).toEqual([])
     expect(plan.movements.map((m) => m.place)).toEqual(['Lavinia', '', 'Domaine'])
+    expect(parsed.rows[0].draft.grapeShares).toEqual({ Syrah: 70, Grenache: 30 })
     expect(parsed.rows[0].window).toEqual({ drinkFrom: 2024, peakFrom: null, peakUntil: 2032, drinkUntil: null })
   })
 })

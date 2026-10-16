@@ -1,5 +1,6 @@
 import { toCsv } from './csv'
 import { COLUMNS, HEADERS } from './csvImport'
+import { formatGrapes } from './grapes'
 import { averageBuyPrices, computeStock } from './stock'
 import type { Cellar, Movement, Wine } from './types'
 
@@ -32,7 +33,7 @@ export function exportCsv(wines: Wine[], movements: Movement[], cellars: Cellar[
       wine.color,
       wine.region,
       wine.country,
-      wine.grapes.join(', '),
+      formatGrapes(wine.grapes, wine.grapeShares),
       price === undefined ? null : Math.round(price * 100) / 100,
       joined(additions.map((m) => m.place)),
       joined(additions.map((m) => m.note)),

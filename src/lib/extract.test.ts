@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignCompletions, changedFields, emptyDraft, lookupKey, mergeExtraction, toWineDraft, wineQuery, type WineDraft, type WineExtraction } from './extract'
+import { alignCompletions, changedFields, emptyDraft, grapePrompt, lookupKey, mergeExtraction, readGrapeLookup, toWineDraft, wineQuery, type GrapeLookup, type GrapesFound, type WineDraft, type WineExtraction } from './extract'
 import { makeWine } from './testing'
 
 describe('toWineDraft', () => {
@@ -20,6 +20,7 @@ describe('toWineDraft', () => {
       producer: 'Dauvissat',
       vintage: 2020,
       grapes: ['Chardonnay'],
+      grapeShares: {},
       region: 'Chablis',
       country: 'France',
       color: 'white',
@@ -162,4 +163,46 @@ describe('changedFields', () => {
   ])('%s', (_, draft, want) => {
     expect(changedFields(draft, opened)).toEqual(want)
   })
+})
+
+describe('grapePrompt', () => {
+  const prompt = grapePrompt({ ...emptyDraft(), producer: 'Dom', name: 'Clos', vintage: 2019 })
+  it.each([
+    ['names the wine and vintage', '<wine>Dom Clos 2019</wine>'],
+    ['asks for the proportions', 'in what proportions'],
+    ['asks for the source', 'sourceUrl'],
+    ['forbids estimated percentages', 'Never\n  estimate a percentage'],
+  ])('%s', (_, part) => expect(prompt).toContain(part))
+})
+
+describe('readGrapeLookup', () => {
+  const grapes = [{ name: ' Merlot ', percent: 60 }, { name: 'Cabernet Franc', percent: 40 }]
+  const cases: { name: string; data: GrapeLookup; want: GrapesFound }[] = [
+    {
+      name: 'keeps shares a source states',
+      data: { grapes, confidence: 'printed-source', sourceUrl: 'https://example.com/sheet.pdf' },
+      want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 }, sourceUrl: 'https://example.com/sheet.pdf' },
+    },
+    {
+      name: 'drops shares of a typical blend',
+      data: { grapes, confidence: 'typical-blend', sourceUrl: null },
+      want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: {}, sourceUrl: null },
+    },
+    {
+      name: 'drops missing and out-of-range shares',
+      data: { grapes: [{ name: 'Merlot', percent: null }, { name: 'Malbec', percent: 120 }, { name: 'Syrah', percent: 0.04 }, { name: '', percent: 5 }], confidence: 'printed-source', sourceUrl: null },
+      want: { grapes: ['Merlot', 'Malbec', 'Syrah'], grapeShares: {}, sourceUrl: null },
+    },
+    {
+      name: 'drops a link that is not http',
+      data: { grapes, confidence: 'printed-source', sourceUrl: 'javascript:alert(1)' },
+      want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 }, sourceUrl: null },
+    },
+    {
+      name: 'drops an unreadable link',
+      data: { grapes: [], confidence: 'unknown', sourceUrl: 'not a url' },
+      want: { grapes: [], grapeShares: {}, sourceUrl: null },
+    },
+  ]
+  for (const c of cases) it(c.name, () => expect(readGrapeLookup(c.data)).toEqual(c.want))
 })

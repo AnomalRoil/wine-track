@@ -290,6 +290,15 @@ it('keeps every field of overlapping wine edits', async () => {
   expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[0]).toEqual(store.wines[0])
 })
 
+it('drops the share of a grape an edit removed', async () => {
+  store.wines = [makeWine({ grapes: ['Merlot', 'Malbec'], grapeShares: { Merlot: 60, Malbec: 40 } })]
+  const edited = patchWine('w1', () => ({ grapes: ['Merlot'] }))
+  await release(edited)
+
+  expect(store.wines[0].grapeShares).toEqual({ Merlot: 60 })
+  expect(vi.mocked(db.putWine).mock.calls.at(-1)?.[0]).toEqual(store.wines[0])
+})
+
 it('drops a capture whose photo was still processing when a backup was restored', async () => {
   const backup: db.Data = { wines: [makeWine({ id: 'old' })], tastings: [], cellars: [cellar('home')], movements: [], racks: [], placements: [] }
   vi.mocked(db.loadAll).mockResolvedValue(structuredClone(backup))

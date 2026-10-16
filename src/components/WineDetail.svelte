@@ -17,6 +17,7 @@
   import { downloadFile } from '../lib/download'
   import { addYears, thisYear, today } from '../lib/due'
   import { changedFields, emptyDraft, type WineDraft } from '../lib/extract'
+  import { effectiveShares, shareLabel } from '../lib/grapes'
   import { buildIcs, icsTimestamp, type CalendarItem } from '../lib/ics'
   import { t } from '../lib/i18n.svelte'
   import { cellarName, rackName, sizeLabel, slotLabel, wineLabel } from '../lib/labels'
@@ -102,6 +103,7 @@
   )
   const serving = $derived(wine && formatServing(wine.servingMinC, wine.servingMaxC, settings.tempUnit))
   const movements = $derived(movementsFor(wineId).length)
+  const shares = $derived(wine ? effectiveShares(wine.grapes, wine.grapeShares) : {})
 
   $effect(() => {
     const id = wine?.photoId
@@ -124,8 +126,8 @@
   }
 
   function editable(w: Wine): WineDraft {
-    const { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
-    return { name, producer, vintage, grapes, region, country, color, sizeCl, tags, lwin }
+    const { name, producer, vintage, grapes, grapeShares, region, country, color, sizeCl, tags, lwin } = $state.snapshot(w)
+    return { name, producer, vintage, grapes, grapeShares, region, country, color, sizeCl, tags, lwin }
   }
 
   function startEdit() {
@@ -262,7 +264,7 @@
     </div>
     <div class="tags">
       <span class="chip">{t(`color.${wine.color}`)}</span>
-      {#each wine.grapes as grape (grape)}<span class="chip">{grape}</span>{/each}
+      {#each wine.grapes as grape (grape)}<span class="chip">{grape}{#if Object.hasOwn(shares, grape)}<span class="share">{shareLabel(shares[grape], settings.locale)}</span>{/if}</span>{/each}
       <span class="chip">{sizeLabel(wine.sizeCl)}</span>
       {#if wine.lwin}<span class="chip">{t('lwin.code', { code: wine.lwin })}</span>{/if}
       {#each wine.tags as tag (tag)}<span class="chip">#{tag}</span>{/each}
@@ -413,6 +415,12 @@
 {/if}
 
 <style>
+  .share {
+    margin-left: 0.3rem;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
   .grow {
     flex: 1;
   }

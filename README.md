@@ -7,7 +7,7 @@ Live at [cave-man.wouaib.ch](https://cave-man.wouaib.ch/).
 ## Features
 
 - Snap a bottle photo; the Claude API extracts name, producer, vintage, grapes, region, and color for you to confirm.
-- Optional online lookup of grape varieties when the label doesn't state them.
+- Optional percentage per grape, with a warning when the blend doesn't total 100%; an optional online lookup finds the varieties and, when a source states them, their percentages, with a link to that source.
 - Optional offline wine names database (LWIN, about 185,000 wines): name suggestions while typing, a proposed match after reading a label, region completion in CSV imports, and a hint when a new wine is already in the collection.
 - Tasting notes with half-star ratings; filter the collection by vintage, grape, color, rating, or free text (accents and case ignored).
 - Optional detailed tasting sheet: who, where and what you ate, photos, appearance, nose with an aroma picker by family, palate and conclusion; summarized on the wine page and in the journal.
@@ -23,7 +23,7 @@ Live at [cave-man.wouaib.ch](https://cave-man.wouaib.ch/).
 - Drink-before dates and "taste again in N years" reminders, with a due view that also lists wines reaching peak or decline this year, and `.ics` calendar export.
 - English, French and German UI.
 - All data stays in the browser (IndexedDB). One-file JSON backup export/import.
-- CSV import with a template (drinking-window years included), per-line validation and duplicate detection (matching wines get the bottles), optional batched completion of grapes and regions by Claude; CSV export in the same columns.
+- CSV import with a template (drinking-window years included), per-line validation and duplicate detection (matching wines get the bottles), optional batched completion of grapes and regions by Claude; CSV export in the same columns. Grapes read and write as "Merlot 60%, Cabernet Franc 40%" or a plain list.
 - Printable insurance inventory per cellar with purchase prices, estimated values, totals and bottles without any price.
 - Installable PWA, works offline. Apart from the optional wine names download from this site, the only network calls are label extraction and wine lookups to `api.anthropic.com` with your own API key, entered in Settings and stored only on the device.
 
