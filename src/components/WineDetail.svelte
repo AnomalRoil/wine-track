@@ -129,7 +129,6 @@
   }
 
   function startEdit() {
-    menu = false
     if (!wine) return
     opened = editable(wine)
     draft = editable(wine)
@@ -175,7 +174,6 @@
   }
 
   async function del() {
-    menu = false
     if (!wine) return
     if (!confirm(t('detail.deleteConfirm', { n: tastings.length }))) return
     await removeWine(wine.id)
@@ -228,18 +226,17 @@
     >
       <Icon name="heart" filled={wine.wished} />
     </button>
-    <button class="icon" aria-label={t('nav.moreActions')} aria-expanded={menu} onclick={() => (menu = !menu)}>
-      <Icon name="more" />
-    </button>
-    {#if menu}
-      <button class="scrim" tabindex="-1" aria-label={t('rack.close')} onclick={() => (menu = false)}></button>
-      <div class="menu" role="menu">
-        <button role="menuitem" disabled={store.restoring} onclick={startEdit}><Icon name="edit" size={20} />{t('detail.edit')}</button>
-        {#if wine.drinkBy || wine.tasteAgainOn}
+    <button class="edit" aria-label={t('form.editWine')} disabled={store.restoring} onclick={startEdit}><Icon name="edit" size={20} />{t('detail.edit')}</button>
+    {#if wine.drinkBy || wine.tasteAgainOn}
+      <button class="icon" aria-label={t('nav.moreActions')} aria-expanded={menu} onclick={() => (menu = !menu)}>
+        <Icon name="more" />
+      </button>
+      {#if menu}
+        <button class="scrim" tabindex="-1" aria-label={t('rack.close')} onclick={() => (menu = false)}></button>
+        <div class="menu" role="menu">
           <button role="menuitem" onclick={() => exportIcs(wine)}><Icon name="calendar" size={20} />{t('detail.calendar')}</button>
-        {/if}
-        <button role="menuitem" class="delete" onclick={del}><Icon name="close" size={20} />{t('detail.delete')}</button>
-      </div>
+        </div>
+      {/if}
     {/if}
   </header>
 
@@ -411,6 +408,8 @@
       {/if}
     {/if}
   </div>
+
+  <button class="danger delete" onclick={del}>{t('detail.deleteWine')}</button>
 {/if}
 
 <style>
@@ -470,8 +469,14 @@
     font-weight: 500;
   }
 
-  .menu .delete {
-    color: var(--error);
+  .bar .edit {
+    margin: 0 4px;
+    color: var(--on-surface);
+  }
+
+  .delete {
+    display: flex;
+    margin: 24px auto 8px;
   }
 
   @keyframes open {
