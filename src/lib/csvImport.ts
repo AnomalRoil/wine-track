@@ -130,11 +130,12 @@ for (const size of BOTTLE_SIZES) {
 export type RowError = 'missing-name'
 
 /** Why a cell was not understood. */
-export type CellError = 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window' | 'lwin'
+export type CellError = 'vintage' | 'quantity' | 'size' | 'color' | 'price' | 'window' | 'lwin' | 'grapes' | 'decimal'
 
 /**
  * A cell imported as empty because its value was not understood: no vintage,
  * price, year or code; the standard size; color "other"; no bottles for a quantity.
+ * A grapes cell lists one per part left out, with that part as its value.
  */
 export interface EmptiedCell {
   column: Column
@@ -301,6 +302,9 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
     const lwin = rawLwin === '' ? null : parseLwinCode(rawLwin)
     if (rawLwin !== '' && lwin === null) empty('lwin', 'lwin')
 
+    const { grapes, grapeShares, invalid } = parseGrapes(get('grapes'))
+    for (const part of invalid) emptied.push({ column: 'grapes', value: part.text, reason: part.reason === 'decimal' ? 'decimal' : 'grapes' })
+
     const name = get('name')
     const producer = get('producer')
     if (!name && !producer) errors.push('missing-name')
@@ -312,7 +316,8 @@ export function parseImport(text: string, currentYear: number): ParsedImport {
         name,
         producer,
         vintage: vintage ?? null,
-        ...parseGrapes(get('grapes')),
+        grapes,
+        grapeShares,
         region: get('region'),
         appellation: get('appellation'),
         country: get('country'),

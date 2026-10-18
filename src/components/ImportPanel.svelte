@@ -259,7 +259,7 @@
       <summary>{t('io.emptiedSummary', emptied)}</summary>
       <ul>
         {#each rows.filter((r) => r.errors.length === 0 && r.emptied.length > 0) as row (row.line)}
-          {#each row.emptied as cell (cell.column)}
+          {#each row.emptied as cell, i (i)}
             <li>{t('io.line', { n: row.line })}: {emptiedText(cell)}</li>
           {/each}
         {/each}
@@ -312,7 +312,7 @@
       {:else}
         {#if row.emptied.length > 0}
           <ul class="emptied">
-            {#each row.emptied as cell (cell.column)}<li>{emptiedText(cell)}</li>{/each}
+            {#each row.emptied as cell, i (i)}<li>{emptiedText(cell)}</li>{/each}
           </ul>
         {/if}
         <div class="muted">

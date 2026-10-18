@@ -62,15 +62,26 @@ function row(fields: string, header = 'name,producer,vintage,quantity,size_cl,co
 }
 
 describe('parseImport grapes', () => {
-  const cases: { name: string; cell: string; grapes: string[]; shares: Record<string, number> }[] = [
+  const cases: { name: string; cell: string; grapes: string[]; shares: Record<string, number>; emptied?: EmptiedCell[] }[] = [
     { name: 'plain list', cell: 'Merlot, Cabernet Franc', grapes: ['Merlot', 'Cabernet Franc'], shares: {} },
     { name: 'with shares', cell: 'Merlot 60%, Cabernet Franc 40%', grapes: ['Merlot', 'Cabernet Franc'], shares: { Merlot: 60, 'Cabernet Franc': 40 } },
-    { name: 'decimal comma', cell: 'Merlot 87,5%; Malbec 12,5%', grapes: ['Merlot', 'Malbec'], shares: { Merlot: 87.5, Malbec: 12.5 } },
+    { name: 'decimal dot', cell: 'Merlot 87.5%; Malbec 12.5%', grapes: ['Merlot', 'Malbec'], shares: { Merlot: 87.5, Malbec: 12.5 } },
+    {
+      name: 'decimal comma',
+      cell: 'Merlot 87,5%; Malbec 12.5%',
+      grapes: ['Malbec'],
+      shares: { Malbec: 12.5 },
+      emptied: [
+        { column: 'grapes', value: 'Merlot 87', reason: 'decimal' },
+        { column: 'grapes', value: '5%', reason: 'decimal' },
+      ],
+    },
+    { name: 'no grape name', cell: 'Merlot, 87', grapes: ['Merlot'], shares: {}, emptied: [{ column: 'grapes', value: '87', reason: 'grapes' }] },
   ]
   for (const c of cases) {
     it(c.name, () => {
-      const { draft, errors } = row(`Clos,"${c.cell}"`, 'name,grapes')
-      expect([draft.grapes, draft.grapeShares, errors]).toEqual([c.grapes, c.shares, []])
+      const { draft, errors, emptied } = row(`Clos,"${c.cell}"`, 'name,grapes')
+      expect([draft.grapes, draft.grapeShares, errors, emptied]).toEqual([c.grapes, c.shares, [], c.emptied ?? []])
     })
   }
 })
