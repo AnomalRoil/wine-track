@@ -41,30 +41,63 @@ export function shareLabel(share: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(share / 100)
 }
 
-const SHARE = String.raw`([-−]?(?:\d+(?:[.,]\d+)?|[.,]\d+))\s*%`
+/** Why a part of a grapes list was not read: no grape name, a share out of range, or a decimal comma. */
+export type InvalidReason = 'grape' | 'decimal'
+
+/** A part of a grapes list that names no grape or has an invalid share, as written. */
+export interface InvalidGrape {
+  text: string
+  reason: InvalidReason
+}
+
+const SHARE = String.raw`([-−]?[\d.]+)\s*%`
 const SUFFIX = new RegExp(String.raw`^(.*?)\s*\(?\s*${SHARE}\s*\)?$`)
-const PREFIX = new RegExp(String.raw`^\(?\s*${SHARE}\s*\)?\s*(.+)$`)
+const PREFIX = new RegExp(String.raw`^\(?\s*${SHARE}\s*\)?\s*(.*)$`)
+const NUMBER = /^(?:\d+(?:\.\d+)?|\.\d+)$/
+const NOT_A_NAME = /^[\p{N}\p{P}\p{S}\s]*$/u
+
+/** The name and share of one part, or null when it names no grape or its share is invalid. */
+function parsePart(text: string): { name: string; share: number | null } | null {
+  const suffix = SUFFIX.exec(text)
+  const prefix = suffix ? null : PREFIX.exec(text)
+  const name = (suffix ? suffix[1].replace(/[\s:–—-]+$/, '') : prefix ? prefix[2] : text).trim()
+  if (NOT_A_NAME.test(name)) return null
+  const share = suffix?.[2] ?? prefix?.[1]
+  if (share === undefined) return { name, share: null }
+  const n = Number(share)
+  if (!NUMBER.test(share) || n > 100) return null
+  return { name, share: toShare(n) }
+}
 
 /**
  * Reads "Merlot 60%, Cabernet Franc 40%", "60 % Merlot; 40 % Cabernet Franc" or a plain
- * list. A comma inside or leading a share ("87,5%", ",5%") is a decimal mark, unless it
- * follows a name ("Merlot,5% Malbec") or follows a space with a name after the share
- * ("Merlot ,40% Malbec"). An invalid share is dropped and its grape kept. A single grape
- * at 100% gets no share, as effectiveShares implies it.
+ * list. Commas, semicolons, bars and newlines separate grapes; shares use a dot for decimals.
+ * A part that names no grape or has a share below 0 or above 100 is returned in `invalid`;
+ * "Merlot 87,5%" yields two invalid parts with the reason "decimal". A share that rounds
+ * to 0 is dropped and its grape kept. A single grape at 100% gets no share, as
+ * effectiveShares implies it.
  */
-export function parseGrapes(raw: string): { grapes: string[]; grapeShares: GrapeShares } {
+export function parseGrapes(raw: string): { grapes: string[]; grapeShares: GrapeShares; invalid: InvalidGrape[] } {
   const grapes: string[] = []
   const grapeShares: GrapeShares = {}
-  for (const item of raw.split(/[;|]|(?<=[^\d\s;|(\-−]),|,(?!\d+\s*%)|(?<=\s),(?=\d+(?:[.,]\d+)?\s*%\s*[^\s,;|)%])/)) {
-    const text = item.trim()
-    const suffix = SUFFIX.exec(text)
-    const prefix = suffix ? null : PREFIX.exec(text)
-    const name = (suffix ? suffix[1].replace(/[\s:–—-]+$/, '') : prefix ? prefix[2] : text).trim()
-    if (!name || grapes.includes(name)) continue
-    grapes.push(name)
-    const share = suffix || prefix ? toShare(Number((suffix?.[2] ?? prefix![1]).replace(',', '.').replace('−', '-'))) : null
-    if (share !== null) grapeShares[name] = share
+  const invalid: InvalidGrape[] = []
+  for (const group of raw.split(/[;|\n]/)) {
+    const parts = group.split(',').map((p) => p.trim())
+    for (let i = 0; i < parts.length; i++) {
+      const text = parts[i]
+      if (!text) continue
+      if (/\d$/.test(text) && !text.includes('%') && /^\d+\s*%/.test(parts[i + 1] ?? '')) {
+        invalid.push({ text, reason: 'decimal' }, { text: parts[++i], reason: 'decimal' })
+        continue
+      }
+      const part = parsePart(text)
+      if (!part) invalid.push({ text, reason: 'grape' })
+      else if (!grapes.includes(part.name)) {
+        grapes.push(part.name)
+        if (part.share !== null) grapeShares[part.name] = part.share
+      }
+    }
   }
-  if (grapes.length === 1 && grapeShares[grapes[0]] === 100) return { grapes, grapeShares: {} }
-  return { grapes, grapeShares }
+  if (grapes.length === 1 && grapeShares[grapes[0]] === 100) return { grapes, grapeShares: {}, invalid }
+  return { grapes, grapeShares, invalid }
 }
