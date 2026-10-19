@@ -9,7 +9,9 @@ export function makeWine(overrides: Partial<Wine> = {}): Wine {
     producer: 'Producer',
     vintage: 2020,
     grapes: [],
+    grapeShares: {},
     region: '',
+    appellation: '',
     country: '',
     color: 'red',
     sizeCl: 75,
@@ -37,6 +39,7 @@ export function makeMovement(overrides: Partial<Movement> = {}): Movement {
     cellarId: 'main',
     toCellarId: null,
     unitPrice: null,
+    place: '',
     note: '',
     ...overrides,
   }

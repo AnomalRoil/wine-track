@@ -19,9 +19,9 @@ import { makeMovement, makeWine } from './testing'
 import type { Tasting, Wine } from './types'
 
 const wines = [
-  makeWine({ id: 'a', color: 'red', country: 'France', region: 'Bordeaux', grapes: ['Merlot', 'Cabernet Franc'], vintage: 2015, value: 40 }),
+  makeWine({ id: 'a', color: 'red', country: 'France', region: 'Bordeaux', appellation: 'Pomerol', grapes: ['Merlot', 'Cabernet Franc'], vintage: 2015, value: 40 }),
   makeWine({ id: 'b', color: 'white', country: 'france', region: 'Chablis', grapes: ['Chardonnay'], vintage: null, sizeCl: 150 }),
-  makeWine({ id: 'c', color: 'red', country: '', region: 'bordeaux', grapes: [], vintage: 2015, value: 10 }),
+  makeWine({ id: 'c', color: 'red', country: '', region: 'bordeaux', appellation: 'pomerol', grapes: [], vintage: 2015, value: 10 }),
   makeWine({ id: 'gone', region: 'Jura' }),
 ]
 const movements = [
@@ -63,6 +63,7 @@ describe('composition', () => {
     { dimension: 'color', want: [['red', 3], ['white', 2]] },
     { dimension: 'country', want: [['France', 4], ['', 1]] },
     { dimension: 'region', want: [['Bordeaux', 3], ['Chablis', 2]] },
+    { dimension: 'appellation', want: [['Pomerol', 3], ['', 2]] },
     { dimension: 'grape', want: [['Cabernet Franc', 2], ['Chardonnay', 2], ['Merlot', 2], ['', 1]] },
     { dimension: 'vintage', want: [['2015', 3], ['', 2]] },
     { dimension: 'size', want: [['75', 3], ['150', 2]] },

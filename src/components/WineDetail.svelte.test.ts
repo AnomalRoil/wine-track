@@ -24,8 +24,7 @@ beforeEach(() => {
 
 async function openEditor() {
   render(WineDetail, { wineId: 'w1', onclose: () => {} })
-  await fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
-  await fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Edit wine' }))
 }
 
 const name = () => screen.getByLabelText<HTMLInputElement>('Wine name')
@@ -117,4 +116,44 @@ it('keeps the code an import gave the wine while its editor was open', async () 
 
   await vi.waitFor(() => expect(screen.queryByLabelText('Wine name')).toBeNull())
   expect(store.wines[0]).toMatchObject({ name: 'Renamed', lwin: '1066553' })
+})
+
+it('shows Edit and Delete without a menu, and asks before deleting', async () => {
+  vi.mocked(db.deleteWine).mockResolvedValue()
+  const onclose = vi.fn()
+  render(WineDetail, { wineId: 'w1', onclose })
+  expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull()
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+
+  await fireEvent.click(button('Delete wine'))
+  expect(store.wines).toHaveLength(1)
+
+  await fireEvent.click(button('Delete wine'))
+  await vi.waitFor(() => expect(onclose).toHaveBeenCalled())
+  expect(confirm).toHaveBeenCalledTimes(2)
+  expect(store.wines).toHaveLength(0)
+})
+
+it('keeps the menu for the calendar export only', async () => {
+  store.wines = [makeWine({ drinkBy: '2030-01-01' })]
+  render(WineDetail, { wineId: 'w1', onclose: () => {} })
+  await fireEvent.click(button('More actions'))
+  expect(screen.getAllByRole('menuitem').map((m) => m.textContent?.trim())).toEqual(['Add to calendar (.ics)'])
+})
+
+it('shows the appellation before the region and saves an edited one', async () => {
+  store.wines = [makeWine({ vintage: 2016, appellation: 'Pauillac', region: 'Bordeaux', country: 'France' })]
+  render(WineDetail, { wineId: 'w1', onclose: () => {} })
+  expect(document.querySelector('.where')?.textContent).toBe('2016 · Pauillac · Bordeaux, France')
+  await fireEvent.click(button('Edit wine'))
+  const appellation = screen.getByLabelText<HTMLInputElement>('Appellation')
+  expect(appellation.value).toBe('Pauillac')
+  await fireEvent.input(appellation, { target: { value: 'Saint-Julien' } })
+
+  await fireEvent.click(button('Save'))
+  await vi.waitFor(() => expect(pending).toHaveLength(1))
+  pending[0]()
+
+  await vi.waitFor(() => expect(store.wines[0].appellation).toBe('Saint-Julien'))
+  expect(store.wines[0].region).toBe('Bordeaux')
 })

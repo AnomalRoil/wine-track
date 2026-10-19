@@ -36,6 +36,7 @@ const label: WineExtraction = {
   producer: 'Dauvissat',
   vintage: 2020,
   grapes: ['Chardonnay'],
+  appellation: null,
   region: 'Chablis',
   country: 'France',
   color: 'white',
@@ -83,6 +84,16 @@ it('Reading the label keeps the form and its chosen color', async () => {
   expect(activeColor()).toBe('Red')
   expect((document.querySelector('#size') as HTMLSelectElement).value).toBe('150')
   expect(details.open).toBe(true)
+})
+
+it('Reading the label fills the appellation apart from the region', async () => {
+  const { answer } = await formWithPhoto()
+  await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
+  answer({ ok: true, data: { ...label, appellation: 'Chablis Premier Cru', region: 'Burgundy' } })
+
+  await waitFor(() => expect(name().value).toBe('Chablis'))
+  expect(screen.getByLabelText<HTMLInputElement>('Appellation').value).toBe('Chablis Premier Cru')
+  expect(screen.getByLabelText<HTMLInputElement>('Region').value).toBe('Burgundy')
 })
 
 it('Reading the label keeps the grape being typed', async () => {
@@ -140,7 +151,7 @@ it('A grape lookup answering after the label read changed the wine is dropped', 
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
   answer({ ok: true, data: label })
   await waitFor(() => expect(name().value).toBe('Chablis'))
-  found({ ok: true, data: { grapes: ['Merlot'], confidence: 'printed-source' } })
+  found({ ok: true, data: { grapes: [{ name: 'Merlot', percent: null }], confidence: 'printed-source', sourceUrl: null } })
   await new Promise((resolve) => setTimeout(resolve))
 
   expect((screen.getByRole('button', { name: 'Look up grapes online' }) as HTMLButtonElement).disabled).toBe(false)
@@ -165,7 +176,7 @@ it('A grape lookup answering during the label read is dropped', async () => {
   await fireEvent.click(screen.getByRole('button', { name: 'Look up grapes online' }))
 
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
-  found({ ok: true, data: { grapes: ['Merlot'], confidence: 'printed-source' } })
+  found({ ok: true, data: { grapes: [{ name: 'Merlot', percent: null }], confidence: 'printed-source', sourceUrl: null } })
   await new Promise((resolve) => setTimeout(resolve))
   expect(screen.queryByRole('button', { name: 'Remove Merlot' })).toBeNull()
 
@@ -184,7 +195,7 @@ it('A drinking-window lookup answering during the label read is dropped, and wai
   await fireEvent.click(screen.getByRole('button', { name: 'Read the label' }))
   found({
     ok: true,
-    data: { drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: null, servingMinC: null, servingMaxC: null, decantMinutes: null, profile: null, confidence: 'similar' },
+    data: { drinkFrom: 2030, peakFrom: null, peakUntil: null, drinkUntil: null, servingMinC: null, servingMaxC: null, decantMinutes: null, profile: null, source: 'typical', sourceUrl: null },
   })
   await new Promise((resolve) => setTimeout(resolve))
   expect(document.querySelector<HTMLInputElement>('#aging-drinkFrom')!.value).toBe('')

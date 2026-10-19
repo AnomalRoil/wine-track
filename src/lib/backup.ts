@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { MAX_YEAR, MIN_YEAR } from './aging'
+import { MAX_YEAR, MIN_YEAR, webUrl } from './aging'
 import type { Data } from './db'
 import { defaultCellar, migrateWinesV1 } from './migrate'
 import { normalizeTasting, SCALES, SHADES } from './tasting'
 import { MAX_COLUMNS, MAX_DEPTH, MAX_ROWS, slotId } from './racks'
-import { RACK_LAYOUTS, type Photo } from './types'
+import { RACK_LAYOUTS, WINDOW_SOURCES, type Photo } from './types'
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
@@ -35,6 +35,9 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   value: z.number().min(0).nullable(),
   valueHistory: z.array(z.object({ date, value: z.number().min(0).nullable() })),
   lwin: z.string().regex(/^\d{7}$/).nullable().default(null),
+  // Out-of-range shares are dropped when the store loads the wines.
+  grapeShares: z.record(z.string(), z.number()).default({}),
+  appellation: z.string().default(''),
   // Aging fields arrived within version 2: older backups lack them.
   drinkFrom: year,
   peakFrom: year,
@@ -45,6 +48,10 @@ const WineSchema = WineV1Schema.omit({ bottlesOwned: true }).extend({
   decantMinutes: z.number().int().min(0).nullable().default(null),
   profile: z
     .object({ body: axis, tannin: axis, sweetness: axis, acidity: axis, fizz: axis })
+    .nullable()
+    .default(null),
+  windowSource: z
+    .object({ kind: z.enum(WINDOW_SOURCES), url: z.string().nullable().transform(webUrl) })
     .nullable()
     .default(null),
 })
@@ -99,6 +106,8 @@ const MovementSchema = z.object({
   cellarId: z.string(),
   toCellarId: z.string().nullable(),
   unitPrice: z.number().min(0).nullable(),
+  // Arrived within version 2: older backups lack it.
+  place: z.string().default(''),
   note: z.string(),
 })
 

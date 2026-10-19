@@ -8,7 +8,11 @@ import type { Tasting } from './types'
 const wine = makeWine({
   id: 'w1',
   name: 'Chablis',
+  region: 'Burgundy',
+  appellation: 'Chablis Premier Cru',
   photoId: 'p1',
+  grapes: ['Chardonnay', 'Aligoté'],
+  grapeShares: { Chardonnay: 87.5, 'Aligoté': 12.5 },
   tags: ['Fish'],
   lwin: '1066540',
   value: 30,
@@ -23,6 +27,7 @@ const wine = makeWine({
   servingMaxC: 12,
   decantMinutes: 0,
   profile: { body: 4, tannin: 0, sweetness: 1, acidity: 8, fizz: 0 },
+  windowSource: { kind: 'producer', url: 'https://domaine.example/chablis' },
 })
 const tasting: Tasting = { id: 't1', wineId: 'w1', date: '2026-08-28', rating: 4.5, notes: 'minerality' }
 const photo = { id: 'p1', mediaType: 'image/jpeg', data: 'AAAA' }
@@ -35,7 +40,7 @@ describe('backup', () => {
       wines: [wine],
       tastings: [tasting, detailed],
       cellars: [{ id: 'main', name: '', position: 0, storage: { temperature: 'cool', light: 'bright' } }],
-      movements: [makeMovement({ unitPrice: 12.5 })],
+      movements: [makeMovement({ unitPrice: 12.5, place: 'Lavinia' })],
       racks: [{ id: 'r1', cellarId: 'main', name: 'Left wall', columns: 6, rows: 4, depth: 2, layout: 'diamond' as const, position: 0 }],
       placements: [{ id: 'r1/1/0/2', rackId: 'r1', layer: 1, row: 0, column: 2, wineId: 'w1' }],
     }
@@ -43,8 +48,8 @@ describe('backup', () => {
     expect(parsed).toEqual({ app: 'wine-track', version: 2, exportedAt: '2026-08-28T10:00:00Z', ...data, photos: [photo, tastingPhoto] })
   })
 
-  it('fills aging fields and the LWIN missing from an older version 2 backup', () => {
-    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, lwin, ...older } = wine
+  it('fills aging fields, grape shares and the LWIN missing from an older version 2 backup', () => {
+    const { drinkFrom, peakFrom, peakUntil, drinkUntil, servingMinC, servingMaxC, decantMinutes, profile, windowSource, lwin, grapeShares, ...older } = wine
     const json = JSON.stringify({
       app: 'wine-track',
       version: 2,
@@ -55,7 +60,36 @@ describe('backup', () => {
       movements: [],
       photos: [],
     })
-    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING, lwin: null }])
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, ...NO_AGING, lwin: null, grapeShares: {} }])
+  })
+
+  it('gives movements from an older version 2 backup an empty purchase place', () => {
+    const { place, ...older } = makeMovement({ unitPrice: 12.5 })
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [older], photos: [] })
+    expect(parseBackup(json)?.movements).toEqual([makeMovement({ unitPrice: 12.5 })])
+  })
+
+  it('gives wines from a backup made before appellations no appellation', () => {
+    const { appellation, ...older } = wine
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [older], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(appellation).not.toBe('')
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, appellation: '' }])
+  })
+
+  it('reads a version 2 backup made before window sources existed', () => {
+    const { windowSource, ...older } = wine
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [older], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.wines).toEqual([{ ...older, windowSource: null }])
+  })
+
+  it.each(['javascript:alert(1)', 'domaine.example/chablis'])('drops a window source link that is not a web address: %s', (url) => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, windowSource: { kind: 'producer', url } }], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)?.wines[0].windowSource).toEqual({ kind: 'producer', url: null })
+  })
+
+  it('rejects a window source of an unknown kind', () => {
+    const json = JSON.stringify({ app: 'wine-track', version: 2, exportedAt: '', wines: [{ ...wine, windowSource: { kind: 'oracle', url: null } }], tastings: [], cellars: [{ id: 'main', name: '', position: 0 }], movements: [], photos: [] })
+    expect(parseBackup(json)).toBeNull()
   })
 
   it('reads a version 2 backup made before racks existed', () => {
@@ -85,11 +119,12 @@ describe('backup', () => {
     const parsed = parseBackup(json)
     expect(parsed?.version).toBe(2)
     expect(parsed?.cellars).toEqual([{ id: 'main', name: '', position: 0, storage: {} }])
-    expect(parsed?.wines.map((w) => [w.id, w.sizeCl, w.tags, w.wished, w.value, w.drinkFrom, w.profile])).toEqual([
-      ['w1', 75, [], false, null, null, null],
-      ['w2', 75, [], false, null, null, null],
+    expect(parsed?.wines.map((w) => [w.id, w.appellation, w.sizeCl, w.tags, w.wished, w.value, w.drinkFrom, w.profile])).toEqual([
+      ['w1', '', 75, [], false, null, null, null],
+      ['w2', '', 75, [], false, null, null, null],
     ])
     expect(parsed?.wines[0]).not.toHaveProperty('bottlesOwned')
+    expect(parsed?.wines[0].grapeShares).toEqual({})
     expect(parsed?.movements).toEqual([
       makeMovement({ id: 'w1-v1', wineId: 'w1', date: '2026-08-28', quantity: 3, cellarId: 'main' }),
     ])

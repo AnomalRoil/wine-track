@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignCompletions, changedFields, emptyDraft, lookupKey, mergeExtraction, toWineDraft, wineQuery, type WineDraft, type WineExtraction } from './extract'
+import { alignCompletions, changedFields, emptyDraft, grapePrompt, lookupKey, mergeExtraction, readGrapeLookup, toWineDraft, wineQuery, type GrapeLookup, type GrapesFound, type WineDraft, type WineExtraction } from './extract'
 import { makeWine } from './testing'
 
 describe('toWineDraft', () => {
@@ -10,7 +10,8 @@ describe('toWineDraft', () => {
         producer: 'Dauvissat',
         vintage: 2020,
         grapes: [' Chardonnay ', ''],
-        region: 'Chablis',
+        appellation: 'Chablis Premier Cru',
+        region: 'Burgundy',
         country: 'France',
         color: 'white',
         volumeCl: 150,
@@ -20,7 +21,9 @@ describe('toWineDraft', () => {
       producer: 'Dauvissat',
       vintage: 2020,
       grapes: ['Chardonnay'],
-      region: 'Chablis',
+      grapeShares: {},
+      region: 'Burgundy',
+      appellation: 'Chablis Premier Cru',
       country: 'France',
       color: 'white',
       sizeCl: 150,
@@ -36,6 +39,7 @@ describe('toWineDraft', () => {
         producer: null,
         vintage: null,
         grapes: [],
+        appellation: null,
         region: null,
         country: null,
         color: 'unknown',
@@ -55,7 +59,8 @@ describe('mergeExtraction', () => {
     producer: 'Dauvissat',
     vintage: 2020,
     grapes: ['Chardonnay'],
-    region: 'Chablis',
+    appellation: 'Chablis',
+    region: 'Burgundy',
     country: 'France',
     color: 'white',
     volumeCl: 150,
@@ -99,6 +104,13 @@ describe('mergeExtraction', () => {
       want: { ...toWineDraft(label), name: '' },
     },
     {
+      name: 'typed appellation kept, region read',
+      draft: { ...emptyDraft(), appellation: 'Chablis Grand Cru' },
+      touched: new Set(['appellation']),
+      extraction: label,
+      want: { ...toWineDraft(label), appellation: 'Chablis Grand Cru' },
+    },
+    {
       name: 'cleared field kept',
       draft: { ...emptyDraft(), producer: '' },
       touched: new Set(['producer']),
@@ -116,6 +128,8 @@ describe('mergeExtraction', () => {
 describe('wineQuery', () => {
   it('joins the identifying fields', () => {
     expect(wineQuery({ ...emptyDraft(), producer: 'Dom', name: 'Clos', vintage: 2019, country: 'France' })).toBe('Dom Clos 2019 France')
+    const place = { appellation: 'Pauillac', region: 'Bordeaux', country: 'France' }
+    expect(wineQuery({ ...emptyDraft(), producer: 'Dom', name: 'Clos', ...place })).toBe('Dom Clos Pauillac Bordeaux France')
   })
 
   it('keeps imported text on one line and clips long fields', () => {
@@ -128,8 +142,8 @@ describe('wineQuery', () => {
 
 describe('alignCompletions', () => {
   it('orders answers by index and fills the gaps', () => {
-    const syrah = { grapes: ['Syrah'], region: 'Cornas', country: 'France' }
-    const empty = { grapes: [], region: null, country: null }
+    const syrah = { grapes: ['Syrah'], region: 'Rhône', appellation: 'Cornas', country: 'France' }
+    const empty = { grapes: [], region: null, appellation: null, country: null }
     expect(alignCompletions(3, [{ index: 3, ...syrah }, { index: 9, ...syrah }])).toEqual([empty, empty, syrah])
   })
 })
@@ -162,4 +176,46 @@ describe('changedFields', () => {
   ])('%s', (_, draft, want) => {
     expect(changedFields(draft, opened)).toEqual(want)
   })
+})
+
+describe('grapePrompt', () => {
+  const prompt = grapePrompt({ ...emptyDraft(), producer: 'Dom', name: 'Clos', vintage: 2019 })
+  it.each([
+    ['names the wine and vintage', '<wine>Dom Clos 2019</wine>'],
+    ['asks for the proportions', 'in what proportions'],
+    ['asks for the source', 'sourceUrl'],
+    ['forbids estimated percentages', 'Never\n  estimate a percentage'],
+  ])('%s', (_, part) => expect(prompt).toContain(part))
+})
+
+describe('readGrapeLookup', () => {
+  const grapes = [{ name: ' Merlot ', percent: 60 }, { name: 'Cabernet Franc', percent: 40 }]
+  const cases: { name: string; data: GrapeLookup; want: GrapesFound }[] = [
+    {
+      name: 'keeps shares a source states',
+      data: { grapes, confidence: 'printed-source', sourceUrl: 'https://example.com/sheet.pdf' },
+      want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 }, sourceUrl: 'https://example.com/sheet.pdf' },
+    },
+    {
+      name: 'drops shares and link of a typical blend',
+      data: { grapes, confidence: 'typical-blend', sourceUrl: 'https://example.com/appellation' },
+      want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: {}, sourceUrl: null },
+    },
+    {
+      name: 'drops missing and out-of-range shares',
+      data: { grapes: [{ name: 'Merlot', percent: null }, { name: 'Malbec', percent: 120 }, { name: 'Syrah', percent: 0.04 }, { name: '', percent: 5 }], confidence: 'printed-source', sourceUrl: null },
+      want: { grapes: ['Merlot', 'Malbec', 'Syrah'], grapeShares: {}, sourceUrl: null },
+    },
+    {
+      name: 'drops a link that is not http',
+      data: { grapes, confidence: 'printed-source', sourceUrl: 'javascript:alert(1)' },
+      want: { grapes: ['Merlot', 'Cabernet Franc'], grapeShares: { Merlot: 60, 'Cabernet Franc': 40 }, sourceUrl: null },
+    },
+    {
+      name: 'drops an unreadable link',
+      data: { grapes: [], confidence: 'unknown', sourceUrl: 'not a url' },
+      want: { grapes: [], grapeShares: {}, sourceUrl: null },
+    },
+  ]
+  for (const c of cases) it(c.name, () => expect(readGrapeLookup(c.data)).toEqual(c.want))
 })

@@ -1,3 +1,4 @@
+import type { GrapeShares } from './grapes'
 import type { SCALES, Shade } from './tasting'
 
 export type WineColor =
@@ -61,6 +62,16 @@ export interface TasteProfile {
   fizz: number
 }
 
+export const WINDOW_SOURCES = ['producer', 'merchant', 'critic', 'typical', 'user'] as const
+/** Who published a drinking window; "typical" is an estimate for the appellation and vintage, "user" a window edited by hand. */
+export type WindowSourceKind = (typeof WINDOW_SOURCES)[number]
+
+export interface WindowSource {
+  kind: WindowSourceKind
+  /** The page the window comes from; null when none was given. */
+  url: string | null
+}
+
 /** Drinking window and serving advice; every field is null when unknown. */
 export interface Aging {
   /** Years: ready to drink from, at peak from/until, drinkable until. */
@@ -74,6 +85,8 @@ export interface Aging {
   /** 0 means no decanting. */
   decantMinutes: number | null
   profile: TasteProfile | null
+  /** Where the window years come from; null when unknown or when there is no window. */
+  windowSource: WindowSource | null
 }
 
 export interface Wine extends Aging {
@@ -83,8 +96,12 @@ export interface Wine extends Aging {
   /** Millésime; null for non-vintage wines. */
   vintage: number | null
   grapes: string[]
-  /** Region or appellation, free text. */
+  /** Percentages the user or a source gave, by grape name. */
+  grapeShares: GrapeShares
+  /** Wine region, e.g. Bordeaux; free text. */
   region: string
+  /** Appellation or sub-region within the region, e.g. Pauillac; free text, '' when unknown. */
+  appellation: string
   country: string
   color: WineColor
   sizeCl: number
@@ -178,6 +195,8 @@ export interface Movement {
   toCellarId: string | null
   /** Price paid per bottle, for additions; null when unknown. */
   unitPrice: number | null
+  /** Where an addition was bought, free text; empty when unknown or not an addition. */
+  place: string
   note: string
 }
 

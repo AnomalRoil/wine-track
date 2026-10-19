@@ -17,4 +17,9 @@ describe('t', () => {
       expect(t('list.summary', { bottles, wines }), `${locale} ${bottles} ${wines}`).toBe(want)
     }
   })
+
+  it('shows a value containing a placeholder as given', () => {
+    settings.locale = 'en'
+    expect(t('io.emptied', { value: '{reason}', reason: 'Why.' })).toBe('“{reason}” left empty. Why.')
+  })
 })

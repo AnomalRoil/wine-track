@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyDraft, type WineDraft } from './extract'
-import { applyLwin, completeFromLwin, findCodes, lwinFields, undoLwinCompletion, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
+import { applyLwin, completeFromLwin, findCodes, lwinFields, CONFIDENT, confidentMatch, displayName, duplicateOf, lwinColor, match, parseLwin, search, words, type LwinWine } from './lwin'
 import { makeWine } from './testing'
 
 const header = JSON.stringify({
@@ -204,21 +204,48 @@ describe('applyLwin', () => {
     expect(applyLwin(emptyDraft(), byCode('1181812'))).toMatchObject({
       name: 'Chablis Premier Cru, Fourchaume',
       producer: 'Domaine Jean Dauvissat',
-      region: 'Chablis',
+      region: 'Burgundy',
+      appellation: 'Chablis',
       country: 'France',
     })
-    expect(applyLwin(emptyDraft(), byCode('1100001')).region).toBe('Port')
+    expect(applyLwin(emptyDraft(), byCode('1100001'))).toMatchObject({ region: 'Port', appellation: '' })
   })
 })
 
 describe('lwinFields', () => {
   it('names the fields the wine gives', () => {
-    expect(lwinFields(byCode('1181812'))).toEqual(['name', 'producer', 'region', 'country', 'color', 'lwin'])
+    expect(lwinFields(byCode('1181812'))).toEqual(['name', 'producer', 'region', 'appellation', 'country', 'color', 'lwin'])
   })
 
   it('leaves out the fields the wine leaves empty', () => {
     const partial = { ...byCode('1066553'), producer: '', region: '', subRegion: '', country: '', colour: '' }
     expect(lwinFields(partial)).toEqual(['name', 'lwin'])
+  })
+})
+
+describe('appellation from LWIN', () => {
+  const cases = [
+    { name: 'sub-region', wine: { region: 'Burgundy', subRegion: 'Chablis' }, want: 'Chablis' },
+    { name: 'no sub-region', wine: { region: 'Port', subRegion: '' }, want: '' },
+    { name: 'sub-region repeating the region', wine: { region: 'Champagne', subRegion: 'Champagne' }, want: '' },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const wine = { ...byCode('1066553'), ...c.wine }
+      expect(applyLwin(emptyDraft(), wine).appellation).toBe(c.want)
+      expect(completeFromLwin(emptyDraft(), wine).appellation).toBe(c.want)
+      expect(lwinFields(wine).includes('appellation')).toBe(c.want !== '')
+    })
+  }
+
+  it('leaves out a sub-region the draft already holds as its region', () => {
+    const wine = { ...byCode('1066553'), region: 'Burgundy', subRegion: 'Chablis' }
+    expect(completeFromLwin({ ...emptyDraft(), region: 'chablis' }, wine)).toMatchObject({ region: 'chablis', appellation: '' })
+    expect(applyLwin({ ...emptyDraft(), region: 'Chablis' }, { ...wine, region: '' })).toMatchObject({ region: 'Chablis', appellation: '' })
+  })
+
+  it('keeps the appellation of the draft when the wine has none', () => {
+    expect(applyLwin({ ...emptyDraft(), appellation: 'Vinho do Porto' }, byCode('1100001')).appellation).toBe('Vinho do Porto')
   })
 })
 
@@ -242,20 +269,6 @@ describe('completeFromLwin', () => {
 describe('findCodes', () => {
   it('finds each code in order, null for an unknown one', () => {
     expect(findCodes(index, ['1100002', '9999999', '1066540']).map((w) => w?.label ?? null)).toEqual(['Rose', null, 'Chablis'])
-  })
-})
-
-describe('undoLwinCompletion', () => {
-  const original = { ...emptyDraft(), name: 'Clos', color: 'other' as const }
-  const wine = byCode('1066553')
-
-  it('restores the fields it filled', () => {
-    expect(undoLwinCompletion(completeFromLwin(original, wine), original, wine)).toEqual(original)
-  })
-
-  it('keeps what was completed or edited since', () => {
-    const later = { ...completeFromLwin(original, wine), grapes: ['Chardonnay'], color: 'sweet' as const }
-    expect(undoLwinCompletion(later, original, wine)).toEqual({ ...original, grapes: ['Chardonnay'], color: 'sweet' })
   })
 })
 
