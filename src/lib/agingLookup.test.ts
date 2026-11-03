@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { APIUserAbortError } from '@anthropic-ai/sdk'
 import { NO_AGING } from './aging'
 import { agingPrompt, emptyDraft, foundAging, lookupAging, type AgingLookup, type WineDraft } from './extract'
 import type { Aging } from './types'
 
-const parse = vi.hoisted(() => vi.fn())
+const create = vi.hoisted(() => vi.fn())
 
 vi.mock('@anthropic-ai/sdk', async (importOriginal) => {
   const real = await importOriginal<typeof import('@anthropic-ai/sdk')>()
   class Mocked extends real.default {
-    messages = { parse } as unknown as InstanceType<typeof real.default>['messages']
+    messages = { create } as unknown as InstanceType<typeof real.default>['messages']
   }
   return { ...real, default: Mocked }
 })
@@ -80,36 +81,54 @@ describe('foundAging', () => {
 
 describe('lookupAging', () => {
   beforeEach(() => {
-    parse.mockReset()
+    create.mockReset()
     vi.stubGlobal('navigator', { onLine: true })
   })
 
   const auth = { apiKey: 'test-key', workspaceId: '' }
+  const reply = (data: AgingLookup, stop_reason = 'end_turn') => ({
+    stop_reason,
+    content: [{ type: 'text', text: 'Searching the producer site.' }, { type: 'text', text: JSON.stringify(data) }],
+  })
 
-  it('searches up to five times at high effort and returns the parsed answer', async () => {
-    parse.mockResolvedValue({ stop_reason: 'end_turn', parsed_output: answer })
+  it('searches up to three times at medium effort and returns the parsed answer', async () => {
+    create.mockResolvedValue(reply(answer))
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
-    const request = parse.mock.calls[0][0]
-    expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }])
-    expect(request.output_config.effort).toBe('high')
+    const request = create.mock.calls[0][0]
+    expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }])
+    expect(request.output_config.effort).toBe('medium')
     expect(request.messages[0].content).toBe(agingPrompt(draft))
   })
 
   it('leaves out the effort for Haiku, which rejects it', async () => {
-    parse.mockResolvedValue({ stop_reason: 'end_turn', parsed_output: answer })
+    create.mockResolvedValue(reply(answer))
     await lookupAging(auth, 'claude-haiku-4-5', draft)
-    const request = parse.mock.calls[0][0]
-    expect(request.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }])
+    const request = create.mock.calls[0][0]
+    expect(request.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }])
     expect(request.output_config).not.toHaveProperty('effort')
   })
 
   it('reports an answer it cannot parse', async () => {
-    parse.mockResolvedValue({ stop_reason: 'end_turn', parsed_output: null })
+    create.mockResolvedValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }] })
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'unparseable' })
+  })
+
+  it('resumes a search the server paused and sends back the partial turn', async () => {
+    const paused = { stop_reason: 'pause_turn', content: [{ type: 'server_tool_use', id: 's1', name: 'web_search', input: {} }] }
+    create.mockResolvedValueOnce(paused).mockResolvedValueOnce(reply(answer))
+    expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
+    const resumed = create.mock.calls[1][0].messages
+    expect(resumed).toEqual([{ role: 'user', content: agingPrompt(draft) }, { role: 'assistant', content: paused.content }])
+  })
+
+  it('bounds every attempt by one deadline and reports it as a timeout', async () => {
+    create.mockRejectedValue(new APIUserAbortError())
+    expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'timeout' })
+    expect(create.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
   })
 
   it('does not call out without a key', async () => {
     expect(await lookupAging({ ...auth, apiKey: '' }, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'no-key' })
-    expect(parse).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
   })
 })
