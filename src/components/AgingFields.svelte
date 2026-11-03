@@ -72,7 +72,7 @@
     if (gen !== generation) return
     lookingUp = false
     if (!result.ok) {
-      lookupNote = t(`extract.${result.kind}`, { detail: result.detail ?? '' })
+      lookupNote = result.kind === 'unparseable' ? t('lookup.unparseable') : t(`extract.${result.kind}`, { detail: result.detail ?? '' })
       return
     }
     const found = foundAging(result.data)

@@ -88,7 +88,7 @@
   )
 
   function failureText(kind: FailureKind, detail?: string): string {
-    return t(`extract.${kind}`, { detail: detail ?? '' })
+    return kind === 'unparseable' ? t('lookup.unparseable') : t(`extract.${kind}`, { detail: detail ?? '' })
   }
 
   // A pending lookup is dropped when the wine it asks about or its grapes change meanwhile,

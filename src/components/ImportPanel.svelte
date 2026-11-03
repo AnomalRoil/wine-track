@@ -276,7 +276,7 @@
         <NeedsKey label={t('io.complete', { n: incomplete.length })} icon="sparkle" disabled={committing} onclick={complete} />
       {/if}
       {#if completeError}
-        <p class="error-text">{t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>
+        <p class="error-text">{completeError.kind === 'unparseable' ? t('lookup.unparseable') : t(`extract.${completeError.kind}`, { detail: completeError.detail ?? '' })}</p>
       {/if}
     </div>
   {/if}
