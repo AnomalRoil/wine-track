@@ -3,7 +3,7 @@ import { TEMP_UNITS, type TempUnit } from './aging'
 export const LOCALES = ['en', 'fr', 'de'] as const
 export type Locale = (typeof LOCALES)[number]
 
-export const MODELS = ['claude-opus-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'] as const
+export const MODELS = ['claude-sonnet-5-5', 'claude-opus-5', 'claude-haiku-4-5'] as const
 export type Model = (typeof MODELS)[number]
 
 export const CURRENCIES = ['EUR', 'CHF', 'USD', 'GBP', 'CAD', 'AUD', 'JPY'] as const
@@ -32,7 +32,7 @@ function load(): Settings {
   const defaults: Settings = {
     apiKey: '',
     workspaceId: '',
-    model: 'claude-opus-5',
+    model: 'claude-sonnet-5-5',
     locale: detectLocale(),
     currency: 'EUR',
     tempUnit: 'C',
