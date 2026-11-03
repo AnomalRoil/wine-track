@@ -152,7 +152,9 @@ Extract the wine's details. Use null for any field that is not legible or not pr
 function failure<T>(err: unknown): Result<T> {
   if (err instanceof Anthropic.AuthenticationError) return { ok: false, kind: 'auth' }
   if (err instanceof Anthropic.RateLimitError) return { ok: false, kind: 'rate-limit' }
-  if (err instanceof Anthropic.APIConnectionTimeoutError) return { ok: false, kind: 'timeout' }
+  if (err instanceof Anthropic.APIConnectionTimeoutError || err instanceof Anthropic.APIUserAbortError) {
+    return { ok: false, kind: 'timeout' }
+  }
   if (err instanceof Anthropic.APIConnectionError) return { ok: false, kind: 'offline' }
   if (err instanceof Anthropic.APIError) {
     return { ok: false, kind: 'error', detail: `${err.status} ${err.message}` }
@@ -252,6 +254,8 @@ interface SearchOptions {
 // Low effort keeps a lookup fast when the answer needs a search, not deep reasoning.
 const QUICK_SEARCH: SearchOptions = { maxUses: 2, effort: 'low', maxTokens: 4000, timeoutMs: 120_000 }
 
+const MAX_PAUSES = 3
+
 async function searchAndParse<S extends z.ZodType>(
   auth: Auth,
   model: Model,
@@ -261,20 +265,40 @@ async function searchAndParse<S extends z.ZodType>(
 ): Promise<Result<z.infer<S>>> {
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
+  const format = zodOutputFormat(schema)
   try {
-    const response = await client(auth, options.timeoutMs).messages.parse({
-      model,
-      max_tokens: options.maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-      tools: [webSearchTool(model, options.maxUses)],
-      // Haiku 4.5 rejects the effort setting.
-      output_config: { ...(model === 'claude-haiku-4-5' ? {} : { effort: options.effort }), format: zodOutputFormat(schema) },
-    })
+    const api = client(auth, options.timeoutMs)
+    // The SDK retries a timed-out request twice; one deadline across attempts keeps the wait to timeoutMs.
+    const signal = AbortSignal.timeout(options.timeoutMs)
+    const messages: Anthropic.Messages.MessageParam[] = [{ role: 'user', content: prompt }]
+    let response: Anthropic.Messages.Message
+    for (let pauses = 0; ; pauses++) {
+      response = await api.messages.create(
+        {
+          model,
+          max_tokens: options.maxTokens,
+          messages,
+          tools: [webSearchTool(model, options.maxUses)],
+          // Haiku 4.5 rejects the effort setting.
+          output_config: { ...(model === 'claude-haiku-4-5' ? {} : { effort: options.effort }), format },
+        },
+        { signal },
+      )
+      // A long search can hit the server's tool-loop limit; sending the partial turn back resumes it.
+      if (response.stop_reason !== 'pause_turn' || pauses === MAX_PAUSES) break
+      messages.splice(1, Infinity, { role: 'assistant', content: response.content })
+    }
     if (response.stop_reason === 'refusal') {
       return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
     }
-    if (!response.parsed_output) return { ok: false, kind: 'unparseable' }
-    return { ok: true, data: response.parsed_output }
+    // The answer is the last text block: earlier ones may narrate the search.
+    const answer = response.content.findLast((block) => block.type === 'text')
+    if (!answer) return { ok: false, kind: 'unparseable' }
+    try {
+      return { ok: true, data: format.parse(answer.text) }
+    } catch {
+      return { ok: false, kind: 'unparseable' }
+    }
   } catch (err) {
     return failure(err)
   }
