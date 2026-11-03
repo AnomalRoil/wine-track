@@ -91,12 +91,12 @@ describe('lookupAging', () => {
     content: [{ type: 'text', text: 'Searching the producer site.' }, { type: 'text', text: JSON.stringify(data) }],
   })
 
-  it('searches up to three times at low effort and returns the parsed answer', async () => {
+  it('searches up to three times at medium effort and returns the parsed answer', async () => {
     create.mockResolvedValue(reply(answer))
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
     const request = create.mock.calls[0][0]
     expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }])
-    expect(request.output_config.effort).toBe('low')
+    expect(request.output_config.effort).toBe('medium')
     expect(request.messages[0].content).toBe(agingPrompt(draft))
   })
 

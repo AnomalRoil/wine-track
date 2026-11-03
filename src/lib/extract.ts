@@ -369,8 +369,8 @@ longer than a quick estimate suggests: allow for the full ageing potential of th
 - sourceUrl: the address of the page that states the window; null when no page states it.`
 }
 
-// Someone is waiting on the form: a third search can reach a merchant or critic, but no deep reasoning.
-const AGING_SEARCH: SearchOptions = { maxUses: 3, effort: 'low', maxTokens: 6000, timeoutMs: 90_000 }
+// Someone is waiting on the form: a third search can reach a merchant or critic, with some judgment between sources.
+const AGING_SEARCH: SearchOptions = { maxUses: 3, effort: 'medium', maxTokens: 8000, timeoutMs: 120_000 }
 
 export function lookupAging(auth: Auth, model: Model, draft: WineDraft): Promise<Result<AgingLookup>> {
   return searchAndParse(auth, model, agingPrompt(draft), AgingLookup, AGING_SEARCH)
