@@ -219,6 +219,10 @@ textarea:focus-visible {
   border-color: var(--primary);
 }
 
+input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
 input[type='checkbox'],
 input[type='range'],
 input[type='radio'] {

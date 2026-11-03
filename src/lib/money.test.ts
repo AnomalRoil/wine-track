@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney, money } from './money'
+import { formatMoney, money, parsePrice } from './money'
 import { settings } from './settings.svelte'
 
 describe('money', () => {
@@ -22,5 +22,29 @@ describe('money', () => {
     expect(formatMoney(1234.56, true)).toBe('1\u202f235\u00a0€')
     settings.locale = 'de'
     expect(formatMoney(1234.56, true)).toBe('1.235\u00a0€')
+  })
+})
+
+describe('parsePrice', () => {
+  it.each([
+    ['', null],
+    ['  ', null],
+    ['12', 12],
+    ['12.5', 12.5],
+    ['12,50', 12.5],
+    ['.5', 0.5],
+    ['100/6', 16.67],
+    [' 100 / 3 ', 33.33],
+    ['45,90/2', 22.95],
+    ['10/2.5', 4],
+    ['1.006', 1.01],
+    ['10/0', undefined],
+    ['abc', undefined],
+    ['-5', undefined],
+    ['10/', undefined],
+    ['1/2/3', undefined],
+    ['1.2.3', undefined],
+  ])('parsePrice(%j) = %j', (raw, want) => {
+    expect(parsePrice(raw)).toBe(want)
   })
 })

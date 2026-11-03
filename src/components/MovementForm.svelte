@@ -7,6 +7,7 @@
   import { bottlesOf } from '../lib/stock'
   import { addMovements, currentStock, sortedCellars, store } from '../lib/store.svelte'
   import { REMOVAL_KINDS, type MovementKind } from '../lib/types'
+  import PriceInput from './PriceInput.svelte'
 
   let {
     wineId,
@@ -111,7 +112,7 @@
     {#if mode === 'add'}
       <div class="grow">
         <label for="mv-price">{t('stock.unitPrice')}</label>
-        <input id="mv-price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+        <PriceInput id="mv-price" bind:value={unitPrice} />
       </div>
     {/if}
   </div>
