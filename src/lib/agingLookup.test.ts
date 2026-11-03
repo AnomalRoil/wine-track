@@ -1,23 +1,42 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { APIUserAbortError, InternalServerError } from '@anthropic-ai/sdk'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NO_AGING } from './aging'
 import { calls, clearCalls } from './diagnostics.svelte'
 import { agingPrompt, emptyDraft, foundAging, lookupAging, type AgingLookup, type WineDraft } from './extract'
 import type { Aging } from './types'
 
-const create = vi.hoisted(() => vi.fn())
+interface FakeMessage {
+  stop_reason: string
+  content: { type: string; [field: string]: unknown }[]
+  usage?: Record<string, unknown>
+}
 
-vi.mock('@anthropic-ai/sdk', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@anthropic-ai/sdk')>()
-  class Mocked extends real.default {
-    messages = {
-      create: (...args: unknown[]) => ({
-        withResponse: async () => ({ data: await create(...args), request_id: 'req_1' }),
-      }),
-    } as unknown as InstanceType<typeof real.default>['messages']
-  }
-  return { ...real, default: Mocked }
-})
+/** Encodes `message` as the server-sent events the Messages API streams. */
+function sse(message: FakeMessage): Response {
+  const usage = { input_tokens: 1, output_tokens: 1, ...message.usage }
+  const events: [string, object][] = [
+    ['message_start', { type: 'message_start', message: { id: 'msg_1', type: 'message', role: 'assistant', model: 'm', content: [], stop_reason: null, stop_sequence: null, usage } }],
+  ]
+  message.content.forEach((block, index) => {
+    if (block.type === 'text') {
+      events.push(['content_block_start', { type: 'content_block_start', index, content_block: { ...block, text: '' } }])
+      events.push(['content_block_delta', { type: 'content_block_delta', index, delta: { type: 'text_delta', text: block.text } }])
+    } else if (block.type === 'server_tool_use') {
+      events.push(['content_block_start', { type: 'content_block_start', index, content_block: { ...block, input: {} } }])
+      events.push(['content_block_delta', { type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json: JSON.stringify(block.input) } }])
+    } else {
+      events.push(['content_block_start', { type: 'content_block_start', index, content_block: block }])
+    }
+    events.push(['content_block_stop', { type: 'content_block_stop', index }])
+  })
+  events.push(['message_delta', { type: 'message_delta', delta: { stop_reason: message.stop_reason, stop_sequence: null }, usage }])
+  events.push(['message_stop', { type: 'message_stop' }])
+  const body = events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join('')
+  return new Response(body, { headers: { 'content-type': 'text/event-stream', 'request-id': 'req_1' } })
+}
+
+/** Answers each request the app sends to the API; a Response is returned as is, a message is streamed. */
+const reply = vi.fn<(body: Record<string, unknown>) => FakeMessage | Response>()
+const sent = () => reply.mock.calls.map(([body]) => body as { messages: unknown[]; tools: unknown[]; output_config: Record<string, unknown>; stream: boolean })
 
 const draft: WineDraft = { ...emptyDraft(), producer: 'Château Montrose', name: 'Saint-Estèphe', vintage: 2016, region: 'Bordeaux', country: 'France' }
 
@@ -86,60 +105,75 @@ describe('foundAging', () => {
 
 describe('lookupAging', () => {
   beforeEach(() => {
-    create.mockReset()
+    reply.mockReset()
     clearCalls()
     vi.stubGlobal('navigator', { onLine: true })
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const answer = reply(JSON.parse(init.body as string))
+      return answer instanceof Response ? answer : sse(answer)
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   const auth = { apiKey: 'test-key', workspaceId: '' }
-  const usage = { input_tokens: 1, output_tokens: 1 }
-  const reply = (data: AgingLookup, stop_reason = 'end_turn') => ({
-    stop_reason,
-    usage,
+  const answered = (data: AgingLookup): FakeMessage => ({
+    stop_reason: 'end_turn',
     content: [{ type: 'text', text: 'Searching the producer site.' }, { type: 'text', text: JSON.stringify(data) }],
   })
 
-  it('searches up to three times at medium effort and returns the parsed answer', async () => {
-    create.mockResolvedValue(reply(answer))
+  it('streams a search at medium effort with up to three searches and returns the parsed answer', async () => {
+    reply.mockReturnValue(answered(answer))
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
-    const request = create.mock.calls[0][0]
+    const [request] = sent()
+    expect(request.stream).toBe(true)
     expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }])
     expect(request.output_config.effort).toBe('medium')
-    expect(request.messages[0].content).toBe(agingPrompt(draft))
+    expect(request.messages).toEqual([{ role: 'user', content: agingPrompt(draft) }])
   })
 
   it('leaves out the effort for Haiku, which rejects it', async () => {
-    create.mockResolvedValue(reply(answer))
+    reply.mockReturnValue(answered(answer))
     await lookupAging(auth, 'claude-haiku-4-5', draft)
-    const request = create.mock.calls[0][0]
+    const [request] = sent()
     expect(request.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }])
     expect(request.output_config).not.toHaveProperty('effort')
   })
 
-  it('reports an answer it cannot parse', async () => {
-    create.mockResolvedValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }], usage })
+  it('reports an answer it cannot parse and records its start', async () => {
+    reply.mockReturnValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }] })
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'unparseable' })
+    expect(calls[0]).toMatchObject({ outcome: 'unparseable', excerpt: 'Sorry.' })
   })
 
   it('resumes a search the server paused and sends back the partial turn', async () => {
-    const paused = { stop_reason: 'pause_turn', usage, content: [{ type: 'server_tool_use', id: 's1', name: 'web_search', input: {} }] }
-    create.mockResolvedValueOnce(paused).mockResolvedValueOnce(reply(answer))
+    const search = { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'Montrose 2016' } }
+    reply.mockReturnValueOnce({ stop_reason: 'pause_turn', content: [search] }).mockReturnValueOnce(answered(answer))
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
-    const resumed = create.mock.calls[1][0].messages
-    expect(resumed).toEqual([{ role: 'user', content: agingPrompt(draft) }, { role: 'assistant', content: paused.content }])
+    expect(sent()[1].messages).toEqual([{ role: 'user', content: agingPrompt(draft) }, { role: 'assistant', content: [search] }])
   })
 
   it('bounds every attempt by one deadline and reports it as a timeout', async () => {
-    create.mockRejectedValue(new APIUserAbortError())
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(AbortSignal.abort())
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'timeout' })
-    expect(create.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+    expect(timeout).toHaveBeenCalledWith(120_000)
+    expect(calls[0]).toMatchObject({ outcome: 'timeout', turns: 0 })
   })
 
-  it('records the call with its request id, searches, tokens and turns', async () => {
+  it('records the call with a timeline of what streamed in, its request id, searches, tokens and turns', async () => {
     const used = (searches: number) => ({ input_tokens: 100, output_tokens: 10, server_tool_use: { web_search_requests: searches } })
-    create
-      .mockResolvedValueOnce({ stop_reason: 'pause_turn', content: [], usage: used(2) })
-      .mockResolvedValueOnce({ ...reply(answer), usage: used(1) })
+    reply
+      .mockReturnValueOnce({
+        stop_reason: 'pause_turn',
+        usage: used(2),
+        content: [
+          { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'Montrose 2016 drinking window' } },
+          { type: 'web_search_tool_result', tool_use_id: 's1', content: [{ type: 'web_search_result', url: 'https://a.example', title: 'A', encrypted_content: 'x', page_age: null }] },
+        ],
+      })
+      .mockReturnValueOnce({ ...answered(answer), usage: used(1) })
     await lookupAging(auth, 'claude-opus-5', draft)
     expect(calls).toHaveLength(1)
     expect(calls[0]).toMatchObject({
@@ -153,23 +187,37 @@ describe('lookupAging', () => {
       inputTokens: 200,
       outputTokens: 20,
     })
-    expect(calls[0]).not.toHaveProperty('excerpt', expect.anything())
+    expect(calls[0].events.map((e) => e.what)).toEqual([
+      'request sent',
+      'connected',
+      'answer started',
+      'web_search "Montrose 2016 drinking window"',
+      '1 search results',
+      'stopped: pause_turn',
+      'request sent',
+      'connected',
+      'answer started',
+      'text, 28 chars',
+      `text, ${JSON.stringify(answer).length} chars`,
+      'stopped: end_turn',
+    ])
   })
 
-  it('records the start of an answer it cannot parse', async () => {
-    create.mockResolvedValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }], usage })
-    await lookupAging(auth, 'claude-opus-5', draft)
-    expect(calls[0]).toMatchObject({ outcome: 'unparseable', excerpt: 'Sorry.' })
-  })
-
-  it('records the request id of a failed request', async () => {
-    create.mockRejectedValue(new InternalServerError(500, undefined, 'boom', new Headers({ 'request-id': 'req_err' })))
-    await lookupAging(auth, 'claude-opus-5', draft)
+  it('records the request id and error of a failed request', async () => {
+    reply.mockReturnValue(
+      new Response(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'bad tool' } }), {
+        status: 400,
+        headers: { 'content-type': 'application/json', 'request-id': 'req_err' },
+      }),
+    )
+    expect(await lookupAging(auth, 'claude-opus-5', draft)).toMatchObject({ ok: false, kind: 'error' })
     expect(calls[0]).toMatchObject({ outcome: 'error', requestId: 'req_err', turns: 0 })
+    expect(calls[0].events.at(-1)?.what).toContain('bad tool')
   })
 
   it('does not call out without a key', async () => {
     expect(await lookupAging({ ...auth, apiKey: '' }, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'no-key' })
-    expect(create).not.toHaveBeenCalled()
+    expect(reply).not.toHaveBeenCalled()
+    expect(calls).toHaveLength(0)
   })
 })

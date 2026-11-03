@@ -1,10 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { APIPromise } from '@anthropic-ai/sdk/core/api-promise'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import { cleanAging, webUrl } from './aging'
 import type { Completion } from './csvImport'
-import { recordCall, type CallTask } from './diagnostics.svelte'
+import { startCall, type CallLog, type CallTask } from './diagnostics.svelte'
 import { toShare, type GrapeShares } from './grapes'
 import type { Model } from './settings.svelte'
 import { STANDARD_SIZE_CL, type Aging, type WineColor } from './types'
@@ -170,89 +169,146 @@ export interface Auth {
   workspaceId: string
 }
 
-function client(auth: Auth, timeoutMs: number): Anthropic {
+function client(auth: Auth, timeoutMs: number, log: CallLog): Anthropic {
+  // Retries and connection failures, minus the SDK's own request ids; streamTurn logs successes.
+  const note = (message: string) => {
+    if (!message.includes(' succeeded with status ')) log.event(message.replace(/^\[[^\]]*\] /, ''))
+  }
   return new Anthropic({
     apiKey: auth.apiKey,
     dangerouslyAllowBrowser: true,
     timeout: timeoutMs,
     defaultHeaders: auth.workspaceId ? { 'anthropic-workspace-id': auth.workspaceId } : undefined,
+    logLevel: 'info',
+    logger: { error: note, warn: note, info: note, debug: () => {} },
   })
 }
 
-/** The responses a call received, in order. */
-type Trace = { message: Anthropic.Messages.Message; requestId?: string }[]
-
-async function send<M extends Anthropic.Messages.Message>(trace: Trace, request: APIPromise<M>): Promise<M> {
-  const { data, request_id } = await request.withResponse()
-  trace.push({ message: data, requestId: request_id ?? undefined })
-  return data
+interface Ask<S extends z.ZodType> {
+  task: CallTask
+  auth: Auth
+  model: Model
+  content: Anthropic.Messages.MessageParam['content']
+  schema: S
+  maxTokens: number
+  timeoutMs: number
+  tools?: Anthropic.Messages.ToolUnion[]
+  effort?: 'low' | 'medium' | 'high'
 }
 
+const MAX_PAUSES = 3
 const EXCERPT_LENGTH = 500
 
-/** Runs an AI call, turns a thrown error into a failure, and records the call in the diagnostics. */
-async function traced<T>(task: CallTask, model: Model, run: (trace: Trace) => Promise<Result<T>>): Promise<Result<T>> {
-  const at = new Date()
-  const trace: Trace = []
-  let result: Result<T>
-  let errorRequestId: string | undefined
+/**
+ * Sends one question to Claude and parses its answer against `schema`. The answer streams in, so
+ * the diagnostics show the call from its start and every search or block as it arrives.
+ */
+async function ask<S extends z.ZodType>(q: Ask<S>): Promise<Result<z.infer<S>>> {
+  if (!q.auth.apiKey) return { ok: false, kind: 'no-key' }
+  if (!navigator.onLine) return { ok: false, kind: 'offline' }
+  const log = startCall(q.task, q.model)
+  let result: Result<z.infer<S>>
   try {
-    result = await run(trace)
+    result = await converse(q, log)
   } catch (err) {
     result = failure(err)
-    if (err instanceof Anthropic.APIError) errorRequestId = err.requestID ?? undefined
+    log.event(`failed: ${err instanceof Error ? err.message : String(err)}`)
+    if (err instanceof Anthropic.APIError && err.requestID) log.update({ requestId: err.requestID })
   }
-  const last = trace.at(-1)?.message
-  const usage = trace.map((t) => t.message.usage)
-  recordCall({
-    at: at.toISOString(),
-    task,
-    model,
-    durationMs: Date.now() - at.getTime(),
-    outcome: result.ok ? 'ok' : result.kind,
-    detail: result.ok ? undefined : result.detail,
-    stopReason: last?.stop_reason ?? undefined,
-    requestId: errorRequestId ?? trace.at(-1)?.requestId,
-    turns: trace.length,
-    searches: usage.reduce((n, u) => n + (u.server_tool_use?.web_search_requests ?? 0), 0),
-    inputTokens: usage.reduce((n, u) => n + u.input_tokens, 0),
-    outputTokens: usage.reduce((n, u) => n + u.output_tokens, 0),
-    excerpt:
-      !result.ok && result.kind === 'unparseable'
-        ? last?.content.findLast((block) => block.type === 'text')?.text.slice(0, EXCERPT_LENGTH)
-        : undefined,
-  })
+  log.finish({ outcome: result.ok ? 'ok' : result.kind, detail: result.ok ? undefined : result.detail })
   return result
 }
 
-export async function extractFromLabel(
-  auth: Auth,
-  model: Model,
-  jpegBase64: string,
-): Promise<Result<WineExtraction>> {
-  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
-  if (!navigator.onLine) return { ok: false, kind: 'offline' }
-  return traced('label', model, async (trace) => {
-    const request = client(auth, 90_000).messages.parse({
-      model,
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpegBase64 } },
-            { type: 'text', text: EXTRACT_PROMPT },
-          ],
-        },
-      ],
-      output_config: { format: zodOutputFormat(WineExtraction) },
-    })
-    const response = await send(trace, request)
-    if (response.stop_reason === 'refusal') {
-      return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
+async function converse<S extends z.ZodType>(q: Ask<S>, log: CallLog): Promise<Result<z.infer<S>>> {
+  const api = client(q.auth, q.timeoutMs, log)
+  // The SDK retries a timed-out request twice; one deadline across attempts keeps the wait to timeoutMs.
+  const signal = AbortSignal.timeout(q.timeoutMs)
+  const format = zodOutputFormat(q.schema)
+  // Without `parse`, the stream leaves the answer as text: the first text block may narrate a search.
+  const wire = { type: format.type, schema: format.schema }
+  // Haiku 4.5 rejects the effort setting.
+  const effort = q.effort && q.model !== 'claude-haiku-4-5' ? { effort: q.effort } : {}
+  const messages: Anthropic.Messages.MessageParam[] = [{ role: 'user', content: q.content }]
+  let message: Anthropic.Messages.Message
+  for (let pauses = 0; ; pauses++) {
+    const params = { model: q.model, max_tokens: q.maxTokens, messages, output_config: { ...effort, format: wire } }
+    message = await streamTurn(api, q.tools ? { ...params, tools: q.tools } : params, signal, log)
+    // A long search can hit the server's tool-loop limit; sending the partial turn back resumes it.
+    if (message.stop_reason !== 'pause_turn' || pauses === MAX_PAUSES) break
+    messages.splice(1, Infinity, { role: 'assistant', content: message.content })
+  }
+  if (message.stop_reason === 'refusal') {
+    return { ok: false, kind: 'refusal', detail: message.stop_details?.explanation ?? undefined }
+  }
+  const answer = message.content.findLast((block) => block.type === 'text')?.text
+  try {
+    if (answer !== undefined) return { ok: true, data: format.parse(answer) }
+  } catch {
+    // Falls through to unparseable, keeping the start of the answer for the diagnostics.
+  }
+  log.update({ excerpt: answer?.slice(0, EXCERPT_LENGTH) })
+  return { ok: false, kind: 'unparseable' }
+}
+
+async function streamTurn(
+  api: Anthropic,
+  params: Anthropic.Messages.MessageCreateParamsNonStreaming,
+  signal: AbortSignal,
+  log: CallLog,
+): Promise<Anthropic.Messages.Message> {
+  log.event('request sent')
+  const stream = api.messages.stream(params, { signal })
+  stream.on('connect', () => {
+    log.update({ requestId: stream.request_id ?? undefined })
+    log.event('connected')
+  })
+  stream.on('streamEvent', (event) => {
+    if (event.type === 'message_start') log.event('answer started')
+  })
+  stream.on('contentBlock', (block) => log.event(describeBlock(block)))
+  const message = await stream.finalMessage()
+  const { usage } = message
+  log.update({
+    stopReason: message.stop_reason ?? undefined,
+    turns: log.record.turns + 1,
+    searches: log.record.searches + (usage.server_tool_use?.web_search_requests ?? 0),
+    inputTokens: log.record.inputTokens + usage.input_tokens,
+    outputTokens: log.record.outputTokens + usage.output_tokens,
+  })
+  log.event(`stopped: ${message.stop_reason}`)
+  return message
+}
+
+/** One line per content block, e.g. 'search "Montrose 2016 drinking window"' or "text, 412 chars". */
+export function describeBlock(block: Anthropic.Messages.ContentBlock): string {
+  switch (block.type) {
+    case 'text':
+      return `text, ${block.text.length} chars`
+    case 'thinking':
+      return `thinking, ${block.thinking.length} chars`
+    case 'server_tool_use': {
+      const query = (block.input as { query?: unknown }).query
+      return typeof query === 'string' ? `${block.name} "${query}"` : block.name
     }
-    if (!response.parsed_output) return { ok: false, kind: 'unparseable' }
-    return { ok: true, data: response.parsed_output }
+    case 'web_search_tool_result':
+      return Array.isArray(block.content) ? `${block.content.length} search results` : `search error: ${block.content.error_code}`
+    default:
+      return block.type
+  }
+}
+
+export function extractFromLabel(auth: Auth, model: Model, jpegBase64: string): Promise<Result<WineExtraction>> {
+  return ask({
+    task: 'label',
+    auth,
+    model,
+    content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpegBase64 } },
+      { type: 'text', text: EXTRACT_PROMPT },
+    ],
+    schema: WineExtraction,
+    maxTokens: 2000,
+    timeoutMs: 90_000,
   })
 }
 
@@ -301,9 +357,7 @@ interface SearchOptions {
 // Low effort keeps a lookup fast when the answer needs a search, not deep reasoning.
 const QUICK_SEARCH: SearchOptions = { maxUses: 2, effort: 'low', maxTokens: 4000, timeoutMs: 120_000 }
 
-const MAX_PAUSES = 3
-
-async function searchAndParse<S extends z.ZodType>(
+function searchAndParse<S extends z.ZodType>(
   task: CallTask,
   auth: Auth,
   model: Model,
@@ -311,43 +365,16 @@ async function searchAndParse<S extends z.ZodType>(
   schema: S,
   options = QUICK_SEARCH,
 ): Promise<Result<z.infer<S>>> {
-  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
-  if (!navigator.onLine) return { ok: false, kind: 'offline' }
-  const format = zodOutputFormat(schema)
-  return traced(task, model, async (trace) => {
-    const api = client(auth, options.timeoutMs)
-    // The SDK retries a timed-out request twice; one deadline across attempts keeps the wait to timeoutMs.
-    const signal = AbortSignal.timeout(options.timeoutMs)
-    const messages: Anthropic.Messages.MessageParam[] = [{ role: 'user', content: prompt }]
-    let response: Anthropic.Messages.Message
-    for (let pauses = 0; ; pauses++) {
-      const request = api.messages.create(
-        {
-          model,
-          max_tokens: options.maxTokens,
-          messages,
-          tools: [webSearchTool(model, options.maxUses)],
-          // Haiku 4.5 rejects the effort setting.
-          output_config: { ...(model === 'claude-haiku-4-5' ? {} : { effort: options.effort }), format },
-        },
-        { signal },
-      )
-      response = await send(trace, request)
-      // A long search can hit the server's tool-loop limit; sending the partial turn back resumes it.
-      if (response.stop_reason !== 'pause_turn' || pauses === MAX_PAUSES) break
-      messages.splice(1, Infinity, { role: 'assistant', content: response.content })
-    }
-    if (response.stop_reason === 'refusal') {
-      return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
-    }
-    // The answer is the last text block: earlier ones may narrate the search.
-    const answer = response.content.findLast((block) => block.type === 'text')
-    if (!answer) return { ok: false, kind: 'unparseable' }
-    try {
-      return { ok: true, data: format.parse(answer.text) }
-    } catch {
-      return { ok: false, kind: 'unparseable' }
-    }
+  return ask({
+    task,
+    auth,
+    model,
+    content: prompt,
+    schema,
+    maxTokens: options.maxTokens,
+    timeoutMs: options.timeoutMs,
+    tools: [webSearchTool(model, options.maxUses)],
+    effort: options.effort,
   })
 }
 
@@ -447,17 +474,12 @@ export function alignCompletions(count: number, answers: z.infer<typeof WineComp
 
 /** Looks up grapes, region, appellation and country for up to COMPLETION_BATCH wines in one request. */
 export async function completeWines(auth: Auth, model: Model, drafts: WineDraft[]): Promise<Result<Completion[]>> {
-  if (!auth.apiKey) return { ok: false, kind: 'no-key' }
-  if (!navigator.onLine) return { ok: false, kind: 'offline' }
   const list = drafts.map((d, i) => `${i + 1}. ${wineQuery(d)} (${d.color})`).join('\n')
-  return traced('completion', model, async (trace) => {
-    const request = client(auth, 240_000).messages.parse({
-      model,
-      max_tokens: 8000,
-      messages: [
-        {
-          role: 'user',
-          content: `For each numbered wine below, give its grape varieties, its wider region (e.g.
+  const result = await ask({
+    task: 'completion',
+    auth,
+    model,
+    content: `For each numbered wine below, give its grape varieties, its wider region (e.g.
 "Bordeaux"), its appellation or sub-region (e.g. "Pauillac"; null when it would only
 repeat the region) and its country. Search the web when you are not sure. Use an empty list or null for
 anything you cannot establish; never guess. Answer with the wine's number as index.
@@ -466,16 +488,11 @@ ${DATA_ONLY}
 <wines>
 ${list}
 </wines>`,
-        },
-      ],
-      tools: [webSearchTool(model, Math.min(10, drafts.length * 2))],
-      output_config: { effort: 'low', format: zodOutputFormat(WineCompletions) },
-    })
-    const response = await send(trace, request)
-    if (response.stop_reason === 'refusal') {
-      return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
-    }
-    if (!response.parsed_output) return { ok: false, kind: 'unparseable' }
-    return { ok: true, data: alignCompletions(drafts.length, response.parsed_output.wines) }
+    schema: WineCompletions,
+    maxTokens: 8000,
+    timeoutMs: 240_000,
+    tools: [webSearchTool(model, Math.min(10, drafts.length * 2))],
+    effort: 'low',
   })
+  return result.ok ? { ok: true, data: alignCompletions(drafts.length, result.data.wines) } : result
 }
