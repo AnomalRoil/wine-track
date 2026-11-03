@@ -134,6 +134,14 @@ describe('lookupAging', () => {
     expect(request.messages).toEqual([{ role: 'user', content: agingPrompt(draft) }])
   })
 
+  it('searches with dynamic filtering at medium effort on Sonnet 5.5', async () => {
+    reply.mockReturnValue(answered(answer))
+    await lookupAging(auth, 'claude-sonnet-5-5', draft)
+    const [request] = sent()
+    expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }])
+    expect(request.output_config.effort).toBe('medium')
+  })
+
   it('leaves out the effort for Haiku, which rejects it', async () => {
     reply.mockReturnValue(answered(answer))
     await lookupAging(auth, 'claude-haiku-4-5', draft)
