@@ -6,6 +6,7 @@
   import { averageBuyPrice, bottlesOf } from '../lib/stock'
   import { currentStock, setWineValue, store } from '../lib/store.svelte'
   import type { Wine } from '../lib/types'
+  import PriceInput from './PriceInput.svelte'
 
   let { wine }: { wine: Wine } = $props()
 
@@ -17,9 +18,7 @@
   // Gains and losses stay neutral when prices are hidden, so the color does not hint at them.
   const tone = $derived(settings.hidePrices || added === null ? 0 : Math.sign(added))
 
-  async function setValue(raw: string) {
-    const value = raw === '' ? null : Number(raw)
-    if (value !== null && !(value >= 0)) return
+  async function setValue(value: number | null) {
     await setWineValue(wine.id, value, today())
   }
 </script>
@@ -32,15 +31,7 @@
   <p class="row"><span class="grow muted">{t('value.current')}</span>{money(wine.value ?? 0)}</p>
 {:else}
   <label for="value">{t('value.current')}</label>
-  <input
-    id="value"
-    type="number"
-    inputmode="decimal"
-    min="0"
-    step="0.01"
-    value={wine.value}
-    onchange={(e) => setValue(e.currentTarget.value)}
-  />
+  <PriceInput id="value" value={wine.value} onchange={setValue} />
 {/if}
 {#if added !== null}
   <p class="row">

@@ -17,6 +17,7 @@
   import WineForm from './WineForm.svelte'
   import Icon from './Icon.svelte'
   import NeedsKey from './NeedsKey.svelte'
+  import PriceInput from './PriceInput.svelte'
 
   let {
     onsaved,
@@ -330,7 +331,7 @@
     {#snippet extra()}
       {#if intoCellar}
         <label for="price">{t('stock.unitPrice')}</label>
-        <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+        <PriceInput id="price" bind:value={unitPrice} />
         <label for="place">{t('stock.place')}</label>
         <input id="place" type="text" bind:value={place} />
       {:else}
@@ -342,7 +343,7 @@
           </div>
           <div class="grow">
             <label for="price">{t('stock.unitPrice')}</label>
-            <input id="price" type="number" inputmode="decimal" min="0" step="0.01" bind:value={unitPrice} />
+            <PriceInput id="price" bind:value={unitPrice} />
           </div>
         </div>
         <label for="place">{t('stock.place')}</label>
