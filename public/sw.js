@@ -14,7 +14,8 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// Navigations: network-first so new deploys are picked up, cached shell offline.
+// Navigations: network-first so new deploys are picked up, cached shell offline. "no-cache" revalidates
+// past the HTTP cache, where Pages keeps index.html for 10 minutes.
 // Same-origin assets: cache-first — Vite filenames are hashed, public files are versioned by query string.
 self.addEventListener('fetch', (event) => {
   const request = event.request
@@ -22,7 +23,7 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-cache' })
         .then((response) => {
           const copy = response.clone()
           caches.open(CACHE).then((cache) => cache.put(SHELL, copy))

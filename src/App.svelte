@@ -11,6 +11,7 @@
   import { MORE_SCREENS, type Screen } from './lib/screens'
   import { t } from './lib/i18n.svelte'
   import { initStore, store } from './lib/store.svelte'
+  import { update } from './lib/update.svelte'
   import type { Wine } from './lib/types'
 
   let tab = $state<Tab>('wines')
@@ -110,6 +111,12 @@
   }
 </script>
 
+{#if update.available}
+  <div class="update" role="status">
+    {t('update.available')}
+    <button class="link" onclick={() => location.reload()}>{t('update.reload')}</button>
+  </div>
+{/if}
 <main class:with-fab={fab}>
   {#if !store.loaded}
     <p class="muted">{store.blocked ? t('app.blocked') : '…'}</p>
@@ -136,6 +143,16 @@
 <TabBar {tab} onselect={selectTab} />
 
 <style>
+  .update {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+  }
+
   .fab {
     position: fixed;
     right: max(16px, calc(50vw - 304px));
