@@ -91,12 +91,12 @@ describe('lookupAging', () => {
     content: [{ type: 'text', text: 'Searching the producer site.' }, { type: 'text', text: JSON.stringify(data) }],
   })
 
-  it('searches up to five times at high effort and returns the parsed answer', async () => {
+  it('searches up to three times at low effort and returns the parsed answer', async () => {
     create.mockResolvedValue(reply(answer))
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
     const request = create.mock.calls[0][0]
-    expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }])
-    expect(request.output_config.effort).toBe('high')
+    expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }])
+    expect(request.output_config.effort).toBe('low')
     expect(request.messages[0].content).toBe(agingPrompt(draft))
   })
 
@@ -104,7 +104,7 @@ describe('lookupAging', () => {
     create.mockResolvedValue(reply(answer))
     await lookupAging(auth, 'claude-haiku-4-5', draft)
     const request = create.mock.calls[0][0]
-    expect(request.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }])
+    expect(request.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }])
     expect(request.output_config).not.toHaveProperty('effort')
   })
 
