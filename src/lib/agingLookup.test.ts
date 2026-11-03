@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { APIUserAbortError } from '@anthropic-ai/sdk'
+import { APIUserAbortError, InternalServerError } from '@anthropic-ai/sdk'
 import { NO_AGING } from './aging'
+import { calls, clearCalls } from './diagnostics.svelte'
 import { agingPrompt, emptyDraft, foundAging, lookupAging, type AgingLookup, type WineDraft } from './extract'
 import type { Aging } from './types'
 
@@ -9,7 +10,11 @@ const create = vi.hoisted(() => vi.fn())
 vi.mock('@anthropic-ai/sdk', async (importOriginal) => {
   const real = await importOriginal<typeof import('@anthropic-ai/sdk')>()
   class Mocked extends real.default {
-    messages = { create } as unknown as InstanceType<typeof real.default>['messages']
+    messages = {
+      create: (...args: unknown[]) => ({
+        withResponse: async () => ({ data: await create(...args), request_id: 'req_1' }),
+      }),
+    } as unknown as InstanceType<typeof real.default>['messages']
   }
   return { ...real, default: Mocked }
 })
@@ -82,12 +87,15 @@ describe('foundAging', () => {
 describe('lookupAging', () => {
   beforeEach(() => {
     create.mockReset()
+    clearCalls()
     vi.stubGlobal('navigator', { onLine: true })
   })
 
   const auth = { apiKey: 'test-key', workspaceId: '' }
+  const usage = { input_tokens: 1, output_tokens: 1 }
   const reply = (data: AgingLookup, stop_reason = 'end_turn') => ({
     stop_reason,
+    usage,
     content: [{ type: 'text', text: 'Searching the producer site.' }, { type: 'text', text: JSON.stringify(data) }],
   })
 
@@ -109,12 +117,12 @@ describe('lookupAging', () => {
   })
 
   it('reports an answer it cannot parse', async () => {
-    create.mockResolvedValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }] })
+    create.mockResolvedValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }], usage })
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'unparseable' })
   })
 
   it('resumes a search the server paused and sends back the partial turn', async () => {
-    const paused = { stop_reason: 'pause_turn', content: [{ type: 'server_tool_use', id: 's1', name: 'web_search', input: {} }] }
+    const paused = { stop_reason: 'pause_turn', usage, content: [{ type: 'server_tool_use', id: 's1', name: 'web_search', input: {} }] }
     create.mockResolvedValueOnce(paused).mockResolvedValueOnce(reply(answer))
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
     const resumed = create.mock.calls[1][0].messages
@@ -125,6 +133,39 @@ describe('lookupAging', () => {
     create.mockRejectedValue(new APIUserAbortError())
     expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'timeout' })
     expect(create.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('records the call with its request id, searches, tokens and turns', async () => {
+    const used = (searches: number) => ({ input_tokens: 100, output_tokens: 10, server_tool_use: { web_search_requests: searches } })
+    create
+      .mockResolvedValueOnce({ stop_reason: 'pause_turn', content: [], usage: used(2) })
+      .mockResolvedValueOnce({ ...reply(answer), usage: used(1) })
+    await lookupAging(auth, 'claude-opus-5', draft)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({
+      task: 'aging',
+      model: 'claude-opus-5',
+      outcome: 'ok',
+      stopReason: 'end_turn',
+      requestId: 'req_1',
+      turns: 2,
+      searches: 3,
+      inputTokens: 200,
+      outputTokens: 20,
+    })
+    expect(calls[0]).not.toHaveProperty('excerpt', expect.anything())
+  })
+
+  it('records the start of an answer it cannot parse', async () => {
+    create.mockResolvedValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }], usage })
+    await lookupAging(auth, 'claude-opus-5', draft)
+    expect(calls[0]).toMatchObject({ outcome: 'unparseable', excerpt: 'Sorry.' })
+  })
+
+  it('records the request id of a failed request', async () => {
+    create.mockRejectedValue(new InternalServerError(500, undefined, 'boom', new Headers({ 'request-id': 'req_err' })))
+    await lookupAging(auth, 'claude-opus-5', draft)
+    expect(calls[0]).toMatchObject({ outcome: 'error', requestId: 'req_err', turns: 0 })
   })
 
   it('does not call out without a key', async () => {

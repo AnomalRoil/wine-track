@@ -7,6 +7,7 @@
   import type { ScreenProps } from '../lib/screens'
   import { backupSnapshot, restore, store } from '../lib/store.svelte'
   import CellarSettings from './CellarSettings.svelte'
+  import Diagnostics from './Diagnostics.svelte'
   import LwinSettings from './LwinSettings.svelte'
   import Icon from './Icon.svelte'
 
@@ -113,6 +114,8 @@
 {#if persisted !== null}
   <p class="muted">{persisted ? t('settings.persisted') : t('settings.notPersisted')}</p>
 {/if}
+
+<Diagnostics />
 
 <style>
   .row {

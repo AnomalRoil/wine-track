@@ -1,8 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { APIPromise } from '@anthropic-ai/sdk/core/api-promise'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import { cleanAging, webUrl } from './aging'
 import type { Completion } from './csvImport'
+import { recordCall, type CallTask } from './diagnostics.svelte'
 import { toShare, type GrapeShares } from './grapes'
 import type { Model } from './settings.svelte'
 import { STANDARD_SIZE_CL, type Aging, type WineColor } from './types'
@@ -177,6 +179,52 @@ function client(auth: Auth, timeoutMs: number): Anthropic {
   })
 }
 
+/** The responses a call received, in order. */
+type Trace = { message: Anthropic.Messages.Message; requestId?: string }[]
+
+async function send<M extends Anthropic.Messages.Message>(trace: Trace, request: APIPromise<M>): Promise<M> {
+  const { data, request_id } = await request.withResponse()
+  trace.push({ message: data, requestId: request_id ?? undefined })
+  return data
+}
+
+const EXCERPT_LENGTH = 500
+
+/** Runs an AI call, turns a thrown error into a failure, and records the call in the diagnostics. */
+async function traced<T>(task: CallTask, model: Model, run: (trace: Trace) => Promise<Result<T>>): Promise<Result<T>> {
+  const at = new Date()
+  const trace: Trace = []
+  let result: Result<T>
+  let errorRequestId: string | undefined
+  try {
+    result = await run(trace)
+  } catch (err) {
+    result = failure(err)
+    if (err instanceof Anthropic.APIError) errorRequestId = err.requestID ?? undefined
+  }
+  const last = trace.at(-1)?.message
+  const usage = trace.map((t) => t.message.usage)
+  recordCall({
+    at: at.toISOString(),
+    task,
+    model,
+    durationMs: Date.now() - at.getTime(),
+    outcome: result.ok ? 'ok' : result.kind,
+    detail: result.ok ? undefined : result.detail,
+    stopReason: last?.stop_reason ?? undefined,
+    requestId: errorRequestId ?? trace.at(-1)?.requestId,
+    turns: trace.length,
+    searches: usage.reduce((n, u) => n + (u.server_tool_use?.web_search_requests ?? 0), 0),
+    inputTokens: usage.reduce((n, u) => n + u.input_tokens, 0),
+    outputTokens: usage.reduce((n, u) => n + u.output_tokens, 0),
+    excerpt:
+      !result.ok && result.kind === 'unparseable'
+        ? last?.content.findLast((block) => block.type === 'text')?.text.slice(0, EXCERPT_LENGTH)
+        : undefined,
+  })
+  return result
+}
+
 export async function extractFromLabel(
   auth: Auth,
   model: Model,
@@ -184,8 +232,8 @@ export async function extractFromLabel(
 ): Promise<Result<WineExtraction>> {
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
-  try {
-    const response = await client(auth, 90_000).messages.parse({
+  return traced('label', model, async (trace) => {
+    const request = client(auth, 90_000).messages.parse({
       model,
       max_tokens: 2000,
       messages: [
@@ -199,14 +247,13 @@ export async function extractFromLabel(
       ],
       output_config: { format: zodOutputFormat(WineExtraction) },
     })
+    const response = await send(trace, request)
     if (response.stop_reason === 'refusal') {
       return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
     }
     if (!response.parsed_output) return { ok: false, kind: 'unparseable' }
     return { ok: true, data: response.parsed_output }
-  } catch (err) {
-    return failure(err)
-  }
+  })
 }
 
 // Haiku 4.5 predates the dynamic-filtering web search variant.
@@ -257,6 +304,7 @@ const QUICK_SEARCH: SearchOptions = { maxUses: 2, effort: 'low', maxTokens: 4000
 const MAX_PAUSES = 3
 
 async function searchAndParse<S extends z.ZodType>(
+  task: CallTask,
   auth: Auth,
   model: Model,
   prompt: string,
@@ -266,14 +314,14 @@ async function searchAndParse<S extends z.ZodType>(
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
   const format = zodOutputFormat(schema)
-  try {
+  return traced(task, model, async (trace) => {
     const api = client(auth, options.timeoutMs)
     // The SDK retries a timed-out request twice; one deadline across attempts keeps the wait to timeoutMs.
     const signal = AbortSignal.timeout(options.timeoutMs)
     const messages: Anthropic.Messages.MessageParam[] = [{ role: 'user', content: prompt }]
     let response: Anthropic.Messages.Message
     for (let pauses = 0; ; pauses++) {
-      response = await api.messages.create(
+      const request = api.messages.create(
         {
           model,
           max_tokens: options.maxTokens,
@@ -284,6 +332,7 @@ async function searchAndParse<S extends z.ZodType>(
         },
         { signal },
       )
+      response = await send(trace, request)
       // A long search can hit the server's tool-loop limit; sending the partial turn back resumes it.
       if (response.stop_reason !== 'pause_turn' || pauses === MAX_PAUSES) break
       messages.splice(1, Infinity, { role: 'assistant', content: response.content })
@@ -299,9 +348,7 @@ async function searchAndParse<S extends z.ZodType>(
     } catch {
       return { ok: false, kind: 'unparseable' }
     }
-  } catch (err) {
-    return failure(err)
-  }
+  })
 }
 
 export function grapePrompt(draft: WineDraft): string {
@@ -342,7 +389,7 @@ export function readGrapeLookup(data: GrapeLookup): GrapesFound {
 }
 
 export function lookupGrapes(auth: Auth, model: Model, draft: WineDraft): Promise<Result<GrapeLookup>> {
-  return searchAndParse(auth, model, grapePrompt(draft), GrapeLookup)
+  return searchAndParse('grapes', auth, model, grapePrompt(draft), GrapeLookup)
 }
 
 /** The drinking-window question for `draft`, preferring windows published for this exact wine and vintage. */
@@ -373,7 +420,7 @@ longer than a quick estimate suggests: allow for the full ageing potential of th
 const AGING_SEARCH: SearchOptions = { maxUses: 3, effort: 'medium', maxTokens: 8000, timeoutMs: 120_000 }
 
 export function lookupAging(auth: Auth, model: Model, draft: WineDraft): Promise<Result<AgingLookup>> {
-  return searchAndParse(auth, model, agingPrompt(draft), AgingLookup, AGING_SEARCH)
+  return searchAndParse('aging', auth, model, agingPrompt(draft), AgingLookup, AGING_SEARCH)
 }
 
 const WineCompletions = z.object({
@@ -403,8 +450,8 @@ export async function completeWines(auth: Auth, model: Model, drafts: WineDraft[
   if (!auth.apiKey) return { ok: false, kind: 'no-key' }
   if (!navigator.onLine) return { ok: false, kind: 'offline' }
   const list = drafts.map((d, i) => `${i + 1}. ${wineQuery(d)} (${d.color})`).join('\n')
-  try {
-    const response = await client(auth, 240_000).messages.parse({
+  return traced('completion', model, async (trace) => {
+    const request = client(auth, 240_000).messages.parse({
       model,
       max_tokens: 8000,
       messages: [
@@ -424,12 +471,11 @@ ${list}
       tools: [webSearchTool(model, Math.min(10, drafts.length * 2))],
       output_config: { effort: 'low', format: zodOutputFormat(WineCompletions) },
     })
+    const response = await send(trace, request)
     if (response.stop_reason === 'refusal') {
       return { ok: false, kind: 'refusal', detail: response.stop_details?.explanation ?? undefined }
     }
     if (!response.parsed_output) return { ok: false, kind: 'unparseable' }
     return { ok: true, data: alignCompletions(drafts.length, response.parsed_output.wines) }
-  } catch (err) {
-    return failure(err)
-  }
+  })
 }

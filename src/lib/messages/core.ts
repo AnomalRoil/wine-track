@@ -61,6 +61,7 @@ export const en = {
   'extract.refusal': 'The model declined to process this image.',
   'extract.unparseable': 'Could not read wine details from the photo.',
   'extract.error': 'Extraction failed: {detail}',
+  'lookup.unparseable': 'The answer could not be read. Try again.',
   'extract.retry': 'Retry',
 
   'form.newWine': 'New wine',
@@ -296,6 +297,7 @@ export const fr: Messages<typeof en> = {
   'extract.refusal': 'Le modèle a refusé de traiter cette image.',
   'extract.unparseable': 'Impossible de lire les détails du vin sur la photo.',
   'extract.error': 'Échec de l’extraction : {detail}',
+  'lookup.unparseable': 'La réponse n’a pas pu être lue. Réessayez.',
   'extract.retry': 'Réessayer',
 
   'form.newWine': 'Nouveau vin',
@@ -532,6 +534,7 @@ export const de: Messages<typeof en> = {
   'extract.refusal': 'Das Modell hat die Verarbeitung dieses Bildes abgelehnt.',
   'extract.unparseable': 'Weindaten konnten nicht aus dem Foto gelesen werden.',
   'extract.error': 'Auslesen fehlgeschlagen: {detail}',
+  'lookup.unparseable': 'Die Antwort konnte nicht gelesen werden. Versuchen Sie es erneut.',
   'extract.retry': 'Erneut versuchen',
 
   'form.newWine': 'Neuer Wein',
