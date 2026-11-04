@@ -126,7 +126,7 @@ describe('lookupAging', () => {
 
   it('streams a search at medium effort with up to three searches and returns the parsed answer', async () => {
     reply.mockReturnValue(answered(answer))
-    expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
+    expect(await lookupAging(auth, 'claude-opus-5-5', draft)).toEqual({ ok: true, data: answer })
     const [request] = sent()
     expect(request.stream).toBe(true)
     expect(request.tools).toEqual([{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }])
@@ -142,30 +142,30 @@ describe('lookupAging', () => {
     expect(request.output_config.effort).toBe('medium')
   })
 
-  it('leaves out the effort for Haiku, which rejects it', async () => {
+  it('uses the basic web search on Haiku 5.5, which lacks dynamic filtering', async () => {
     reply.mockReturnValue(answered(answer))
-    await lookupAging(auth, 'claude-haiku-4-5', draft)
+    await lookupAging(auth, 'claude-haiku-5-5', draft)
     const [request] = sent()
     expect(request.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }])
-    expect(request.output_config).not.toHaveProperty('effort')
+    expect(request.output_config.effort).toBe('medium')
   })
 
   it('reports an answer it cannot parse and records its start', async () => {
     reply.mockReturnValue({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry.' }] })
-    expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'unparseable' })
+    expect(await lookupAging(auth, 'claude-opus-5-5', draft)).toEqual({ ok: false, kind: 'unparseable' })
     expect(calls[0]).toMatchObject({ outcome: 'unparseable', excerpt: 'Sorry.' })
   })
 
   it('resumes a search the server paused and sends back the partial turn', async () => {
     const search = { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'Montrose 2016' } }
     reply.mockReturnValueOnce({ stop_reason: 'pause_turn', content: [search] }).mockReturnValueOnce(answered(answer))
-    expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: true, data: answer })
+    expect(await lookupAging(auth, 'claude-opus-5-5', draft)).toEqual({ ok: true, data: answer })
     expect(sent()[1].messages).toEqual([{ role: 'user', content: agingPrompt(draft) }, { role: 'assistant', content: [search] }])
   })
 
   it('bounds every attempt by one deadline and reports it as a timeout', async () => {
     const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(AbortSignal.abort())
-    expect(await lookupAging(auth, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'timeout' })
+    expect(await lookupAging(auth, 'claude-opus-5-5', draft)).toEqual({ ok: false, kind: 'timeout' })
     expect(timeout).toHaveBeenCalledWith(120_000)
     expect(calls[0]).toMatchObject({ outcome: 'timeout', turns: 0 })
   })
@@ -182,11 +182,11 @@ describe('lookupAging', () => {
         ],
       })
       .mockReturnValueOnce({ ...answered(answer), usage: used(1) })
-    await lookupAging(auth, 'claude-opus-5', draft)
+    await lookupAging(auth, 'claude-opus-5-5', draft)
     expect(calls).toHaveLength(1)
     expect(calls[0]).toMatchObject({
       task: 'aging',
-      model: 'claude-opus-5',
+      model: 'claude-opus-5-5',
       outcome: 'ok',
       stopReason: 'end_turn',
       requestId: 'req_1',
@@ -218,13 +218,13 @@ describe('lookupAging', () => {
         headers: { 'content-type': 'application/json', 'request-id': 'req_err' },
       }),
     )
-    expect(await lookupAging(auth, 'claude-opus-5', draft)).toMatchObject({ ok: false, kind: 'error' })
+    expect(await lookupAging(auth, 'claude-opus-5-5', draft)).toMatchObject({ ok: false, kind: 'error' })
     expect(calls[0]).toMatchObject({ outcome: 'error', requestId: 'req_err', turns: 0 })
     expect(calls[0].events.at(-1)?.what).toContain('bad tool')
   })
 
   it('does not call out without a key', async () => {
-    expect(await lookupAging({ ...auth, apiKey: '' }, 'claude-opus-5', draft)).toEqual({ ok: false, kind: 'no-key' })
+    expect(await lookupAging({ ...auth, apiKey: '' }, 'claude-opus-5-5', draft)).toEqual({ ok: false, kind: 'no-key' })
     expect(reply).not.toHaveBeenCalled()
     expect(calls).toHaveLength(0)
   })

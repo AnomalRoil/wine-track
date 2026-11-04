@@ -5,7 +5,7 @@ import { settings } from '../lib/settings.svelte'
 import Diagnostics from './Diagnostics.svelte'
 
 function record(fields: Partial<CallRecord>) {
-  startCall('aging', 'claude-opus-5').update(fields)
+  startCall('aging', 'claude-opus-5-5').update(fields)
 }
 
 const timedOut: Partial<CallRecord> = { durationMs: 120_000, outcome: 'timeout', requestId: 'req_1', turns: 1, searches: 3 }
@@ -39,7 +39,7 @@ it('keeps the latest calls only and clears them', async () => {
 
 it('shows a call as running from its start, with its elapsed time', async () => {
   vi.useFakeTimers()
-  startCall('grapes', 'claude-opus-5')
+  startCall('grapes', 'claude-opus-5-5')
   render(Diagnostics)
   expect(screen.getByText(/Grape lookup/).textContent).toContain('running · 0.0 s')
   await vi.advanceTimersByTimeAsync(3000)
