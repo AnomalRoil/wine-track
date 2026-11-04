@@ -226,8 +226,7 @@ async function converse<S extends z.ZodType>(q: Ask<S>, log: CallLog): Promise<R
   const format = zodOutputFormat(q.schema)
   // Without `parse`, the stream leaves the answer as text: the first text block may narrate a search.
   const wire = { type: format.type, schema: format.schema }
-  // Haiku 4.5 rejects the effort setting.
-  const effort = q.effort && q.model !== 'claude-haiku-4-5' ? { effort: q.effort } : {}
+  const effort = q.effort ? { effort: q.effort } : {}
   const messages: Anthropic.Messages.MessageParam[] = [{ role: 'user', content: q.content }]
   let message: Anthropic.Messages.Message
   for (let pauses = 0; ; pauses++) {
@@ -312,9 +311,9 @@ export function extractFromLabel(auth: Auth, model: Model, jpegBase64: string): 
   })
 }
 
-// Haiku 4.5 predates the dynamic-filtering web search variant.
+// The dynamic-filtering web search variant is for Opus and Sonnet models only.
 function webSearchTool(model: Model, maxUses = 2): Anthropic.Messages.ToolUnion {
-  if (model === 'claude-haiku-4-5') {
+  if (model === 'claude-haiku-5-5') {
     return { type: 'web_search_20250305', name: 'web_search', max_uses: maxUses }
   }
   return { type: 'web_search_20260209', name: 'web_search', max_uses: maxUses }

@@ -3,7 +3,7 @@ import { TEMP_UNITS, type TempUnit } from './aging'
 export const LOCALES = ['en', 'fr', 'de'] as const
 export type Locale = (typeof LOCALES)[number]
 
-export const MODELS = ['claude-sonnet-5-5', 'claude-opus-5', 'claude-haiku-4-5'] as const
+export const MODELS = ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5'] as const
 export type Model = (typeof MODELS)[number]
 
 export const CURRENCIES = ['EUR', 'CHF', 'USD', 'GBP', 'CAD', 'AUD', 'JPY'] as const
@@ -28,6 +28,18 @@ function detectLocale(): Locale {
   return LOCALES.find((l) => l === lang) ?? 'en'
 }
 
+// A model dropped from MODELS moves to the latest model of its tier.
+const SUCCESSORS: Record<string, Model> = {
+  'claude-opus-5': 'claude-opus-5-5',
+  'claude-sonnet-4-6': 'claude-sonnet-5-5',
+  'claude-haiku-4-5': 'claude-haiku-5-5',
+}
+
+function storedModel(model: unknown): Model | undefined {
+  if (MODELS.includes(model as Model)) return model as Model
+  return typeof model === 'string' ? SUCCESSORS[model] : undefined
+}
+
 function load(): Settings {
   const defaults: Settings = {
     apiKey: '',
@@ -46,7 +58,7 @@ function load(): Settings {
     return {
       ...defaults,
       ...stored,
-      model: MODELS.includes(stored.model as Model) ? (stored.model as Model) : defaults.model,
+      model: storedModel(stored.model) ?? defaults.model,
       locale: LOCALES.includes(stored.locale as Locale) ? (stored.locale as Locale) : defaults.locale,
       currency: CURRENCIES.includes(stored.currency as Currency) ? (stored.currency as Currency) : defaults.currency,
       tempUnit: TEMP_UNITS.includes(stored.tempUnit as TempUnit) ? (stored.tempUnit as TempUnit) : defaults.tempUnit,
